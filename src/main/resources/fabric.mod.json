@@ -1,0 +1,53 @@
+{
+    "schemaVersion": 1,
+    "id": "touristry",
+    "version": "${version}",
+    "name": "Touristry",
+    "description": "Invite travelers to shop, dine, play, and sleep in your town and watch it come alive!",
+    "authors": [
+        "Willow the Wisp"
+    ],
+    "contact": {
+            "homepage": "https://github.com/willihay/touristry/wiki",
+            "sources": "https://github.com/willihay/touristry",
+            "issues": "https://github.com/willihay/touristry/issues"
+    },
+    "license": "MIT",
+    "icon": "assets/touristry/icon.png",
+    "environment": "*",
+    "entrypoints": {
+        "main": [
+            "org.bensam.touristry.Touristry"
+        ],
+        "client": [
+            "org.bensam.touristry.client.TouristryClient"
+        ],
+        "fabric-datagen": [
+            "org.bensam.touristry.client.TouristryDataGenerator"
+        ],
+        "jei_mod_plugin": [
+            "org.bensam.touristry.client.integration.jei.JEIPlugin"
+        ],
+        "modmenu": [
+            "org.bensam.touristry.client.integration.modmenu.ModMenuIntegration"
+        ]
+    },
+    "mixins": [
+        "touristry.mixins.json",
+        {
+            "config": "touristry.client.mixins.json",
+            "environment": "client"
+        }
+    ],
+    "depends": {
+        "fabricloader": ">=0.19.2",
+        "minecraft": "~1.21.11",
+        "java": ">=21",
+        "fabric-api": "*"
+    },
+    "suggests": {
+	    "jei": ">=27.4.0.22",
+        "modmenu": ">=17.0.0",
+        "yet_another_config_lib_v3": ">=3.8.1"
+    }
+}

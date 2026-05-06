@@ -1,0 +1,10 @@
+{
+  "advancement.touristry.root.title": "Touristry",
+  "advancement.touristry.root.description": "Unlocked touristry",
+  "advancement.touristry.tourist_beacon.title": "Take Me To Your Leader",
+  "advancement.touristry.tourist_beacon.description": "Crafted a Tourist Beacon",
+
+  "block.touristry.tourist_beacon": "Tourist Beacon",
+
+  "itemGroup.touristry": "Touristry"
+}
