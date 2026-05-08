@@ -10,18 +10,33 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.component.ItemContainerContents;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.properties.NoteBlockInstrument;
+import net.minecraft.world.level.material.MapColor;
+import org.bensam.touristry.block.TouristBeaconBlock;
 
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 public class ModBlocks {
     private ModBlocks() {}
 
-//    private static BlockWandEnchantingTable wandEnchantingTableInternal;
-//    public static final Supplier<BlockWandEnchantingTable> WAND_ENCHANTING_TABLE = () -> wandEnchantingTableInternal;
+    private static TouristBeaconBlock touristBeacon;
+    public static final Supplier<TouristBeaconBlock> TOURIST_BEACON = () -> touristBeacon;
 
     public static void initialize() {
         // Register mod blocks.
+        touristBeacon = register(
+                "tourist_beacon",
+                TouristBeaconBlock::new,
+                BlockBehaviour.Properties.of()
+                        .mapColor(MapColor.COLOR_PURPLE)
+                        .instrument(NoteBlockInstrument.BASEDRUM)
+                        .requiresCorrectToolForDrops()
+                        .sound(SoundType.STONE)
+                        .strength(5.0f, 1200.0f)
+        );
 //        wandEnchantingTableInternal = register(
 //                "wand_enchanting_table",
 //                BlockWandEnchantingTable::new,

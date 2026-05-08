@@ -1,22 +1,28 @@
 package org.bensam.touristry;
 
+import net.fabricmc.fabric.api.object.builder.v1.block.entity.FabricBlockEntityTypeBuilder;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
+
+import java.util.function.Supplier;
+
 public class ModBlockEntities {
     private ModBlockEntities() {}
 
-    /*
-    private static BlockEntityType<BlockEntityWandEnchantingTable> wandEnchantingTableInternal;
-    public static final Supplier<BlockEntityType<BlockEntityWandEnchantingTable>> WAND_ENCHANTING_TABLE =
-            () -> wandEnchantingTableInternal;
-    */
+    private static BlockEntityType<TouristBeaconBlockEntity> touristBeacon;
+    public static final Supplier<BlockEntityType<TouristBeaconBlockEntity>> TOURIST_BEACON = () -> touristBeacon;
 
     public static void initialize() {
-//        wandEnchantingTableInternal = Registry.register(
-//                BuiltInRegistries.BLOCK_ENTITY_TYPE,
-//                Identifier.fromNamespaceAndPath(ArcaneRelics.MOD_ID, "wand_enchanting_table"),
-//                FabricBlockEntityTypeBuilder.create(
-//                        BlockEntityWandEnchantingTable::new,
-//                        ModBlocks.WAND_ENCHANTING_TABLE.get()
-//                ).build()
-//        );
+        touristBeacon = Registry.register(
+                BuiltInRegistries.BLOCK_ENTITY_TYPE,
+                Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tourist_beacon"),
+                FabricBlockEntityTypeBuilder.create(
+                        TouristBeaconBlockEntity::new,
+                        ModBlocks.TOURIST_BEACON.get()
+                ).build()
+        );
     }
 }

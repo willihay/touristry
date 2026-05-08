@@ -8,8 +8,6 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
-import net.minecraft.world.level.block.Blocks;
 
 import java.util.function.Supplier;
 
@@ -28,11 +26,10 @@ public final class ModCreativeTab {
     public static void initialize() {
         // Build the custom creative tab.
         tabInternal = FabricItemGroup.builder()
-                .icon(() -> new ItemStack(Items.EMERALD))
+                .icon(() -> new ItemStack(ModBlocks.TOURIST_BEACON.get().asItem()))
                 .title(Component.translatable("itemGroup." + Touristry.MOD_ID))
                 .displayItems((params, output) -> {
-                    output.accept(Blocks.BELL.asItem());
-                    output.accept(Items.EMERALD);
+                    output.accept(ModBlocks.TOURIST_BEACON.get().asItem());
                 })
                 .build();
 

@@ -6,15 +6,18 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
+import org.bensam.touristry.menu.TouristBeaconMenu;
 
-public class ModMenus {
+import java.util.function.Supplier;
+
+public final class ModMenus {
     private ModMenus() {}
 
-//    private static MenuType<WandEnchantingMenu> wandEnchantingMenuInternal;
-//    public static final Supplier<MenuType<WandEnchantingMenu>> WAND_ENCHANTING_MENU = () -> wandEnchantingMenuInternal;
+    private static MenuType<TouristBeaconMenu> touristBeaconMenu;
+    public static final Supplier<MenuType<TouristBeaconMenu>> TOURIST_BEACON_MENU = () -> touristBeaconMenu;
 
     public static void initialize() {
-        // wandEnchantingMenuInternal = register("wand_enchanting_menu", WandEnchantingMenu::new);
+        touristBeaconMenu = register("tourist_beacon_menu", TouristBeaconMenu::new);
     }
 
     public static <T extends AbstractContainerMenu> MenuType<T> register(

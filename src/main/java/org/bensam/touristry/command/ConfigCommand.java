@@ -18,17 +18,17 @@ public class ConfigCommand {
             CommandBuildContext registryAccess,
             Commands.CommandSelection environment
     ) {
-        LiteralArgumentBuilder<CommandSourceStack> arcCommand = Commands.literal("tour")
+        LiteralArgumentBuilder<CommandSourceStack> tourCommand = Commands.literal("tour")
                 .requires(player -> player.permissions().hasPermission(Permissions.COMMANDS_ADMIN));
 
-        arcCommand.then(Commands.literal("config")
+        tourCommand.then(Commands.literal("config")
                 .then(Commands.literal("reload")
                         .executes(source -> this.reloadConfig(source.getSource())))
                 .then(Commands.literal("reset")
                         .executes(source -> this.resetConfig(source.getSource())))
         );
 
-        dispatcher.register(arcCommand);
+        dispatcher.register(tourCommand);
     }
 
     protected int reloadConfig(CommandSourceStack source) {

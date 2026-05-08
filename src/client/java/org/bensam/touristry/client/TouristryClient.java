@@ -1,8 +1,14 @@
 package org.bensam.touristry.client;
 
 import net.fabricmc.api.ClientModInitializer;
+import net.minecraft.client.gui.screens.MenuScreens;
+import net.minecraft.client.renderer.entity.EntityRenderers;
+import org.bensam.touristry.ModEntities;
+import org.bensam.touristry.ModMenus;
 import org.bensam.touristry.client.config.ModClientConfigManager;
 import org.bensam.touristry.client.network.ConfigClientPackets;
+import org.bensam.touristry.client.render.entity.TouristRenderer;
+import org.bensam.touristry.client.screen.TouristBeaconScreen;
 import org.bensam.touristry.config.ConfigBridgeForClient;
 
 public class TouristryClient implements ClientModInitializer {
@@ -19,5 +25,14 @@ public class TouristryClient implements ClientModInitializer {
 
 		// Register packet receivers.
 		ConfigClientPackets.registerClientReceivers();
+
+		// Register screens.
+		MenuScreens.register(ModMenus.TOURIST_BEACON_MENU.get(), TouristBeaconScreen::new);
+
+		// Register renderers.
+		EntityRenderers.register(ModEntities.TOURIST.get(), TouristRenderer::new);
+
+		// Initialize models.
+		//ModModelLayers.initialize();
 	}
 }
