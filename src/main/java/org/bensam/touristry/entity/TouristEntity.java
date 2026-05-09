@@ -19,6 +19,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import org.bensam.touristry.ModEntities;
+import org.bensam.touristry.Touristry;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
 import org.bensam.touristry.entity.goal.MoveToBeaconGoal;
 import org.bensam.touristry.tourism.TourismManager;
@@ -103,9 +104,18 @@ public class TouristEntity extends AbstractVillager {
     public void tick() {
         super.tick();
 
-        if (!this.level().isClientSide() && !this.registeredWithTourismManager) {
-            TourismManager.registerTourist(this);
-            this.registeredWithTourismManager = true;
+        if (!this.level().isClientSide()) {
+            if (TourismManager.shouldForceDespawn(this)) {
+                TourismManager.unregisterTourist(this);
+                Touristry.LOGGER.info("[Tourist] Despawning at {} per instruction from TourismManager", this.blockPosition());
+                this.discard();
+                return;
+            }
+
+            if (!this.registeredWithTourismManager) {
+                TourismManager.registerTourist(this);
+                this.registeredWithTourismManager = true;
+            }
         }
     }
 
@@ -113,8 +123,8 @@ public class TouristEntity extends AbstractVillager {
         return this.beaconTarget;
     }
 
-    public void setBeaconTarget(BlockPos beaconTarget) {
-        this.beaconTarget = beaconTarget;
+    public void setBeaconTarget(@NonNull BlockPos beaconTarget) {
+        this.beaconTarget = beaconTarget.immutable();
     }
 
     public void onArrivedAtBeacon() {

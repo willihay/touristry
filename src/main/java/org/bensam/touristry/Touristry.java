@@ -2,8 +2,10 @@ package org.bensam.touristry;
 
 import net.fabricmc.api.ModInitializer;
 
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
+import org.bensam.touristry.command.TourCommand;
 import org.bensam.touristry.config.ModServerConfigManager;
 import org.bensam.touristry.config.ModServerConfigSync;
 import org.bensam.touristry.config.SyncedClientConfig;
@@ -55,7 +57,7 @@ public class Touristry implements ModInitializer {
 			TourismManager.tick(server.overworld());
 		});
 
-		ModCommands.initialize();
+		CommandRegistrationCallback.EVENT.register(TourCommand::register);
 
 		LOGGER.debug("onInitialize complete");
 	}
