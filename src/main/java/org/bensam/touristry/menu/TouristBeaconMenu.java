@@ -5,29 +5,24 @@ import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.state.BlockState;
-import org.bensam.touristry.ModBlocks;
 import org.bensam.touristry.ModMenus;
 import org.jspecify.annotations.NonNull;
 
 public class TouristBeaconMenu extends AbstractContainerMenu {
     // Slot layout
-    private static final int PAYMENT_SLOT = 0;
-    public static final int PAYMENT_SLOT_X = 62;
-    public static final int PAYMENT_SLOT_Y = 17;
-    private static final int BEACON_SLOT_COUNT = 1;
+    private static final int BEACON_SLOT_COUNT = 9;
+    private static final int BEACON_SLOT_START_X = 62;
+    private static final int BEACON_SLOT_START_Y = 17;
+    private static final int SLOT_SIDE_LENGTH = 18;
 
     // Player inventory layout
     private static final int PLAYER_INVENTORY_ROW_X = 8;
     private static final int PLAYER_INVENTORY_ROW_Y = 84;
-    private static final int FIRST_PLAYER_SLOT = BEACON_SLOT_COUNT;
-    private static final int FIRST_HOTBAR_SLOT = FIRST_PLAYER_SLOT + 27;
+    private static final int PLAYER_SLOT_START = BEACON_SLOT_COUNT;
 
-    private final Container blockInventory;
-    private final ContainerLevelAccess access;
+    private final Container beaconInventory;
 
     // Client-side constructor:
     // Uses dummy containers so the menu can be constructed on the client
@@ -36,27 +31,29 @@ public class TouristBeaconMenu extends AbstractContainerMenu {
         this(
                 containerId,
                 playerInventory,
-                new SimpleContainer(BEACON_SLOT_COUNT),
-                ContainerLevelAccess.NULL
+                new SimpleContainer(BEACON_SLOT_COUNT)
         );
     }
 
     // Server-side constructor:
-    public TouristBeaconMenu(int containerId, Inventory playerInventory, Container blockInventory, ContainerLevelAccess access) {
+    public TouristBeaconMenu(int containerId, Inventory playerInventory, Container beaconInventory) {
         super(ModMenus.TOURIST_BEACON_MENU.get(), containerId);
-        this.blockInventory = blockInventory;
-        this.access = access;
+        this.beaconInventory = beaconInventory;
 
-        // Add block entity slots.
-        // Slot 0: Payment
-        this.addSlot(new Slot(blockInventory, PAYMENT_SLOT, PAYMENT_SLOT_X, PAYMENT_SLOT_Y));
+        // Add beacon inventory slots.
+        add3x3GridSlots(beaconInventory, BEACON_SLOT_START_X, BEACON_SLOT_START_Y);
 
         // Add the player inventory slots.
         this.addStandardInventorySlots(playerInventory, PLAYER_INVENTORY_ROW_X, PLAYER_INVENTORY_ROW_Y);
     }
 
-    protected boolean isValidBlock(BlockState blockState) {
-        return blockState.is(ModBlocks.TOURIST_BEACON.get());
+    protected void add3x3GridSlots(Container container, int firstSlotX, int firstSlotY) {
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 3; col++) {
+                int slotIndex = col + row * 3;
+                this.addSlot(new Slot(container, slotIndex, firstSlotX + col * SLOT_SIDE_LENGTH, firstSlotY + row * SLOT_SIDE_LENGTH));
+            }
+        }
     }
 
     @Override
@@ -72,14 +69,14 @@ public class TouristBeaconMenu extends AbstractContainerMenu {
         ItemStack returnStack = sourceStack.copy();
 
         // Payment slot -> player inventory
-        if (slotIndex == PAYMENT_SLOT) {
-            if (!this.moveItemStackTo(sourceStack, FIRST_PLAYER_SLOT, inventorySize, false)) {
+        if (slotIndex < BEACON_SLOT_COUNT) {
+            if (!this.moveItemStackTo(sourceStack, PLAYER_SLOT_START, inventorySize, false)) {
                 return ItemStack.EMPTY;
             }
         }
         // Player inventory -> payment slot
         else {
-            if (!this.moveItemStackTo(sourceStack, PAYMENT_SLOT, BEACON_SLOT_COUNT, false)) {
+            if (!this.moveItemStackTo(sourceStack, 0, BEACON_SLOT_COUNT, false)) {
                 return ItemStack.EMPTY;
             }
         }
@@ -94,11 +91,12 @@ public class TouristBeaconMenu extends AbstractContainerMenu {
             return ItemStack.EMPTY;
         }
 
+        slot.onTake(player, sourceStack);
         return returnStack;
     }
 
     @Override
     public boolean stillValid(@NonNull Player player) {
-        return this.blockInventory.stillValid(player);
+        return this.beaconInventory.stillValid(player);
     }
 }

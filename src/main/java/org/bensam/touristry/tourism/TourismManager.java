@@ -27,7 +27,7 @@ public class TourismManager {
     public static final Comparator<ScheduledTouristSpawn> SCHEDULED_TOURIST_SPAWN_COMPARATOR =
             Comparator.comparingInt(ScheduledTouristSpawn::timeOfDay);
 
-    private static final int SPAWNS_PER_BEACON_PER_DAY = 20;
+    private static final int SPAWNS_PER_BEACON_PER_DAY = 5;
     private static final int EARLIEST_SPAWN_TIME = 2000; // 8:00 AM
     private static final int LATEST_SPAWN_TIME_EXCLUSIVE = 9001; // 3:00 PM
     private static final int MIDNIGHT_DESPAWN_TIME = 18000; // 12:00 AM
@@ -226,15 +226,9 @@ public class TourismManager {
 
         // (Informational only) Write hourly heartbeat to log.
         if (dayCount > lastDayThreshold || tickHour > lastHourThreshold) {
-            int hour24 = (tickHour + 6) % 24;
-            int hour = hour24 % 12;
-            String ampm = hour24 < 12 ? "AM" : "PM";
-            if (hour == 0) {
-                hour = 12;
-            }
             lastDayThreshold = dayCount;
             lastHourThreshold = tickHour;
-            Touristry.LOGGER.info("[TourismManager] Minecraft Day: {}; Time: {} {}; DayTime: {}", lastDayThreshold, hour, ampm, dayTime);
+            Touristry.LOGGER.info("[TourismManager] Minecraft Day: {}; Time: {}; Ticks: {}", dayCount, getFriendlyTimeOfDay(dayTime), dayTime);
         }
 
         if (despawnAllTourists) {
@@ -284,9 +278,10 @@ public class TourismManager {
         persistPendingSpawns();
     }
 
-    public static String getFriendlyTimeOfDay(int ticksIntoDay) {
-        int tickHour = ticksIntoDay / 1000;
-        int ticksIntoHour = ticksIntoDay % 1000;
+    public static String getFriendlyTimeOfDay(long dayTimeTicks) {
+        int tickTimeOfDay = (int)(dayTimeTicks % 24000L);
+        int tickHour = tickTimeOfDay / 1000;
+        int ticksIntoHour = tickTimeOfDay % 1000;
         int minutes = ticksIntoHour * 60 / 1000;
         int hour24 = (tickHour + 6) % 24;
         int hour = hour24 % 12;
@@ -321,9 +316,11 @@ public class TourismManager {
             for (int spawnTime : spawnTimes) {
                 pendingSpawns.add(new ScheduledTouristSpawn(spawnTime, beaconPos));
                 Touristry.LOGGER.info(
-                        "[TourismManager] Added pending spawn for beacon {} at time {}",
+                        "[TourismManager] Added pending spawn for {} at {} @ time {} ticks ({})",
+                        touristBeaconBlockEntity.getPlainTextName(),
                         beaconPos,
-                        spawnTime
+                        spawnTime,
+                        getFriendlyTimeOfDay(spawnTime)
                 );
             }
         }
@@ -346,18 +343,22 @@ public class TourismManager {
         BlockPos spawnPoint = getSpawnPoint(world, scheduledTouristSpawn.beaconPos(), tourist);
         if (spawnPoint == null) {
             Touristry.LOGGER.warn(
-                    "[TourismManager] No safe spawn point found for beacon {} for scheduled time {}",
+                    "[TourismManager] No safe spawn point found for {} at {} for scheduled time {} ticks ({})",
+                    touristBeaconBlockEntity.getPlainTextName(),
                     scheduledTouristSpawn.beaconPos(),
-                    scheduledTouristSpawn.timeOfDay()
+                    scheduledTouristSpawn.timeOfDay(),
+                    getFriendlyTimeOfDay(scheduledTouristSpawn.timeOfDay())
             );
             return;
         }
 
         Touristry.LOGGER.info(
-                "[TourismManager] Spawning tourist at {} for beacon {} for scheduled time {}",
+                "[TourismManager] Spawning tourist at {} for {} at {} for scheduled time {} ticks ({})",
                 spawnPoint,
+                touristBeaconBlockEntity.getPlainTextName(),
                 scheduledTouristSpawn.beaconPos(),
-                scheduledTouristSpawn.timeOfDay()
+                scheduledTouristSpawn.timeOfDay(),
+                getFriendlyTimeOfDay(scheduledTouristSpawn.timeOfDay())
         );
 
         tourist.snapTo(spawnPoint, world.random.nextFloat() * 360.0F, 0.0F);
@@ -375,15 +376,17 @@ public class TourismManager {
         BlockPos spawnPoint = (requestedSpawnPoint != null) ? requestedSpawnPoint : getSpawnPoint(world, touristBeaconBlockEntity.getBlockPos(), tourist);
         if (spawnPoint == null) {
             Touristry.LOGGER.warn(
-                    "[TourismManager] No safe spawn point found for beacon {}",
+                    "[TourismManager] No safe spawn point found for {} at {}",
+                    touristBeaconBlockEntity.getPlainTextName(),
                     touristBeaconBlockEntity.getBlockPos()
             );
             return false;
         }
 
         Touristry.LOGGER.info(
-                "[TourismManager] Spawning tourist at {} for beacon {} by command",
+                "[TourismManager] Spawning tourist at {} for {} at {} by command",
                 spawnPoint,
+                touristBeaconBlockEntity.getPlainTextName(),
                 touristBeaconBlockEntity.getBlockPos()
         );
 

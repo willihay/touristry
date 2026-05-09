@@ -2,18 +2,15 @@ package org.bensam.touristry.block;
 
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
-import org.bensam.touristry.Touristry;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
 import org.bensam.touristry.menu.TouristBeaconMenu;
 import org.jspecify.annotations.NonNull;
@@ -21,7 +18,6 @@ import org.jspecify.annotations.Nullable;
 
 public class TouristBeaconBlock extends BaseEntityBlock {
     public static final MapCodec<TouristBeaconBlock> CODEC = simpleCodec(TouristBeaconBlock::new);
-    private static final Component CONTAINER_TITLE = Component.translatable("container." + Touristry.MOD_ID + ".tourist_beacon.title");
 
 	public TouristBeaconBlock(Properties properties)
 	{
@@ -54,10 +50,9 @@ public class TouristBeaconBlock extends BaseEntityBlock {
                     (containerId, inventory, player) -> new TouristBeaconMenu(
                             containerId,
                             inventory,
-                            touristBeaconBlockEntity,
-                            ContainerLevelAccess.create(level, blockPos)
+                            touristBeaconBlockEntity
                     ),
-                    CONTAINER_TITLE
+                    touristBeaconBlockEntity.getName()
             );
         }
 

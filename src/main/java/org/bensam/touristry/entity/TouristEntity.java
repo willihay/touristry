@@ -153,12 +153,35 @@ public class TouristEntity extends AbstractVillager {
                         this.getX(),
                         this.getY(),
                         this.getZ(),
+                        SoundEvents.VILLAGER_CELEBRATE,
+                        SoundSource.NEUTRAL,
+                        1.0f,
+                        1.0f
+                );
+            } else {
+                serverLevel.playSound(
+                        this,
+                        this.getX(),
+                        this.getY(),
+                        this.getZ(),
                         SoundEvents.VILLAGER_TRADE,
                         SoundSource.NEUTRAL,
                         1.0f,
                         1.0f
                 );
             }
+        } else {
+            // No beacon found at beaconTarget!
+            serverLevel.playSound(
+                    this,
+                    this.getX(),
+                    this.getY(),
+                    this.getZ(),
+                    SoundEvents.VILLAGER_NO,
+                    SoundSource.NEUTRAL,
+                    1.0f,
+                    1.0f
+            );
         }
     }
 

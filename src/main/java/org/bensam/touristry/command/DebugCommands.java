@@ -5,34 +5,21 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
 import org.bensam.touristry.tourism.TourismManager;
-
-import java.util.List;
 
 public final class DebugCommands {
     private DebugCommands() {}
 
     public static void register(LiteralArgumentBuilder<CommandSourceStack> root) {
-        root.then(Commands.literal("now")
-                .executes(ctx -> showTimeAndDay(ctx.getSource()))
-        );
-
         root.then(Commands.literal("debug")
                 .requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_ADMIN))
                 .then(Commands.literal("despawn")
                         .then(Commands.literal("all")
                                 .executes(ctx -> despawnAll(ctx.getSource()))))
-                .then(Commands.literal("list")
-                        .then(Commands.literal("beacons")
-                                .executes(ctx -> listBeacons(ctx.getSource())))
-                        .then(Commands.literal("spawnSchedule")
-                                .executes(ctx -> listSpawnSchedule(ctx.getSource()))))
                 .then(Commands.literal("spawn")
                         .then(Commands.literal("clearSchedule")
                                 .executes(ctx -> clearSpawnSchedule(ctx.getSource())))
@@ -43,52 +30,9 @@ public final class DebugCommands {
         );
     }
 
-    private static int showTimeAndDay(CommandSourceStack source) {
-        ServerLevel overworld = source.getServer().overworld();
-        int tickTimeOfDay = (int)(overworld.getDayTime() % 24000L);
-        source.sendSuccess(() -> Component.literal("Current time: " + TourismManager.getFriendlyTimeOfDay(tickTimeOfDay) + " on day " + overworld.getDayCount()), false);
-        return 1;
-    }
-
     private static int despawnAll(CommandSourceStack source) {
         TourismManager.setForceDespawnAll();
         source.sendSuccess(() -> Component.literal("Instructing all tourists to despawn..."), true);
-        return 1;
-    }
-
-    private static int listBeacons(CommandSourceStack source) {
-        List<TouristBeaconBlockEntity> loadedBeacons = TourismManager.getLoadedTouristBeacons(source.getServer().overworld());
-        if (loadedBeacons.isEmpty()) {
-            source.sendSuccess(() -> Component.literal("No tourist beacons found"), false);
-            return 1;
-        }
-
-        source.sendSuccess(() -> Component.literal("Tourist beacon locations:"), false);
-
-        for (TouristBeaconBlockEntity beacon : loadedBeacons) {
-            source.sendSuccess(
-                    () -> Component.literal(" - " + beacon.getBlockPos()),
-                    false
-            );
-        }
-        return 1;
-    }
-
-    private static int listSpawnSchedule(CommandSourceStack source) {
-        List<TourismManager.ScheduledTouristSpawn> pendingSpawns = TourismManager.getPendingSpawns();
-        if (pendingSpawns.isEmpty()) {
-            source.sendSuccess(() -> Component.literal("No pending tourist spawns for today"), false);
-            return 1;
-        }
-
-        source.sendSuccess(() -> Component.literal("Pending tourist spawns:"), false);
-
-        for (TourismManager.ScheduledTouristSpawn spawn : pendingSpawns) {
-            source.sendSuccess(
-                    () -> Component.literal(" - " + TourismManager.getFriendlyTimeOfDay(spawn.timeOfDay()) + " for beacon @ " + spawn.beaconPos()),
-                    false
-            );
-        }
         return 1;
     }
 
@@ -105,8 +49,8 @@ public final class DebugCommands {
             return -1;
         }
 
-        TouristBeaconBlockEntity beaconEntity = TourismManager.findClosestBeaconEntity(serverPlayer.blockPosition());
-        if (beaconEntity == null) {
+        TouristBeaconBlockEntity beaconBlockEntity = TourismManager.findClosestBeaconEntity(serverPlayer.blockPosition());
+        if (beaconBlockEntity == null) {
             source.sendFailure(Component.literal("No beacon found in this dimension"));
             return -1;
         }
@@ -115,8 +59,11 @@ public final class DebugCommands {
         Vec3 horizonLookAngle = new Vec3(lookAngle.x(), 0, lookAngle.z());
         BlockPos spawnPos = BlockPos.containing(serverPlayer.position().add(horizonLookAngle.normalize().scale(2.0)));
 
-        if (TourismManager.trySpawnTouristForBeacon(source.getLevel(), spawnPos, beaconEntity)) {
-            source.sendSuccess(() -> Component.literal("Spawned tourist for beacon " + beaconEntity.getBlockPos()), false);
+        if (TourismManager.trySpawnTouristForBeacon(source.getLevel(), spawnPos, beaconBlockEntity)) {
+            Component message = Component.literal("Spawned tourist for ")
+                    .append(beaconBlockEntity.getName().copy())
+                    .append(Component.literal(" @ " + beaconBlockEntity.getBlockPos()));
+            source.sendSuccess(() -> message, false);
             return 1;
         } else {
             source.sendFailure(Component.literal("Unable to spawn tourist here"));

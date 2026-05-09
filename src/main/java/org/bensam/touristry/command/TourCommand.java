@@ -18,6 +18,7 @@ public final class TourCommand {
 
         ConfigCommands.register(root);
         DebugCommands.register(root);
+        PlayerCommands.register(root);
 
         dispatcher.register(root);
     }
