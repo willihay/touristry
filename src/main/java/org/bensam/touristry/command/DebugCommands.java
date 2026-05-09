@@ -5,8 +5,10 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
 import org.bensam.touristry.tourism.TourismManager;
@@ -17,6 +19,10 @@ public final class DebugCommands {
     private DebugCommands() {}
 
     public static void register(LiteralArgumentBuilder<CommandSourceStack> root) {
+        root.then(Commands.literal("now")
+                .executes(ctx -> showTimeAndDay(ctx.getSource()))
+        );
+
         root.then(Commands.literal("debug")
                 .requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_ADMIN))
                 .then(Commands.literal("despawn")
@@ -35,6 +41,13 @@ public final class DebugCommands {
                         .then(Commands.literal("resetSchedule")
                                 .executes(ctx -> resetSpawnSchedule(ctx.getSource()))))
         );
+    }
+
+    private static int showTimeAndDay(CommandSourceStack source) {
+        ServerLevel overworld = source.getServer().overworld();
+        int tickTimeOfDay = (int)(overworld.getDayTime() % 24000L);
+        source.sendSuccess(() -> Component.literal("Current time: " + TourismManager.getFriendlyTimeOfDay(tickTimeOfDay) + " on day " + overworld.getDayCount()), false);
+        return 1;
     }
 
     private static int despawnAll(CommandSourceStack source) {
