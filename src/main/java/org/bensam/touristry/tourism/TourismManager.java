@@ -241,7 +241,7 @@ public class TourismManager {
         } else {
             // Prepare spawn schedule for the new day.
             if (dayCount > lastPreparedDay) {
-                prepareSpawnTimes(overworld);
+                prepareSpawnTimes(overworld, tickTimeOfDay);
             }
             if (lastPreparedDay != dayCount) {
                 lastPreparedDay = dayCount; // we never want the lastPreparedDay to get *ahead* of the actual day count on the server (e.g. from a time set command)
@@ -299,18 +299,28 @@ public class TourismManager {
                 .toList();
     }
 
-    private static void prepareSpawnTimes(ServerLevel world) {
+    private static void prepareSpawnTimes(ServerLevel world, int currentTickTime) {
         pendingSpawns.clear();
         RandomSource random = world.getRandom();
 
+        if (currentTickTime >= LATEST_SPAWN_TIME_EXCLUSIVE) {
+            Touristry.LOGGER.info("[TourismManager] Too late in the day to add spawn times");
+            return;
+        }
+
         for (TouristBeaconBlockEntity touristBeaconBlockEntity : getLoadedTouristBeacons(world)) {
+            int effectiveStartTime = Math.max(currentTickTime, EARLIEST_SPAWN_TIME);
+            int windowLength = LATEST_SPAWN_TIME_EXCLUSIVE - EARLIEST_SPAWN_TIME;
+            int remainingWindow = Math.max(0, LATEST_SPAWN_TIME_EXCLUSIVE - effectiveStartTime);
+
+            double remainingFraction = (double) remainingWindow / windowLength;
+            int spawnCount = Math.max(1, (int) Math.ceil(SPAWNS_PER_BEACON_PER_DAY * remainingFraction));
+
             BlockPos beaconPos = touristBeaconBlockEntity.getBlockPos().immutable();
-            int availableSpawnTimes = LATEST_SPAWN_TIME_EXCLUSIVE - EARLIEST_SPAWN_TIME;
-            int spawnCount = Math.min(SPAWNS_PER_BEACON_PER_DAY, availableSpawnTimes);
             Set<Integer> spawnTimes = new LinkedHashSet<>(spawnCount);
 
             while (spawnTimes.size() < spawnCount) {
-                spawnTimes.add(random.nextInt(EARLIEST_SPAWN_TIME, LATEST_SPAWN_TIME_EXCLUSIVE));
+                spawnTimes.add(random.nextInt(currentTickTime, LATEST_SPAWN_TIME_EXCLUSIVE));
             }
 
             for (int spawnTime : spawnTimes) {

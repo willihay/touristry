@@ -15,6 +15,9 @@ public final class PlayerCommands {
     private PlayerCommands() {}
 
     public static void register(LiteralArgumentBuilder<CommandSourceStack> root) {
+        root.then(Commands.literal("next")
+                .executes(ctx -> showNextSpawn(ctx.getSource())));
+
         root.then(Commands.literal("now")
                 .executes(ctx -> showTimeAndDay(ctx.getSource()))
         );
@@ -25,6 +28,25 @@ public final class PlayerCommands {
                 .then(Commands.literal("spawnSchedule")
                         .executes(ctx -> listSpawnSchedule(ctx.getSource()))));
 
+    }
+
+    private static int showNextSpawn(CommandSourceStack source) {
+        List<TourismManager.ScheduledTouristSpawn> pendingSpawns = TourismManager.getPendingSpawns();
+        if (pendingSpawns.isEmpty()) {
+            source.sendSuccess(() -> Component.literal("No pending tourist spawns"), false);
+            return 1;
+        }
+
+        TourismManager.ScheduledTouristSpawn nextSpawn = pendingSpawns.getFirst();
+        MutableComponent message = Component.literal("Next spawn at " + TourismManager.getFriendlyTimeOfDay(nextSpawn.timeOfDay()) + " for ");
+        if (source.getServer().overworld().getBlockEntity(nextSpawn.beaconPos()) instanceof TouristBeaconBlockEntity beaconBlockEntity) {
+            message.append(beaconBlockEntity.getName().copy());
+        } else {
+            message.append(Component.literal("unknown beacon"));
+        }
+        message.append(Component.literal(" @ " + nextSpawn.beaconPos()));
+        source.sendSuccess(() -> message, false);
+        return 1;
     }
 
     private static int showTimeAndDay(CommandSourceStack source) {
