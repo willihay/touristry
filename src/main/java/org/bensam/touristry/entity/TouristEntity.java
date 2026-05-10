@@ -23,6 +23,7 @@ import org.bensam.touristry.Touristry;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
 import org.bensam.touristry.entity.goal.MoveToBeaconGoal;
 import org.bensam.touristry.tourism.TourismManager;
+import org.bensam.touristry.tourism.VisitResult;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -148,6 +149,7 @@ public class TouristEntity extends AbstractVillager {
         BlockPos beaconTarget = this.getBeaconTarget();
         if (beaconTarget != null && serverLevel.getBlockEntity(beaconTarget) instanceof TouristBeaconBlockEntity touristBeaconBlockEntity) {
             if (touristBeaconBlockEntity.tryDepositItem(new ItemStack(Items.EMERALD))) {
+                touristBeaconBlockEntity.rateVisit(VisitResult.GOOD);
                 serverLevel.playSound(
                         this,
                         this.getX(),
@@ -172,6 +174,7 @@ public class TouristEntity extends AbstractVillager {
             }
         } else {
             // No beacon found at beaconTarget!
+            // TODO: Record failed visit with TourismManager for later effect on beacon reputation if the beacon reappears in the world.
             serverLevel.playSound(
                     this,
                     this.getX(),

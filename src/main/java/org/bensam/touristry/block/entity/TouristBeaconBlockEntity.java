@@ -6,6 +6,7 @@ import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -15,17 +16,29 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import org.bensam.touristry.ModBlockEntities;
+import org.bensam.touristry.ModComponents;
 import org.bensam.touristry.Touristry;
 import org.bensam.touristry.menu.TouristBeaconMenu;
 import org.bensam.touristry.tourism.TourismManager;
+import org.bensam.touristry.tourism.TouristBeaconStats;
+import org.bensam.touristry.tourism.VisitResult;
 import org.jspecify.annotations.NonNull;
 
 public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
     private static final int INVENTORY_SIZE = 9;
     private NonNullList<ItemStack> paymentItems = NonNullList.withSize(INVENTORY_SIZE, ItemStack.EMPTY);
 
+    private int successfulVisits;
+    private int failedVisits;
+    private double reputation;
+
+    private static final double MIN_REPUTATION = -100.0d;
+    private static final double MAX_REPUTATION = 100.0d;
+
     public TouristBeaconBlockEntity(BlockPos blockPos, BlockState blockState) {
         super(ModBlockEntities.TOURIST_BEACON.get(), blockPos, blockState);
+        this.successfulVisits = 0;
+        this.failedVisits = 0;
     }
 
     @Override
@@ -93,6 +106,34 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
         return false;
     }
 
+    public TouristBeaconStats getBeaconStats() {
+        return new TouristBeaconStats(this.successfulVisits, this.failedVisits, this.reputation);
+    }
+
+    public void rateVisit(VisitResult result) {
+        this.reputation = applyRating(this.reputation, result);
+
+        switch (result) {
+            case GOOD, GREAT -> this.successfulVisits++;
+            case LOST, CLOSED, HURT_EN_ROUTE, HURT_ON_PREMISES, KILLED_EN_ROUTE, KILLED_ON_PREMISES -> this.failedVisits++;
+        }
+
+        this.setChanged();
+    }
+
+    private double applyRating(double reputation, VisitResult result) {
+        double positiveNormalized = Math.max(0.0, reputation) / MAX_REPUTATION;
+        double negativeNormalized = Math.max(0.0, -reputation) / MAX_REPUTATION;
+        double gain = 0;
+
+        switch (result) {
+            case GOOD, GREAT -> gain = result.baseReputationDelta() * (1.0 - positiveNormalized) * (1.0 + 0.5 * negativeNormalized);
+            case LOST, CLOSED, HURT_EN_ROUTE, HURT_ON_PREMISES, KILLED_EN_ROUTE, KILLED_ON_PREMISES -> gain = result.baseReputationDelta() * (0.75 + 0.5 * positiveNormalized);
+        }
+
+        return Mth.clamp(reputation + gain, MIN_REPUTATION, MAX_REPUTATION);
+    }
+
     @Override
     public void clearRemoved() {
         super.clearRemoved();
@@ -121,12 +162,18 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
         super.loadAdditional(valueInput);
         this.paymentItems = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
         ContainerHelper.loadAllItems(valueInput, this.paymentItems);
+        valueInput.getIntOr("SuccessfulVisits", 0);
+        valueInput.getIntOr("FailedVisits", 0);
+        valueInput.getDoubleOr("Reputation", 0d);
     }
 
     @Override
     protected void saveAdditional(@NonNull ValueOutput valueOutput) {
         super.saveAdditional(valueOutput);
         ContainerHelper.saveAllItems(valueOutput, this.paymentItems);
+        valueOutput.putInt("SuccessfulVisits", this.successfulVisits);
+        valueOutput.putInt("FailedVisits", this.failedVisits);
+        valueOutput.putDouble("Reputation", this.reputation);
     }
 
     @Override
@@ -134,7 +181,13 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
         super.applyImplicitComponents(dataComponentGetter);
 
         // Restore additional components when BlockItem is placed as a Block/Block Entity.
-        // ...
+        TouristBeaconStats stats = dataComponentGetter.getOrDefault(
+                ModComponents.TOURIST_BEACON_STATS,
+                TouristBeaconStats.EMPTY
+        );
+        this.successfulVisits = stats.successfulVisits();
+        this.failedVisits = stats.failedVisits();
+        this.reputation = stats.reputation();
     }
 
     @Override
@@ -142,15 +195,21 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
         super.collectImplicitComponents(builder);
 
         // Collect additional components to save in components container in BlockItem when block breaks.
-        // ...
+        builder.set(ModComponents.TOURIST_BEACON_STATS, new TouristBeaconStats(
+                this.successfulVisits,
+                this.failedVisits,
+                this.reputation
+        ));
     }
 
     @Override
     public void removeComponentsFromTag(@NonNull ValueOutput valueOutput) {
         super.removeComponentsFromTag(valueOutput);
 
-        // Discard additional component tags when representing this block entity as components.
-        // ...
+        // Remove raw tag entries for data that is carried by custom components in the block item form.
+        valueOutput.discard("SuccessfulVisits");
+        valueOutput.discard("FailedVisits");
+        valueOutput.discard("Reputation");
     }
 
     @Override

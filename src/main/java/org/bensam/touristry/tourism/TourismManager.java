@@ -252,6 +252,7 @@ public class TourismManager {
             if (tickTimeOfDay >= MIDNIGHT_DESPAWN_TIME
                     && (lastTickTimeOfDay < MIDNIGHT_DESPAWN_TIME || lastTickTimeOfDay > tickTimeOfDay)) {
                 despawnTouristsAtMidnight(overworld);
+                // TODO: When this moves to tourist logic, record failed visits when applicable.
             }
 
             // Spawn tourists throughout the day according to schedule.
