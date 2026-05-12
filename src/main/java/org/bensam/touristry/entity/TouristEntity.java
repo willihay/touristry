@@ -147,9 +147,24 @@ public class TouristEntity extends AbstractVillager {
         }
 
         BlockPos beaconTarget = this.getBeaconTarget();
-        if (beaconTarget != null && serverLevel.getBlockEntity(beaconTarget) instanceof TouristBeaconBlockEntity touristBeaconBlockEntity) {
-            if (touristBeaconBlockEntity.tryDepositItem(new ItemStack(Items.EMERALD))) {
-                touristBeaconBlockEntity.rateVisit(VisitResult.GOOD);
+        if (beaconTarget != null && serverLevel.getBlockEntity(beaconTarget) instanceof TouristBeaconBlockEntity beaconBlockEntity) {
+            if (!beaconBlockEntity.isOpenForBusiness()) {
+                beaconBlockEntity.rateVisit(VisitResult.CLOSED);
+                serverLevel.playSound(
+                        this,
+                        this.getX(),
+                        this.getY(),
+                        this.getZ(),
+                        SoundEvents.VILLAGER_NO,
+                        SoundSource.NEUTRAL,
+                        1.0f,
+                        1.0f
+                );
+                return;
+            }
+
+            if (beaconBlockEntity.tryDepositItem(new ItemStack(Items.EMERALD))) {
+                beaconBlockEntity.rateVisit(VisitResult.GOOD);
                 serverLevel.playSound(
                         this,
                         this.getX(),

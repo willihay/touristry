@@ -3,6 +3,7 @@ package org.bensam.touristry.tourism;
 public enum VisitResult {
     GOOD(1.0),
     GREAT(2.0),
+    FAILED_SPAWN(-1.0),
     LOST(-3.0),
     CLOSED(-4.0),
     HURT_EN_ROUTE(-6.0),

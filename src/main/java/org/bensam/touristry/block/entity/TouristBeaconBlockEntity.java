@@ -10,6 +10,8 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerData;
+import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BaseContainerBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -20,6 +22,7 @@ import org.bensam.touristry.ModComponents;
 import org.bensam.touristry.Touristry;
 import org.bensam.touristry.menu.TouristBeaconMenu;
 import org.bensam.touristry.tourism.TourismManager;
+import org.bensam.touristry.tourism.TouristBeaconExperience;
 import org.bensam.touristry.tourism.TouristBeaconStats;
 import org.bensam.touristry.tourism.VisitResult;
 import org.jspecify.annotations.NonNull;
@@ -28,17 +31,50 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
     private static final int INVENTORY_SIZE = 9;
     private NonNullList<ItemStack> paymentItems = NonNullList.withSize(INVENTORY_SIZE, ItemStack.EMPTY);
 
+    private boolean openForBusiness;
     private int successfulVisits;
     private int failedVisits;
+    private int failedSpawns;
     private double reputation;
 
     private static final double MIN_REPUTATION = -100.0d;
     private static final double MAX_REPUTATION = 100.0d;
 
+    public static final int DATA_REPUTATION = 0;
+    public static final int DATA_OPEN_FOR_BUSINESS = 1;
+    public static final int DATA_COUNT = 2;
+
+    protected final ContainerData data = new ContainerData() {
+        @Override
+        public int get(int i) {
+            return switch (i) {
+                case DATA_REPUTATION -> (int) Math.round(TouristBeaconBlockEntity.this.reputation * 100.0);
+                case DATA_OPEN_FOR_BUSINESS -> TouristBeaconBlockEntity.this.openForBusiness ? 1 : 0;
+                default -> throw new IndexOutOfBoundsException("Invalid container data index: " + i);
+            };
+        }
+
+        @Override
+        public void set(int i, int value) {
+            switch (i) {
+                case DATA_REPUTATION, DATA_OPEN_FOR_BUSINESS -> { /* ignore: synced display-only value */ }
+                default -> throw new IndexOutOfBoundsException("Invalid container data index: " + i);
+            }
+        }
+
+        @Override
+        public int getCount() {
+            return DATA_COUNT;
+        }
+    };
+
     public TouristBeaconBlockEntity(BlockPos blockPos, BlockState blockState) {
         super(ModBlockEntities.TOURIST_BEACON.get(), blockPos, blockState);
+        this.openForBusiness = false;
         this.successfulVisits = 0;
         this.failedVisits = 0;
+        this.failedSpawns = 0;
+        this.reputation = 0.0d;
     }
 
     @Override
@@ -48,8 +84,8 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
     }
 
     @Override
-    protected @NonNull AbstractContainerMenu createMenu(int i, Inventory inventory) {
-        return new TouristBeaconMenu(i, inventory, this);
+    protected @NonNull AbstractContainerMenu createMenu(int i, @NonNull Inventory inventory) {
+        return new TouristBeaconMenu(i, inventory, this, this.data, ContainerLevelAccess.create(this.level, this.getBlockPos()));
     }
 
     @Override
@@ -73,6 +109,10 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
     }
 
     public boolean tryDepositItem(ItemStack itemStack) {
+        if (!this.isOpenForBusiness()) {
+            return false;
+        }
+
         if (itemStack.isEmpty()) {
             return true;
         }
@@ -106,17 +146,44 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
         return false;
     }
 
+    public TouristBeaconExperience getBeaconExperience() {
+        return new TouristBeaconExperience(this.openForBusiness);
+    }
+
     public TouristBeaconStats getBeaconStats() {
-        return new TouristBeaconStats(this.successfulVisits, this.failedVisits, this.reputation);
+        return new TouristBeaconStats(this.successfulVisits, this.failedVisits, this.failedSpawns, this.reputation);
+    }
+
+    public boolean isOpenForBusiness() {
+        return this.openForBusiness;
+    }
+
+    public void setOpenForBusiness(boolean openForBusiness) {
+        this.openForBusiness = openForBusiness;
+        this.setChanged();
+    }
+
+    public void resetReputation() {
+        this.reputation = 0.0d;
+    }
+
+    public void resetAllStats() {
+        this.successfulVisits = 0;
+        this.failedVisits = 0;
+        this.failedSpawns = 0;
+        this.reputation = 0.0d;
     }
 
     public void rateVisit(VisitResult result) {
         this.reputation = applyRating(this.reputation, result);
 
-        switch (result) {
-            case GOOD, GREAT -> this.successfulVisits++;
-            case LOST, CLOSED, HURT_EN_ROUTE, HURT_ON_PREMISES, KILLED_EN_ROUTE, KILLED_ON_PREMISES -> this.failedVisits++;
-        }
+        // Use a Runnable to make compiler catch forgotten updates when new VisitResult enums are added.
+        Runnable update = switch (result) {
+            case GOOD, GREAT -> () -> this.successfulVisits++;
+            case LOST, CLOSED, HURT_EN_ROUTE, HURT_ON_PREMISES, KILLED_EN_ROUTE, KILLED_ON_PREMISES -> () -> this.failedVisits++;
+            case FAILED_SPAWN -> () -> this.failedSpawns++;
+        };
+        update.run();
 
         this.setChanged();
     }
@@ -124,14 +191,14 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
     private double applyRating(double reputation, VisitResult result) {
         double positiveNormalized = Math.max(0.0, reputation) / MAX_REPUTATION;
         double negativeNormalized = Math.max(0.0, -reputation) / MAX_REPUTATION;
-        double gain = 0;
+        double change = switch (result) {
+            case GOOD, GREAT ->
+                    result.baseReputationDelta() * (1.0 - positiveNormalized) * (1.0 + 0.5 * negativeNormalized);
+            case FAILED_SPAWN, LOST, CLOSED, HURT_EN_ROUTE, HURT_ON_PREMISES, KILLED_EN_ROUTE, KILLED_ON_PREMISES ->
+                    result.baseReputationDelta() * (0.75 + 0.5 * positiveNormalized);
+        };
 
-        switch (result) {
-            case GOOD, GREAT -> gain = result.baseReputationDelta() * (1.0 - positiveNormalized) * (1.0 + 0.5 * negativeNormalized);
-            case LOST, CLOSED, HURT_EN_ROUTE, HURT_ON_PREMISES, KILLED_EN_ROUTE, KILLED_ON_PREMISES -> gain = result.baseReputationDelta() * (0.75 + 0.5 * positiveNormalized);
-        }
-
-        return Mth.clamp(reputation + gain, MIN_REPUTATION, MAX_REPUTATION);
+        return Mth.clamp(reputation + change, MIN_REPUTATION, MAX_REPUTATION);
     }
 
     @Override
@@ -162,17 +229,21 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
         super.loadAdditional(valueInput);
         this.paymentItems = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
         ContainerHelper.loadAllItems(valueInput, this.paymentItems);
-        valueInput.getIntOr("SuccessfulVisits", 0);
-        valueInput.getIntOr("FailedVisits", 0);
-        valueInput.getDoubleOr("Reputation", 0d);
+        this.openForBusiness = valueInput.getBooleanOr("OpenForBusiness", false);
+        this.successfulVisits = valueInput.getIntOr("SuccessfulVisits", 0);
+        this.failedVisits = valueInput.getIntOr("FailedVisits", 0);
+        this.failedSpawns = valueInput.getIntOr("FailedSpawns", 0);
+        this.reputation = valueInput.getDoubleOr("Reputation", 0d);
     }
 
     @Override
     protected void saveAdditional(@NonNull ValueOutput valueOutput) {
         super.saveAdditional(valueOutput);
         ContainerHelper.saveAllItems(valueOutput, this.paymentItems);
+        valueOutput.putBoolean("OpenForBusiness", this.openForBusiness);
         valueOutput.putInt("SuccessfulVisits", this.successfulVisits);
         valueOutput.putInt("FailedVisits", this.failedVisits);
+        valueOutput.putInt("FailedSpawns", this.failedSpawns);
         valueOutput.putDouble("Reputation", this.reputation);
     }
 
@@ -181,12 +252,19 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
         super.applyImplicitComponents(dataComponentGetter);
 
         // Restore additional components when BlockItem is placed as a Block/Block Entity.
+        TouristBeaconExperience experience = dataComponentGetter.getOrDefault(
+                ModComponents.TOURIST_BEACON_EXPERIENCE,
+                TouristBeaconExperience.EMPTY
+        );
+        this.openForBusiness = experience.beaconOpenForBusiness();
+
         TouristBeaconStats stats = dataComponentGetter.getOrDefault(
                 ModComponents.TOURIST_BEACON_STATS,
                 TouristBeaconStats.EMPTY
         );
         this.successfulVisits = stats.successfulVisits();
         this.failedVisits = stats.failedVisits();
+        this.failedSpawns = stats.failedSpawns();
         this.reputation = stats.reputation();
     }
 
@@ -195,11 +273,8 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
         super.collectImplicitComponents(builder);
 
         // Collect additional components to save in components container in BlockItem when block breaks.
-        builder.set(ModComponents.TOURIST_BEACON_STATS, new TouristBeaconStats(
-                this.successfulVisits,
-                this.failedVisits,
-                this.reputation
-        ));
+        builder.set(ModComponents.TOURIST_BEACON_EXPERIENCE, this.getBeaconExperience());
+        builder.set(ModComponents.TOURIST_BEACON_STATS, this.getBeaconStats());
     }
 
     @Override
@@ -207,8 +282,10 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
         super.removeComponentsFromTag(valueOutput);
 
         // Remove raw tag entries for data that is carried by custom components in the block item form.
+        valueOutput.discard("OpenForBusiness");
         valueOutput.discard("SuccessfulVisits");
         valueOutput.discard("FailedVisits");
+        valueOutput.discard("FailedSpawns");
         valueOutput.discard("Reputation");
     }
 

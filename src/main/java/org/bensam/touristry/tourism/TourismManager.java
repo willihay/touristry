@@ -32,6 +32,7 @@ public class TourismManager {
     private static final int LATEST_SPAWN_TIME_EXCLUSIVE = 9001; // 3:00 PM
     private static final int MIDNIGHT_DESPAWN_TIME = 18000; // 12:00 AM
     private static final double SPAWN_DISTANCE_FROM_BEACON = 50.0D;
+    private static final int SPAWN_ATTEMPTS_PER_BEACON = 8;
 
     private static @Nullable TourismSavedData tourismSavedData;
 
@@ -124,11 +125,11 @@ public class TourismManager {
         TouristBeaconBlockEntity closest = null;
         double closestDistanceSq = Double.MAX_VALUE;
 
-        for (TouristBeaconBlockEntity beacon : loadedTouristBeacons.values()) {
-            double distanceSq = pos.distSqr(beacon.getBlockPos());
+        for (TouristBeaconBlockEntity beaconBlockEntity : loadedTouristBeacons.values()) {
+            double distanceSq = pos.distSqr(beaconBlockEntity.getBlockPos());
             if (distanceSq < closestDistanceSq) {
                 closestDistanceSq = distanceSq;
-                closest = beacon;
+                closest = beaconBlockEntity;
             }
         }
 
@@ -142,15 +143,15 @@ public class TourismManager {
 
     private static void pruneInvalidTouristBeacons(ServerLevel overworld) {
         loadedTouristBeacons.entrySet().removeIf(entry -> {
-            TouristBeaconBlockEntity touristBeaconBlockEntity = entry.getValue();
-            return touristBeaconBlockEntity.isRemoved()
-                    || touristBeaconBlockEntity.getLevel() != overworld
-                    || overworld.getBlockEntity(entry.getKey()) != touristBeaconBlockEntity;
+            TouristBeaconBlockEntity beaconBlockEntity = entry.getValue();
+            return beaconBlockEntity.isRemoved()
+                    || beaconBlockEntity.getLevel() != overworld
+                    || overworld.getBlockEntity(entry.getKey()) != beaconBlockEntity;
         });
     }
 
-    public static void registerTouristBeacon(TouristBeaconBlockEntity touristBeaconBlockEntity) {
-        if (!(touristBeaconBlockEntity.getLevel() instanceof ServerLevel serverLevel)) {
+    public static void registerTouristBeacon(TouristBeaconBlockEntity beaconBlockEntity) {
+        if (!(beaconBlockEntity.getLevel() instanceof ServerLevel serverLevel)) {
             return;
         }
 
@@ -158,7 +159,7 @@ public class TourismManager {
             return;
         }
 
-        loadedTouristBeacons.put(touristBeaconBlockEntity.getBlockPos(), touristBeaconBlockEntity);
+        loadedTouristBeacons.put(beaconBlockEntity.getBlockPos(), beaconBlockEntity);
     }
 
     public static void unregisterTouristBeacon(TouristBeaconBlockEntity touristBeaconBlockEntity) {
@@ -309,7 +310,7 @@ public class TourismManager {
             return;
         }
 
-        for (TouristBeaconBlockEntity touristBeaconBlockEntity : getLoadedTouristBeacons(world)) {
+        for (TouristBeaconBlockEntity beaconBlockEntity : getLoadedTouristBeacons(world)) {
             int effectiveStartTime = Math.max(currentTickTime, EARLIEST_SPAWN_TIME);
             int windowLength = LATEST_SPAWN_TIME_EXCLUSIVE - EARLIEST_SPAWN_TIME;
             int remainingWindow = Math.max(0, LATEST_SPAWN_TIME_EXCLUSIVE - effectiveStartTime);
@@ -317,7 +318,7 @@ public class TourismManager {
             double remainingFraction = (double) remainingWindow / windowLength;
             int spawnCount = Math.max(1, (int) Math.ceil(SPAWNS_PER_BEACON_PER_DAY * remainingFraction));
 
-            BlockPos beaconPos = touristBeaconBlockEntity.getBlockPos().immutable();
+            BlockPos beaconPos = beaconBlockEntity.getBlockPos().immutable();
             Set<Integer> spawnTimes = new LinkedHashSet<>(spawnCount);
 
             while (spawnTimes.size() < spawnCount) {
@@ -328,7 +329,7 @@ public class TourismManager {
                 pendingSpawns.add(new ScheduledTouristSpawn(spawnTime, beaconPos));
                 Touristry.LOGGER.info(
                         "[TourismManager] Added pending spawn for {} at {} @ time {} ticks ({})",
-                        touristBeaconBlockEntity.getPlainTextName(),
+                        beaconBlockEntity.getPlainTextName(),
                         beaconPos,
                         spawnTime,
                         getFriendlyTimeOfDay(spawnTime)
@@ -341,8 +342,8 @@ public class TourismManager {
     }
 
     private static void spawnTouristOnSchedule(ServerLevel world, ScheduledTouristSpawn scheduledTouristSpawn) {
-        TouristBeaconBlockEntity touristBeaconBlockEntity = loadedTouristBeacons.get(scheduledTouristSpawn.beaconPos());
-        if (touristBeaconBlockEntity == null) {
+        TouristBeaconBlockEntity beaconBlockEntity = loadedTouristBeacons.get(scheduledTouristSpawn.beaconPos());
+        if (beaconBlockEntity == null) {
             return;
         }
 
@@ -353,9 +354,10 @@ public class TourismManager {
 
         BlockPos spawnPoint = getSpawnPoint(world, scheduledTouristSpawn.beaconPos(), tourist);
         if (spawnPoint == null) {
+            beaconBlockEntity.rateVisit(VisitResult.FAILED_SPAWN);
             Touristry.LOGGER.warn(
                     "[TourismManager] No safe spawn point found for {} at {} for scheduled time {} ticks ({})",
-                    touristBeaconBlockEntity.getPlainTextName(),
+                    beaconBlockEntity.getPlainTextName(),
                     scheduledTouristSpawn.beaconPos(),
                     scheduledTouristSpawn.timeOfDay(),
                     getFriendlyTimeOfDay(scheduledTouristSpawn.timeOfDay())
@@ -366,7 +368,7 @@ public class TourismManager {
         Touristry.LOGGER.info(
                 "[TourismManager] Spawning tourist at {} for {} at {} for scheduled time {} ticks ({})",
                 spawnPoint,
-                touristBeaconBlockEntity.getPlainTextName(),
+                beaconBlockEntity.getPlainTextName(),
                 scheduledTouristSpawn.beaconPos(),
                 scheduledTouristSpawn.timeOfDay(),
                 getFriendlyTimeOfDay(scheduledTouristSpawn.timeOfDay())
@@ -378,18 +380,18 @@ public class TourismManager {
         world.addFreshEntity(tourist);
     }
 
-    public static boolean trySpawnTouristForBeacon(ServerLevel world, @Nullable BlockPos requestedSpawnPoint, @NonNull TouristBeaconBlockEntity touristBeaconBlockEntity) {
+    public static boolean trySpawnTouristForBeacon(ServerLevel world, @Nullable BlockPos requestedSpawnPoint, @NonNull TouristBeaconBlockEntity beaconBlockEntity) {
         TouristEntity tourist = ModEntities.TOURIST.get().create(world, EntitySpawnReason.COMMAND);
         if (tourist == null) {
             return false;
         }
 
-        BlockPos spawnPoint = (requestedSpawnPoint != null) ? requestedSpawnPoint : getSpawnPoint(world, touristBeaconBlockEntity.getBlockPos(), tourist);
+        BlockPos spawnPoint = (requestedSpawnPoint != null) ? requestedSpawnPoint : getSpawnPoint(world, beaconBlockEntity.getBlockPos(), tourist);
         if (spawnPoint == null) {
             Touristry.LOGGER.warn(
                     "[TourismManager] No safe spawn point found for {} at {}",
-                    touristBeaconBlockEntity.getPlainTextName(),
-                    touristBeaconBlockEntity.getBlockPos()
+                    beaconBlockEntity.getPlainTextName(),
+                    beaconBlockEntity.getBlockPos()
             );
             return false;
         }
@@ -397,12 +399,12 @@ public class TourismManager {
         Touristry.LOGGER.info(
                 "[TourismManager] Spawning tourist at {} for {} at {} by command",
                 spawnPoint,
-                touristBeaconBlockEntity.getPlainTextName(),
-                touristBeaconBlockEntity.getBlockPos()
+                beaconBlockEntity.getPlainTextName(),
+                beaconBlockEntity.getBlockPos()
         );
 
         tourist.snapTo(spawnPoint, world.random.nextFloat() * 360.0F, 0.0F);
-        tourist.setBeaconTarget(touristBeaconBlockEntity.getBlockPos());
+        tourist.setBeaconTarget(beaconBlockEntity.getBlockPos());
         tourist.finalizeSpawn(world, world.getCurrentDifficultyAt(tourist.blockPosition()), EntitySpawnReason.COMMAND, null);
         world.addFreshEntity(tourist);
         return true;
@@ -411,7 +413,7 @@ public class TourismManager {
     private static @Nullable BlockPos getSpawnPoint(ServerLevel world, BlockPos beaconPos, Entity touristEntity) {
         RandomSource random = world.getRandom();
 
-        for (int attempt = 0; attempt < 8; attempt++) {
+        for (int attempt = 0; attempt < SPAWN_ATTEMPTS_PER_BEACON; attempt++) {
             double angle = random.nextDouble() * (Math.PI * 2.0D);
             int offsetX = (int)Math.round(Math.cos(angle) * SPAWN_DISTANCE_FROM_BEACON);
             int offsetZ = (int)Math.round(Math.sin(angle) * SPAWN_DISTANCE_FROM_BEACON);

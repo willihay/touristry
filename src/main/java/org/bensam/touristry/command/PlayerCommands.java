@@ -11,6 +11,7 @@ import org.bensam.touristry.tourism.TourismManager;
 
 import java.util.List;
 
+@SuppressWarnings("SameReturnValue")
 public final class PlayerCommands {
     private PlayerCommands() {}
 
@@ -25,8 +26,8 @@ public final class PlayerCommands {
         root.then(Commands.literal("list")
                 .then(Commands.literal("beacons")
                         .executes(ctx -> listBeacons(ctx.getSource())))
-                .then(Commands.literal("spawnSchedule")
-                        .executes(ctx -> listSpawnSchedule(ctx.getSource()))));
+                .then(Commands.literal("touristSchedule")
+                        .executes(ctx -> listTouristSchedule(ctx.getSource()))));
 
     }
 
@@ -44,7 +45,7 @@ public final class PlayerCommands {
         } else {
             message.append(Component.literal("unknown beacon"));
         }
-        message.append(Component.literal(" @ " + nextSpawn.beaconPos()));
+        message.append(Component.literal(" @ " + nextSpawn.beaconPos().toShortString()));
         source.sendSuccess(() -> message, false);
         return 1;
     }
@@ -67,20 +68,20 @@ public final class PlayerCommands {
         for (TouristBeaconBlockEntity beaconBlockEntity : loadedBeacons) {
             Component message = Component.literal(" - ")
                     .append(beaconBlockEntity.getName().copy())
-                    .append(Component.literal(" @ " + beaconBlockEntity.getBlockPos()));
+                    .append(Component.literal(" @ " + beaconBlockEntity.getBlockPos().toShortString()));
             source.sendSuccess(() -> message, false);
         }
         return 1;
     }
 
-    private static int listSpawnSchedule(CommandSourceStack source) {
+    private static int listTouristSchedule(CommandSourceStack source) {
         List<TourismManager.ScheduledTouristSpawn> pendingSpawns = TourismManager.getPendingSpawns();
         if (pendingSpawns.isEmpty()) {
-            source.sendSuccess(() -> Component.literal("No pending tourist spawns for today"), false);
+            source.sendSuccess(() -> Component.literal("No tourists scheduled for today"), false);
             return 1;
         }
 
-        source.sendSuccess(() -> Component.literal("Pending tourist spawns:"), false);
+        source.sendSuccess(() -> Component.literal("Remaining tourist arrivals scheduled for today:"), false);
 
         for (TourismManager.ScheduledTouristSpawn spawn : pendingSpawns) {
             MutableComponent message = Component.literal(" - " + TourismManager.getFriendlyTimeOfDay(spawn.timeOfDay()) + " for ");
@@ -89,7 +90,7 @@ public final class PlayerCommands {
             } else {
                 message.append(Component.literal("unknown beacon"));
             }
-            message.append(Component.literal(" @ " + spawn.beaconPos()));
+            message.append(Component.literal(" @ " + spawn.beaconPos().toShortString()));
             source.sendSuccess(() -> message, false);
         }
         return 1;
