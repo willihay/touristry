@@ -6,6 +6,8 @@
 
   "block.touristry.tourist_beacon": "Tourist Beacon",
 
+  "entity.touristry.tourist": "Tourist",
+
   "itemGroup.touristry": "Touristry",
 
   "screen.touristry.tourist_beacon.reputation": "Reputation: %1$s",

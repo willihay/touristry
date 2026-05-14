@@ -1,13 +1,15 @@
 package org.bensam.touristry.entity;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.entity.AgeableMob;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.Mob;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
@@ -29,7 +31,9 @@ import org.jspecify.annotations.Nullable;
 
 public class TouristEntity extends AbstractVillager {
     private BlockPos beaconTarget;
-    private boolean visitCompleted;
+    private boolean atBeacon;
+    private boolean reportedHurtEnRoute;
+    private boolean reportedHurtOnPremises;
     private boolean registeredWithTourismManager;
 
     public TouristEntity(Level level) {
@@ -38,20 +42,104 @@ public class TouristEntity extends AbstractVillager {
 
     public TouristEntity(EntityType<? extends TouristEntity> entityType, Level level) {
         super(entityType, level);
-        this.visitCompleted = false;
+        this.atBeacon = false;
+        this.reportedHurtEnRoute = false;
+        this.reportedHurtOnPremises = false;
     }
 
     public static AttributeSupplier.Builder createTouristAttributes() {
         return Mob.createMobAttributes()
-                .add(Attributes.MOVEMENT_SPEED, 0.35)
+                .add(Attributes.MOVEMENT_SPEED, 0.3)
                 .add(Attributes.MAX_HEALTH, 20.0)
                 .add(Attributes.FOLLOW_RANGE, 32.0);
     }
 
     //region Class Overrides
     @Override
+    public void die(DamageSource damageSource) {
+        if (this.level() instanceof ServerLevel serverLevel) {
+            Component deathMessage = damageSource.getLocalizedDeathMessage(this);
+            TouristBeaconBlockEntity beaconBlockEntity = TourismManager.getBeaconBlockEntity(serverLevel, this.beaconTarget);
+            MutableComponent playerMessage = deathMessage.copy();
+
+            if (beaconBlockEntity != null) {
+                String beaconName = beaconBlockEntity.getPlainTextName();
+                if (this.atBeacon) {
+                    playerMessage.append(Component.literal(" while at beacon "))
+                            .append(Component.literal(beaconName));
+                    this.sendMessageToNearbyPlayers(serverLevel, playerMessage);
+
+                    beaconBlockEntity.rateVisit(VisitResult.KILLED_ON_PREMISES);
+                } else {
+                    playerMessage.append(Component.literal(" while travelling to beacon "))
+                            .append(Component.literal(beaconName));
+                    this.sendMessageToNearbyPlayers(serverLevel, playerMessage);
+
+                    beaconBlockEntity.rateVisit(VisitResult.KILLED_EN_ROUTE);
+                }
+            } else {
+                this.sendMessageToNearbyPlayers(serverLevel, playerMessage);
+                Touristry.LOGGER.info(deathMessage.getString());
+            }
+        }
+
+        super.die(damageSource);
+    }
+
+    @Override
     public @Nullable AgeableMob getBreedOffspring(@NonNull ServerLevel serverLevel, @NonNull AgeableMob ageableMob) {
         return null; // not applicable
+    }
+
+    @Override
+    protected SoundEvent getHurtSound(DamageSource damageSource) {
+        return SoundEvents.VILLAGER_HURT;
+    }
+
+    @Override
+    public boolean hurtServer(ServerLevel serverLevel, DamageSource damageSource, float f) {
+        TouristBeaconBlockEntity beaconBlockEntity = TourismManager.getBeaconBlockEntity(this.level(), this.beaconTarget);
+        if (this.atBeacon) {
+            if (!this.reportedHurtOnPremises) {
+                if (beaconBlockEntity != null) {
+                    // Send hurt message to nearby players and log it.
+                    String beaconName = beaconBlockEntity.getPlainTextName();
+                    MutableComponent playerMessage = getHurtMessage(damageSource);
+                    playerMessage.append(Component.literal(" while at beacon " + beaconName));
+                    this.sendMessageToNearbyPlayers(serverLevel, playerMessage);
+                    Touristry.LOGGER.info(playerMessage.getString());
+
+                    beaconBlockEntity.rateVisit(VisitResult.HURT_ON_PREMISES);
+                }
+                this.reportedHurtOnPremises = true;
+            }
+        } else {
+            if (!this.reportedHurtEnRoute) {
+                if (beaconBlockEntity != null) {
+                    // Send hurt message to nearby players and log it.
+                    String beaconName = beaconBlockEntity.getPlainTextName();
+                    MutableComponent playerMessage = getHurtMessage(damageSource);
+                    playerMessage.append(Component.literal(" while travelling to beacon " + beaconName));
+                    this.sendMessageToNearbyPlayers(serverLevel, playerMessage);
+                    Touristry.LOGGER.info(playerMessage.getString());
+
+                    beaconBlockEntity.rateVisit(VisitResult.HURT_EN_ROUTE);
+                }
+                this.reportedHurtEnRoute = true;
+            }
+        }
+
+        return super.hurtServer(serverLevel, damageSource, f);
+    }
+
+    public MutableComponent getHurtMessage(DamageSource damageSource) {
+        MutableComponent hurtMessage = this.getDisplayName().copy();
+        if (damageSource.getEntity() == null && damageSource.getDirectEntity() == null) {
+            return hurtMessage.append(Component.literal(" hurt"));
+        } else {
+            Component hurtBy = damageSource.getEntity() == null ? damageSource.getDirectEntity().getDisplayName() : damageSource.getEntity().getDisplayName();
+            return hurtMessage.append(Component.literal(" hurt by ")).append(hurtBy);
+        }
     }
 
     @Override
@@ -89,7 +177,9 @@ public class TouristEntity extends AbstractVillager {
         if (beaconTarget != null) {
             valueOutput.store("BeaconTarget", BlockPos.CODEC, this.beaconTarget);
         }
-        valueOutput.putBoolean("VisitCompleted", visitCompleted);
+        valueOutput.putBoolean("VisitCompleted", this.atBeacon);
+        valueOutput.putBoolean("ReportedHurtEnRoute", this.reportedHurtEnRoute);
+        valueOutput.putBoolean("ReportedHurtOnPremises", this.reportedHurtOnPremises);
     }
 
     @Override
@@ -97,7 +187,9 @@ public class TouristEntity extends AbstractVillager {
         super.readAdditionalSaveData(valueInput);
 
         this.beaconTarget = valueInput.read("BeaconTarget", BlockPos.CODEC).orElse(null);
-        this.visitCompleted = valueInput.getBooleanOr("VisitCompleted", false);
+        this.atBeacon = valueInput.getBooleanOr("VisitCompleted", false);
+        this.reportedHurtEnRoute = valueInput.getBooleanOr("ReportedHurtEnRoute", false);
+        this.reportedHurtOnPremises = valueInput.getBooleanOr("ReportedHurtOnPremises", false);
     }
     //endregion
 
@@ -108,7 +200,6 @@ public class TouristEntity extends AbstractVillager {
         if (!this.level().isClientSide()) {
             if (TourismManager.shouldForceDespawn(this)) {
                 TourismManager.unregisterTourist(this);
-                Touristry.LOGGER.info("[Tourist] Despawning at {} per instruction from TourismManager", this.blockPosition());
                 this.discard();
                 return;
             }
@@ -129,11 +220,11 @@ public class TouristEntity extends AbstractVillager {
     }
 
     public void onArrivedAtBeacon() {
-        if (this.visitCompleted) {
+        if (this.atBeacon) {
             return;
         }
 
-        this.visitCompleted = true;
+        this.atBeacon = true;
         this.completeVisit();
     }
 
@@ -204,6 +295,46 @@ public class TouristEntity extends AbstractVillager {
     }
 
     public boolean hasCompletedVisit() {
-        return this.visitCompleted;
+        return this.atBeacon;
+    }
+
+    public void onNavigationFailed() {
+        if (this.level() instanceof ServerLevel serverLevel) {
+            // Send navigation failure message to nearby players and log it.
+            TouristBeaconBlockEntity beaconBlockEntity = TourismManager.getBeaconBlockEntity(serverLevel, this.beaconTarget);
+            String beaconName = beaconBlockEntity != null ? beaconBlockEntity.getPlainTextName() : "unknown destination";
+            MutableComponent playerMessage = this.getDisplayName().copy()
+                    .append(Component.literal(" got lost travelling to " + beaconName));
+            this.sendMessageToNearbyPlayers(serverLevel, playerMessage);
+            Touristry.LOGGER.info(playerMessage.getString());
+
+            if (beaconBlockEntity != null) {
+                beaconBlockEntity.rateVisit(VisitResult.LOST);
+            }
+
+            serverLevel.playSound(
+                    this,
+                    this.getX(),
+                    this.getY(),
+                    this.getZ(),
+                    SoundEvents.VILLAGER_NO,
+                    SoundSource.NEUTRAL,
+                    1.0f,
+                    1.0f
+            );
+
+            TourismManager.unregisterTourist(this);
+            this.discard();
+        }
+    }
+
+    protected void sendMessageToNearbyPlayers(ServerLevel serverLevel, Component message) {
+        double radiusSq = 70.0 * 70.0;
+
+        for (ServerPlayer player : serverLevel.players()) {
+            if (player.distanceToSqr(this) <= radiusSq) {
+                player.sendSystemMessage(message);
+            }
+        }
     }
 }

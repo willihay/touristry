@@ -91,7 +91,10 @@ public class TouristBeaconMenu extends AbstractContainerMenu {
             return false;
         }
 
-        this.toggleOpenForBusiness();
+        if (!player.level().isClientSide()) {
+            this.toggleOpenForBusiness();
+        }
+
         return true;
     }
 

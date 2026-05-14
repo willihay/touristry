@@ -1,10 +1,12 @@
 package org.bensam.touristry.tourism;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import org.bensam.touristry.ModEntities;
@@ -31,7 +33,9 @@ public class TourismManager {
     private static final int EARLIEST_SPAWN_TIME = 2000; // 8:00 AM
     private static final int LATEST_SPAWN_TIME_EXCLUSIVE = 9001; // 3:00 PM
     private static final int MIDNIGHT_DESPAWN_TIME = 18000; // 12:00 AM
-    private static final double SPAWN_DISTANCE_FROM_BEACON = 50.0D;
+    private static final double SPAWN_DISTANCE_FROM_BEACON_MIN = 35.0D;
+    private static final double SPAWN_DISTANCE_FROM_BEACON_MAX = 70.0D;
+    private static final double SPAWN_DISTANCE_RANGE_DELTA = SPAWN_DISTANCE_FROM_BEACON_MAX - SPAWN_DISTANCE_FROM_BEACON_MIN;
     private static final int SPAWN_ATTEMPTS_PER_BEACON = 8;
 
     private static @Nullable TourismSavedData tourismSavedData;
@@ -136,6 +140,13 @@ public class TourismManager {
         return closest;
     }
 
+    public static @Nullable TouristBeaconBlockEntity getBeaconBlockEntity(@NonNull Level level, @NonNull BlockPos pos) {
+        if (level.getBlockEntity(pos) instanceof TouristBeaconBlockEntity beaconBlockEntity) {
+            return beaconBlockEntity;
+        }
+        return null;
+    }
+
     public static List<TouristBeaconBlockEntity> getLoadedTouristBeacons(ServerLevel overworld) {
         pruneInvalidTouristBeacons(overworld);
         return List.copyOf(loadedTouristBeacons.values());
@@ -226,6 +237,7 @@ public class TourismManager {
         int tickHour = tickTimeOfDay / 1000;
 
         // (Informational only) Write hourly heartbeat to log.
+        // TODO: Remove (or change to LOGGER.debug()) before publishing
         if (dayCount > lastDayThreshold || tickHour > lastHourThreshold) {
             lastDayThreshold = dayCount;
             lastHourThreshold = tickHour;
@@ -377,6 +389,7 @@ public class TourismManager {
         tourist.snapTo(spawnPoint, world.random.nextFloat() * 360.0F, 0.0F);
         tourist.setBeaconTarget(scheduledTouristSpawn.beaconPos());
         tourist.finalizeSpawn(world, world.getCurrentDifficultyAt(tourist.blockPosition()), EntitySpawnReason.EVENT, null);
+        tourist.setCustomName(Component.literal("Ned Flanders"));
         world.addFreshEntity(tourist);
     }
 
@@ -406,17 +419,19 @@ public class TourismManager {
         tourist.snapTo(spawnPoint, world.random.nextFloat() * 360.0F, 0.0F);
         tourist.setBeaconTarget(beaconBlockEntity.getBlockPos());
         tourist.finalizeSpawn(world, world.getCurrentDifficultyAt(tourist.blockPosition()), EntitySpawnReason.COMMAND, null);
+        tourist.setCustomName(Component.literal("Cassian Andor"));
         world.addFreshEntity(tourist);
         return true;
     }
 
-    private static @Nullable BlockPos getSpawnPoint(ServerLevel world, BlockPos beaconPos, Entity touristEntity) {
+    public static @Nullable BlockPos getSpawnPoint(ServerLevel world, BlockPos beaconPos, Entity touristEntity) {
         RandomSource random = world.getRandom();
 
         for (int attempt = 0; attempt < SPAWN_ATTEMPTS_PER_BEACON; attempt++) {
+            double distance = SPAWN_DISTANCE_FROM_BEACON_MIN + (random.nextDouble() * SPAWN_DISTANCE_RANGE_DELTA);
             double angle = random.nextDouble() * (Math.PI * 2.0D);
-            int offsetX = (int)Math.round(Math.cos(angle) * SPAWN_DISTANCE_FROM_BEACON);
-            int offsetZ = (int)Math.round(Math.sin(angle) * SPAWN_DISTANCE_FROM_BEACON);
+            int offsetX = (int)Math.round(Math.cos(angle) * distance);
+            int offsetZ = (int)Math.round(Math.sin(angle) * distance);
 
             if (offsetX == 0 && offsetZ == 0) {
                 continue;

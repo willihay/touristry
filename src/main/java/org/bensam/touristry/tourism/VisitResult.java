@@ -4,12 +4,12 @@ public enum VisitResult {
     GOOD(1.0),
     GREAT(2.0),
     FAILED_SPAWN(-1.0),
-    LOST(-3.0),
-    CLOSED(-4.0),
-    HURT_EN_ROUTE(-6.0),
-    HURT_ON_PREMISES(-8.0),
-    KILLED_EN_ROUTE(-9.0),
-    KILLED_ON_PREMISES(-15.0);
+    LOST(-1.0),
+    CLOSED(-2.0),
+    HURT_EN_ROUTE(-3.0),
+    HURT_ON_PREMISES(-6.0),
+    KILLED_EN_ROUTE(-3.0),
+    KILLED_ON_PREMISES(-9.0);
 
     private final double baseReputationDelta;
 

@@ -35,6 +35,8 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
     private int successfulVisits;
     private int failedVisits;
     private int failedSpawns;
+    private int touristsHurt;
+    private int touristsKilled;
     private double reputation;
 
     private static final double MIN_REPUTATION = -100.0d;
@@ -74,6 +76,8 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
         this.successfulVisits = 0;
         this.failedVisits = 0;
         this.failedSpawns = 0;
+        this.touristsHurt = 0;
+        this.touristsKilled = 0;
         this.reputation = 0.0d;
     }
 
@@ -151,7 +155,7 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
     }
 
     public TouristBeaconStats getBeaconStats() {
-        return new TouristBeaconStats(this.successfulVisits, this.failedVisits, this.failedSpawns, this.reputation);
+        return new TouristBeaconStats(this.successfulVisits, this.failedVisits, this.failedSpawns, this.touristsHurt, this.touristsKilled, this.reputation);
     }
 
     public boolean isOpenForBusiness() {
@@ -165,13 +169,17 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
 
     public void resetReputation() {
         this.reputation = 0.0d;
+        this.setChanged();
     }
 
     public void resetAllStats() {
         this.successfulVisits = 0;
         this.failedVisits = 0;
         this.failedSpawns = 0;
+        this.touristsHurt = 0;
+        this.touristsKilled = 0;
         this.reputation = 0.0d;
+        this.setChanged();
     }
 
     public void rateVisit(VisitResult result) {
@@ -180,7 +188,9 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
         // Use a Runnable to make compiler catch forgotten updates when new VisitResult enums are added.
         Runnable update = switch (result) {
             case GOOD, GREAT -> () -> this.successfulVisits++;
-            case LOST, CLOSED, HURT_EN_ROUTE, HURT_ON_PREMISES, KILLED_EN_ROUTE, KILLED_ON_PREMISES -> () -> this.failedVisits++;
+            case LOST, CLOSED -> () -> this.failedVisits++;
+            case HURT_EN_ROUTE, HURT_ON_PREMISES -> () -> this.touristsHurt++;
+            case KILLED_EN_ROUTE, KILLED_ON_PREMISES -> () -> { this.failedVisits++; this.touristsKilled++; };
             case FAILED_SPAWN -> () -> this.failedSpawns++;
         };
         update.run();
@@ -233,6 +243,8 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
         this.successfulVisits = valueInput.getIntOr("SuccessfulVisits", 0);
         this.failedVisits = valueInput.getIntOr("FailedVisits", 0);
         this.failedSpawns = valueInput.getIntOr("FailedSpawns", 0);
+        this.touristsHurt = valueInput.getIntOr("TouristsHurt", 0);
+        this.touristsKilled = valueInput.getIntOr("TouristsKilled", 0);
         this.reputation = valueInput.getDoubleOr("Reputation", 0d);
     }
 
@@ -244,6 +256,8 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
         valueOutput.putInt("SuccessfulVisits", this.successfulVisits);
         valueOutput.putInt("FailedVisits", this.failedVisits);
         valueOutput.putInt("FailedSpawns", this.failedSpawns);
+        valueOutput.putInt("TouristsHurt", this.touristsHurt);
+        valueOutput.putInt("TouristsKilled", this.touristsKilled);
         valueOutput.putDouble("Reputation", this.reputation);
     }
 
@@ -265,6 +279,8 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
         this.successfulVisits = stats.successfulVisits();
         this.failedVisits = stats.failedVisits();
         this.failedSpawns = stats.failedSpawns();
+        this.touristsHurt = stats.touristsHurt();
+        this.touristsKilled = stats.touristsKilled();
         this.reputation = stats.reputation();
     }
 
@@ -286,6 +302,8 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
         valueOutput.discard("SuccessfulVisits");
         valueOutput.discard("FailedVisits");
         valueOutput.discard("FailedSpawns");
+        valueOutput.discard("TouristsHurt");
+        valueOutput.discard("TouristsKilled");
         valueOutput.discard("Reputation");
     }
 

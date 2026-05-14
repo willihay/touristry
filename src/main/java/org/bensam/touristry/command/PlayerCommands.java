@@ -1,27 +1,38 @@
 package org.bensam.touristry.command;
 
+import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
 import org.bensam.touristry.tourism.TourismManager;
+import org.bensam.touristry.tourism.TouristBeaconExperience;
+import org.bensam.touristry.tourism.TouristBeaconStats;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @SuppressWarnings("SameReturnValue")
 public final class PlayerCommands {
     private PlayerCommands() {}
 
     public static void register(LiteralArgumentBuilder<CommandSourceStack> root) {
-        root.then(Commands.literal("next")
-                .executes(ctx -> showNextSpawn(ctx.getSource())));
-
-        root.then(Commands.literal("now")
-                .executes(ctx -> showTimeAndDay(ctx.getSource()))
-        );
+        root.then(Commands.literal("beacon")
+                .then(addBeaconActions(
+                        Commands.argument("beaconPos", BlockPosArgument.blockPos()),
+                        ctx -> TourCommand.requireBeacon(
+                                ctx.getSource(),
+                                BlockPosArgument.getLoadedBlockPos(ctx, "beaconPos"))))
+                .then(addBeaconActions(
+                        Commands.literal("nearest"),
+                        ctx -> TourCommand.requireNearestBeacon(ctx.getSource()))));
 
         root.then(Commands.literal("list")
                 .then(Commands.literal("beacons")
@@ -29,30 +40,75 @@ public final class PlayerCommands {
                 .then(Commands.literal("touristSchedule")
                         .executes(ctx -> listTouristSchedule(ctx.getSource()))));
 
+        root.then(Commands.literal("next")
+                .executes(ctx -> showNextSpawn(ctx.getSource())));
+
+        root.then(Commands.literal("now")
+                .executes(ctx -> showTimeAndDay(ctx.getSource()))
+        );
     }
 
-    private static int showNextSpawn(CommandSourceStack source) {
-        List<TourismManager.ScheduledTouristSpawn> pendingSpawns = TourismManager.getPendingSpawns();
-        if (pendingSpawns.isEmpty()) {
-            source.sendSuccess(() -> Component.literal("No pending tourist spawns"), false);
-            return 1;
+    private static <T extends ArgumentBuilder<CommandSourceStack, T>> T addBeaconActions(
+            T parent,
+            TourCommand.BeaconResolver resolver
+    ) {
+        return parent
+                .then(Commands.literal("info")
+                        .executes(ctx -> showInfo(
+                                ctx.getSource(),
+                                resolver.resolve(ctx))));
+    }
+
+    private static int showInfo(CommandSourceStack source, TouristBeaconBlockEntity beaconBlockEntity) {
+        if (beaconBlockEntity == null) {
+            return -1;
         }
 
-        TourismManager.ScheduledTouristSpawn nextSpawn = pendingSpawns.getFirst();
-        MutableComponent message = Component.literal("Next spawn at " + TourismManager.getFriendlyTimeOfDay(nextSpawn.timeOfDay()) + " for ");
-        if (source.getServer().overworld().getBlockEntity(nextSpawn.beaconPos()) instanceof TouristBeaconBlockEntity beaconBlockEntity) {
-            message.append(beaconBlockEntity.getName().copy());
-        } else {
-            message.append(Component.literal("unknown beacon"));
-        }
-        message.append(Component.literal(" @ " + nextSpawn.beaconPos().toShortString()));
+        // beacon name
+        Component message = beaconBlockEntity.getName().copy()
+                .append(Component.literal(" @ " + beaconBlockEntity.getBlockPos().toShortString() + " info:"));
         source.sendSuccess(() -> message, false);
-        return 1;
-    }
 
-    private static int showTimeAndDay(CommandSourceStack source) {
-        ServerLevel overworld = source.getServer().overworld();
-        source.sendSuccess(() -> Component.literal("Current time: " + TourismManager.getFriendlyTimeOfDay(overworld.getDayTime()) + " on day " + overworld.getDayCount()), false);
+        // business status
+        TouristBeaconExperience experience = beaconBlockEntity.getBeaconExperience();
+        source.sendSuccess(() -> Component.literal(" - status: " + (experience.beaconOpenForBusiness() ? "open for business" : "closed for business")), false);
+
+        // stats
+        TouristBeaconStats stats = beaconBlockEntity.getBeaconStats();
+        source.sendSuccess(() -> Component.literal(
+                " - reputation: " + String.format("%.2f", stats.reputation())
+                        + "; successful visits: " + stats.successfulVisits()
+                        + "; failed visits: " + stats.failedVisits()),
+                false);
+        source.sendSuccess(() -> Component.literal(
+                " - failed spawns: " + stats.failedSpawns()
+                        + "; tourists hurt: " + stats.touristsHurt()
+                        + "; tourists killed: " + stats.touristsKilled()),
+                false);
+
+        // inventory
+        MutableComponent inventoryMessage = Component.literal(" - inventory: ");
+        Map<Item, Integer> totals = new LinkedHashMap<>();
+        for (int i = 0; i < beaconBlockEntity.getContainerSize(); ++i) {
+            ItemStack itemStack = beaconBlockEntity.getItem(i);
+            if (!itemStack.isEmpty()) {
+                totals.merge(itemStack.getItem(), itemStack.getCount(), Integer::sum);
+            }
+        }
+        if (totals.isEmpty()) {
+            inventoryMessage.append(Component.literal("empty"));
+        } else {
+            boolean first = true;
+            for (Map.Entry<Item, Integer> entry : totals.entrySet()) {
+                if (!first) {
+                    inventoryMessage.append("; ");
+                }
+                inventoryMessage.append(entry.getKey().getName().copy());
+                inventoryMessage.append(": " + entry.getValue());
+                first = false;
+            }
+        }
+        source.sendSuccess(() -> inventoryMessage, false);
         return 1;
     }
 
@@ -93,6 +149,31 @@ public final class PlayerCommands {
             message.append(Component.literal(" @ " + spawn.beaconPos().toShortString()));
             source.sendSuccess(() -> message, false);
         }
+        return 1;
+    }
+
+    private static int showNextSpawn(CommandSourceStack source) {
+        List<TourismManager.ScheduledTouristSpawn> pendingSpawns = TourismManager.getPendingSpawns();
+        if (pendingSpawns.isEmpty()) {
+            source.sendSuccess(() -> Component.literal("No pending tourist spawns"), false);
+            return 1;
+        }
+
+        TourismManager.ScheduledTouristSpawn nextSpawn = pendingSpawns.getFirst();
+        MutableComponent message = Component.literal("Next spawn at " + TourismManager.getFriendlyTimeOfDay(nextSpawn.timeOfDay()) + " for ");
+        if (source.getServer().overworld().getBlockEntity(nextSpawn.beaconPos()) instanceof TouristBeaconBlockEntity beaconBlockEntity) {
+            message.append(beaconBlockEntity.getName().copy());
+        } else {
+            message.append(Component.literal("unknown beacon"));
+        }
+        message.append(Component.literal(" @ " + nextSpawn.beaconPos().toShortString()));
+        source.sendSuccess(() -> message, false);
+        return 1;
+    }
+
+    private static int showTimeAndDay(CommandSourceStack source) {
+        ServerLevel overworld = source.getServer().overworld();
+        source.sendSuccess(() -> Component.literal("Current time: " + TourismManager.getFriendlyTimeOfDay(overworld.getDayTime()) + " on day " + overworld.getDayCount()), false);
         return 1;
     }
 }
