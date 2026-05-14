@@ -10,6 +10,9 @@
 
   "itemGroup.touristry": "Touristry",
 
+  "message.touristry.tourist_beacon.open_for_business": "OPEN for business",
+  "message.touristry.tourist_beacon.closed_for_business": "CLOSED for business",
+
   "screen.touristry.tourist_beacon.reputation": "Reputation: %1$s",
   "screen.touristry.tourist_beacon.status": "Status:",
   "screen.touristry.tourist_beacon.open_for_business": "Open for business",

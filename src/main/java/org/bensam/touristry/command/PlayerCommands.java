@@ -10,6 +10,7 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import org.bensam.touristry.Touristry;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
 import org.bensam.touristry.tourism.TourismManager;
 import org.bensam.touristry.tourism.TouristBeaconExperience;
@@ -56,14 +57,14 @@ public final class PlayerCommands {
                 .then(Commands.literal("info")
                         .executes(ctx -> showInfo(
                                 ctx.getSource(),
+                                resolver.resolve(ctx))))
+                .then(Commands.literal("toggleStatus")
+                        .executes(ctx -> toggleBeaconStatus(
+                                ctx.getSource(),
                                 resolver.resolve(ctx))));
     }
 
     private static int showInfo(CommandSourceStack source, TouristBeaconBlockEntity beaconBlockEntity) {
-        if (beaconBlockEntity == null) {
-            return -1;
-        }
-
         // beacon name
         Component message = beaconBlockEntity.getName().copy()
                 .append(Component.literal(" @ " + beaconBlockEntity.getBlockPos().toShortString() + " info:"));
@@ -109,6 +110,17 @@ public final class PlayerCommands {
             }
         }
         source.sendSuccess(() -> inventoryMessage, false);
+        return 1;
+    }
+
+    private static int toggleBeaconStatus(CommandSourceStack source, TouristBeaconBlockEntity beaconBlockEntity) {
+        beaconBlockEntity.setOpenForBusiness(!beaconBlockEntity.isOpenForBusiness());
+
+        Component message = beaconBlockEntity.getName().copy()
+                .append(Component.literal(" @ " + beaconBlockEntity.getBlockPos().toShortString() + " is now "))
+                .append(Component.translatable("message." + Touristry.MOD_ID
+                        + (beaconBlockEntity.isOpenForBusiness() ? ".tourist_beacon.open_for_business" : ".tourist_beacon.closed_for_business")));
+        source.sendSuccess(() -> message,  false);
         return 1;
     }
 

@@ -60,10 +60,6 @@ public final class DebugCommands {
                 .then(Commands.literal("spawnTouristHere")
                         .executes(ctx -> spawnBeaconTouristHere(
                                 ctx.getSource(),
-                                resolver.resolve(ctx))))
-                .then(Commands.literal("toggleStatus")
-                        .executes(ctx -> toggleBeaconStatus(
-                                ctx.getSource(),
                                 resolver.resolve(ctx))));
     }
 
@@ -118,11 +114,6 @@ public final class DebugCommands {
             source.sendFailure(Component.literal("Unable to spawn tourist here"));
             return -1;
         }
-    }
-
-    private static int toggleBeaconStatus(CommandSourceStack source, TouristBeaconBlockEntity beaconBlockEntity) {
-        beaconBlockEntity.setOpenForBusiness(!beaconBlockEntity.isOpenForBusiness());
-        return 1;
     }
 
     private static int clearSpawnSchedule(CommandSourceStack source) {
