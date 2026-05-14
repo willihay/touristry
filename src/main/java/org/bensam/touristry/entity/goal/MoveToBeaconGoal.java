@@ -19,8 +19,6 @@ public class MoveToBeaconGoal extends Goal {
     private final double speedModifier;
     private int nextRepathTick;
     private int nextCheckProgressTick;
-    private int failedProgressChecksRemaining;
-    private double closestCheckedDistance;
 
     public MoveToBeaconGoal(TouristEntity tourist, double speedModifier) {
         this.tourist = tourist;
@@ -42,11 +40,8 @@ public class MoveToBeaconGoal extends Goal {
     public void start() {
         this.nextRepathTick = 0;
         this.nextCheckProgressTick = CHECK_PROGRESS_GOALTICKS;
-        this.failedProgressChecksRemaining = PROGRESS_CHECK_RETRIES;
-        this.closestCheckedDistance = Double.MAX_VALUE;
         BlockPos beaconTarget = this.tourist.getBeaconTarget();
         if (beaconTarget != null && !this.isAtBeacon(beaconTarget)) {
-            this.closestCheckedDistance = Math.sqrt(this.getDistanceToBeaconSqr(beaconTarget));
             this.moveToBeacon();
         } else {
             this.tourist.getNavigation().stop();
@@ -81,19 +76,24 @@ public class MoveToBeaconGoal extends Goal {
         }
 
         if (nextCheckProgressTick <= 0 && !this.isAtBeacon(beaconTarget)) {
+            double closestDistanceToBeacon = this.tourist.getClosestDistanceToBeacon();
             double distanceToTarget = Math.sqrt(getDistanceToBeaconSqr(beaconTarget));
-            if ((this.closestCheckedDistance - distanceToTarget) < 0.5) {
-                this.failedProgressChecksRemaining--;
-                if (this.failedProgressChecksRemaining <= 0) {
+            if ((closestDistanceToBeacon - distanceToTarget) < 0.5) {
+                int consecutiveFailedProgressChecks = this.tourist.getConsecutiveFailedProgressChecks();
+                consecutiveFailedProgressChecks++;
+                this.tourist.reportProgressTowardsBeaconTarget(closestDistanceToBeacon, consecutiveFailedProgressChecks);
+
+                if (consecutiveFailedProgressChecks > PROGRESS_CHECK_RETRIES) {
                     this.tourist.onNavigationFailed();
                 } else {
                     if (this.tourist.level() instanceof ServerLevel) {
-                        Touristry.LOGGER.info("[MoveToBeaconGoal] {} nav retries remaining: {}", this.tourist.getDisplayName().getString(), this.failedProgressChecksRemaining);
+                        Touristry.LOGGER.info("[MoveToBeaconGoal] {} failed {} consecutive nav progress checks",
+                                this.tourist.getDisplayName().getString(),
+                                consecutiveFailedProgressChecks);
                     }
                 }
             } else {
-                this.failedProgressChecksRemaining = PROGRESS_CHECK_RETRIES;
-                this.closestCheckedDistance = distanceToTarget;
+                this.tourist.reportProgressTowardsBeaconTarget(distanceToTarget, 0);
             }
             this.nextCheckProgressTick = CHECK_PROGRESS_GOALTICKS;
         }
@@ -110,7 +110,7 @@ public class MoveToBeaconGoal extends Goal {
             return;
         }
 
-        boolean isMoving = this.tourist.getNavigation().moveTo(
+        this.tourist.getNavigation().moveTo(
                 beaconTarget.getX() + 0.5,
                 beaconTarget.getY(),
                 beaconTarget.getZ() + 0.5,

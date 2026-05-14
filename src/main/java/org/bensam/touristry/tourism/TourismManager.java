@@ -389,6 +389,7 @@ public class TourismManager {
         tourist.snapTo(spawnPoint, world.random.nextFloat() * 360.0F, 0.0F);
         tourist.setBeaconTarget(scheduledTouristSpawn.beaconPos());
         tourist.finalizeSpawn(world, world.getCurrentDifficultyAt(tourist.blockPosition()), EntitySpawnReason.EVENT, null);
+        // TODO: Implement random tourist names (ensuring name isn't currently in use)
         tourist.setCustomName(Component.literal("Ned Flanders"));
         world.addFreshEntity(tourist);
     }
@@ -419,7 +420,7 @@ public class TourismManager {
         tourist.snapTo(spawnPoint, world.random.nextFloat() * 360.0F, 0.0F);
         tourist.setBeaconTarget(beaconBlockEntity.getBlockPos());
         tourist.finalizeSpawn(world, world.getCurrentDifficultyAt(tourist.blockPosition()), EntitySpawnReason.COMMAND, null);
-        tourist.setCustomName(Component.literal("Cassian Andor"));
+        tourist.setCustomName(Component.literal("Tassian Candor"));
         world.addFreshEntity(tourist);
         return true;
     }

@@ -30,10 +30,14 @@ import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 public class TouristEntity extends AbstractVillager {
+    // persisted data
     private BlockPos beaconTarget;
     private boolean atBeacon;
+    private double closestDistanceToBeacon;
+    private int consecutiveFailedProgressChecks;
     private boolean reportedHurtEnRoute;
     private boolean reportedHurtOnPremises;
+
     private boolean registeredWithTourismManager;
 
     public TouristEntity(Level level) {
@@ -43,6 +47,8 @@ public class TouristEntity extends AbstractVillager {
     public TouristEntity(EntityType<? extends TouristEntity> entityType, Level level) {
         super(entityType, level);
         this.atBeacon = false;
+        this.closestDistanceToBeacon = Double.MAX_VALUE;
+        this.consecutiveFailedProgressChecks = 0;
         this.reportedHurtEnRoute = false;
         this.reportedHurtOnPremises = false;
     }
@@ -178,6 +184,8 @@ public class TouristEntity extends AbstractVillager {
             valueOutput.store("BeaconTarget", BlockPos.CODEC, this.beaconTarget);
         }
         valueOutput.putBoolean("VisitCompleted", this.atBeacon);
+        valueOutput.putDouble("ClosestDistanceToBeacon", this.closestDistanceToBeacon);
+        valueOutput.putInt("FailedProgressChecks", this.consecutiveFailedProgressChecks);
         valueOutput.putBoolean("ReportedHurtEnRoute", this.reportedHurtEnRoute);
         valueOutput.putBoolean("ReportedHurtOnPremises", this.reportedHurtOnPremises);
     }
@@ -188,6 +196,8 @@ public class TouristEntity extends AbstractVillager {
 
         this.beaconTarget = valueInput.read("BeaconTarget", BlockPos.CODEC).orElse(null);
         this.atBeacon = valueInput.getBooleanOr("VisitCompleted", false);
+        this.closestDistanceToBeacon = valueInput.getDoubleOr("ClosestDistanceToBeacon", Double.MAX_VALUE);
+        this.consecutiveFailedProgressChecks = valueInput.getIntOr("FailedProgressChecks", 0);
         this.reportedHurtEnRoute = valueInput.getBooleanOr("ReportedHurtEnRoute", false);
         this.reportedHurtOnPremises = valueInput.getBooleanOr("ReportedHurtOnPremises", false);
     }
@@ -215,6 +225,19 @@ public class TouristEntity extends AbstractVillager {
         return this.beaconTarget;
     }
 
+    public double getClosestDistanceToBeacon() {
+        return this.closestDistanceToBeacon;
+    }
+
+    public int getConsecutiveFailedProgressChecks() {
+        return this.consecutiveFailedProgressChecks;
+    }
+
+    public void reportProgressTowardsBeaconTarget(double closestDistanceToBeacon, int consecutiveFailedProgressChecks) {
+        this.closestDistanceToBeacon = closestDistanceToBeacon;
+        this.consecutiveFailedProgressChecks = consecutiveFailedProgressChecks;
+    }
+
     public void setBeaconTarget(@NonNull BlockPos beaconTarget) {
         this.beaconTarget = beaconTarget.immutable();
     }
@@ -225,6 +248,8 @@ public class TouristEntity extends AbstractVillager {
         }
 
         this.atBeacon = true;
+        this.closestDistanceToBeacon = 0;
+        this.consecutiveFailedProgressChecks = 0;
         this.completeVisit();
     }
 
