@@ -59,7 +59,7 @@ public class MoveToBeaconGoal extends Goal {
 
         if (this.isAtBeacon(beaconTarget)) {
             this.tourist.getNavigation().stop();
-            this.tourist.onArrivedAtBeacon();
+            this.tourist.arriveAtBeacon();
             return;
         }
 
@@ -84,7 +84,7 @@ public class MoveToBeaconGoal extends Goal {
                 this.tourist.reportProgressTowardsBeaconTarget(closestDistanceToBeacon, consecutiveFailedProgressChecks);
 
                 if (consecutiveFailedProgressChecks > PROGRESS_CHECK_RETRIES) {
-                    this.tourist.onNavigationFailed();
+                    this.tourist.markLost();
                 } else {
                     if (this.tourist.level() instanceof ServerLevel) {
                         Touristry.LOGGER.info("[MoveToBeaconGoal] {} failed {} consecutive nav progress checks",

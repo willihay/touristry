@@ -25,26 +25,33 @@ import org.bensam.touristry.tourism.TourismManager;
 import org.bensam.touristry.tourism.TouristBeaconExperience;
 import org.bensam.touristry.tourism.TouristBeaconStats;
 import org.bensam.touristry.tourism.VisitResult;
+import org.bensam.touristry.tourism.experience.SightseeingExperience;
 import org.jspecify.annotations.NonNull;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
     private static final int INVENTORY_SIZE = 9;
-    private NonNullList<ItemStack> paymentItems = NonNullList.withSize(INVENTORY_SIZE, ItemStack.EMPTY);
-
-    private boolean openForBusiness;
-    private int successfulVisits;
-    private int failedVisits;
-    private int failedSpawns;
-    private int touristsHurt;
-    private int touristsKilled;
-    private double reputation;
-
     private static final double MIN_REPUTATION = -100.0d;
     private static final double MAX_REPUTATION = 100.0d;
-
     public static final int DATA_REPUTATION = 0;
     public static final int DATA_OPEN_FOR_BUSINESS = 1;
     public static final int DATA_COUNT = 2;
+
+    private NonNullList<ItemStack> paymentItems = NonNullList.withSize(INVENTORY_SIZE, ItemStack.EMPTY);
+    private List<SightseeingExperience> experiences = new ArrayList<>();
+    private int experienceSlots;
+
+    // stats
+    private boolean openForBusiness;
+    private int successfulVisits;
+    private int closedEarly;
+    private int failedSpawns;
+    private int navFailures;
+    private int touristsHurt;
+    private int touristsKilled;
+    private double reputation;
 
     protected final ContainerData data = new ContainerData() {
         @Override
@@ -72,10 +79,12 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
 
     public TouristBeaconBlockEntity(BlockPos blockPos, BlockState blockState) {
         super(ModBlockEntities.TOURIST_BEACON.get(), blockPos, blockState);
+        this.experienceSlots = TouristBeaconExperience.BASE_EXPERIENCE_SLOTS;
         this.openForBusiness = false;
         this.successfulVisits = 0;
-        this.failedVisits = 0;
+        this.closedEarly = 0;
         this.failedSpawns = 0;
+        this.navFailures = 0;
         this.touristsHurt = 0;
         this.touristsKilled = 0;
         this.reputation = 0.0d;
@@ -151,11 +160,18 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
     }
 
     public TouristBeaconExperience getBeaconExperience() {
-        return new TouristBeaconExperience(this.openForBusiness);
+        return new TouristBeaconExperience(this.openForBusiness, this.experienceSlots, this.experiences);
     }
 
     public TouristBeaconStats getBeaconStats() {
-        return new TouristBeaconStats(this.successfulVisits, this.failedVisits, this.failedSpawns, this.touristsHurt, this.touristsKilled, this.reputation);
+        return new TouristBeaconStats(
+                this.successfulVisits,
+                this.closedEarly,
+                this.failedSpawns,
+                this.navFailures,
+                this.touristsHurt,
+                this.touristsKilled,
+                this.reputation);
     }
 
     public boolean isOpenForBusiness() {
@@ -174,8 +190,9 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
 
     public void resetAllStats() {
         this.successfulVisits = 0;
-        this.failedVisits = 0;
+        this.closedEarly = 0;
         this.failedSpawns = 0;
+        this.navFailures = 0;
         this.touristsHurt = 0;
         this.touristsKilled = 0;
         this.reputation = 0.0d;
@@ -188,9 +205,10 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
         // Use a Runnable to make compiler catch forgotten updates when new VisitResult enums are added.
         Runnable update = switch (result) {
             case GOOD, GREAT -> () -> this.successfulVisits++;
-            case LOST, CLOSED -> () -> this.failedVisits++;
+            case CLOSED_ON_SPAWN, CLOSED_ON_ARRIVAL -> () -> this.closedEarly++;
+            case LOST -> () -> this.navFailures++;
             case HURT_EN_ROUTE, HURT_ON_PREMISES -> () -> this.touristsHurt++;
-            case KILLED_EN_ROUTE, KILLED_ON_PREMISES -> () -> { this.failedVisits++; this.touristsKilled++; };
+            case KILLED_EN_ROUTE, KILLED_ON_PREMISES -> () -> this.touristsKilled++;
             case FAILED_SPAWN -> () -> this.failedSpawns++;
         };
         update.run();
@@ -204,7 +222,7 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
         double change = switch (result) {
             case GOOD, GREAT ->
                     result.baseReputationDelta() * (1.0 - positiveNormalized) * (1.0 + 0.5 * negativeNormalized);
-            case FAILED_SPAWN, LOST, CLOSED, HURT_EN_ROUTE, HURT_ON_PREMISES, KILLED_EN_ROUTE, KILLED_ON_PREMISES ->
+            case FAILED_SPAWN, LOST, CLOSED_ON_SPAWN, CLOSED_ON_ARRIVAL, HURT_EN_ROUTE, HURT_ON_PREMISES, KILLED_EN_ROUTE, KILLED_ON_PREMISES ->
                     result.baseReputationDelta() * (0.75 + 0.5 * positiveNormalized);
         };
 
@@ -239,10 +257,17 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
         super.loadAdditional(valueInput);
         this.paymentItems = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
         ContainerHelper.loadAllItems(valueInput, this.paymentItems);
-        this.openForBusiness = valueInput.getBooleanOr("OpenForBusiness", false);
+
+        TouristBeaconExperience experience = valueInput.read("BeaconExperience", TouristBeaconExperience.CODEC)
+                .orElse(TouristBeaconExperience.EMPTY);
+        this.experiences = List.copyOf(experience.experiences());
+        this.experienceSlots = experience.experienceSlots();
+        this.openForBusiness = experience.beaconOpenForBusiness();
+
         this.successfulVisits = valueInput.getIntOr("SuccessfulVisits", 0);
-        this.failedVisits = valueInput.getIntOr("FailedVisits", 0);
+        this.closedEarly = valueInput.getIntOr("ClosedEarly", 0);
         this.failedSpawns = valueInput.getIntOr("FailedSpawns", 0);
+        this.navFailures = valueInput.getIntOr("NavFailures", 0);
         this.touristsHurt = valueInput.getIntOr("TouristsHurt", 0);
         this.touristsKilled = valueInput.getIntOr("TouristsKilled", 0);
         this.reputation = valueInput.getDoubleOr("Reputation", 0d);
@@ -252,10 +277,11 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
     protected void saveAdditional(@NonNull ValueOutput valueOutput) {
         super.saveAdditional(valueOutput);
         ContainerHelper.saveAllItems(valueOutput, this.paymentItems);
-        valueOutput.putBoolean("OpenForBusiness", this.openForBusiness);
+        valueOutput.store("BeaconExperience", TouristBeaconExperience.CODEC, this.getBeaconExperience());
         valueOutput.putInt("SuccessfulVisits", this.successfulVisits);
-        valueOutput.putInt("FailedVisits", this.failedVisits);
+        valueOutput.putInt("ClosedEarly", this.closedEarly);
         valueOutput.putInt("FailedSpawns", this.failedSpawns);
+        valueOutput.putInt("NavFailures", this.navFailures);
         valueOutput.putInt("TouristsHurt", this.touristsHurt);
         valueOutput.putInt("TouristsKilled", this.touristsKilled);
         valueOutput.putDouble("Reputation", this.reputation);
@@ -270,6 +296,8 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
                 ModComponents.TOURIST_BEACON_EXPERIENCE,
                 TouristBeaconExperience.EMPTY
         );
+        this.experiences = List.copyOf(experience.experiences());
+        this.experienceSlots = experience.experienceSlots();
         this.openForBusiness = experience.beaconOpenForBusiness();
 
         TouristBeaconStats stats = dataComponentGetter.getOrDefault(
@@ -277,8 +305,9 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
                 TouristBeaconStats.EMPTY
         );
         this.successfulVisits = stats.successfulVisits();
-        this.failedVisits = stats.failedVisits();
+        this.closedEarly = stats.closedEarly();
         this.failedSpawns = stats.failedSpawns();
+        this.navFailures = stats.navFailures();
         this.touristsHurt = stats.touristsHurt();
         this.touristsKilled = stats.touristsKilled();
         this.reputation = stats.reputation();
@@ -298,10 +327,11 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
         super.removeComponentsFromTag(valueOutput);
 
         // Remove raw tag entries for data that is carried by custom components in the block item form.
-        valueOutput.discard("OpenForBusiness");
+        valueOutput.discard("BeaconExperience");
         valueOutput.discard("SuccessfulVisits");
-        valueOutput.discard("FailedVisits");
+        valueOutput.discard("ClosedEarly");
         valueOutput.discard("FailedSpawns");
+        valueOutput.discard("NavFailures");
         valueOutput.discard("TouristsHurt");
         valueOutput.discard("TouristsKilled");
         valueOutput.discard("Reputation");

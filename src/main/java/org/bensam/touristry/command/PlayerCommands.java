@@ -78,12 +78,15 @@ public final class PlayerCommands {
         TouristBeaconStats stats = beaconBlockEntity.getBeaconStats();
         source.sendSuccess(() -> Component.literal(
                 " - reputation: " + String.format("%.2f", stats.reputation())
-                        + "; successful visits: " + stats.successfulVisits()
-                        + "; failed visits: " + stats.failedVisits()),
+                        + "; successful visits: " + stats.successfulVisits()),
                 false);
         source.sendSuccess(() -> Component.literal(
                 " - failed spawns: " + stats.failedSpawns()
-                        + "; tourists hurt: " + stats.touristsHurt()
+                        + "; navigation failures: " + stats.navFailures()
+                        + "; closed early: " + stats.closedEarly()),
+                false);
+        source.sendSuccess(() -> Component.literal(
+                " - tourists hurt: " + stats.touristsHurt()
                         + "; tourists killed: " + stats.touristsKilled()),
                 false);
 

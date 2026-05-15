@@ -323,6 +323,9 @@ public class TourismManager {
         }
 
         for (TouristBeaconBlockEntity beaconBlockEntity : getLoadedTouristBeacons(world)) {
+            if (!beaconBlockEntity.isOpenForBusiness()) {
+                continue;
+            }
             int effectiveStartTime = Math.max(currentTickTime, EARLIEST_SPAWN_TIME);
             int windowLength = LATEST_SPAWN_TIME_EXCLUSIVE - EARLIEST_SPAWN_TIME;
             int remainingWindow = Math.max(0, LATEST_SPAWN_TIME_EXCLUSIVE - effectiveStartTime);
@@ -356,6 +359,12 @@ public class TourismManager {
     private static void spawnTouristOnSchedule(ServerLevel world, ScheduledTouristSpawn scheduledTouristSpawn) {
         TouristBeaconBlockEntity beaconBlockEntity = loadedTouristBeacons.get(scheduledTouristSpawn.beaconPos());
         if (beaconBlockEntity == null) {
+            // TODO: Leave a pending VisitResult.CLOSED_ON_SPAWN rating for if/when the beacon returns.
+            return;
+        }
+
+        if (!beaconBlockEntity.isOpenForBusiness()) {
+            beaconBlockEntity.rateVisit(VisitResult.CLOSED_ON_SPAWN);
             return;
         }
 
@@ -387,7 +396,7 @@ public class TourismManager {
         );
 
         tourist.snapTo(spawnPoint, world.random.nextFloat() * 360.0F, 0.0F);
-        tourist.setBeaconTarget(scheduledTouristSpawn.beaconPos());
+        tourist.beginJourney(scheduledTouristSpawn.beaconPos());
         tourist.finalizeSpawn(world, world.getCurrentDifficultyAt(tourist.blockPosition()), EntitySpawnReason.EVENT, null);
         // TODO: Implement random tourist names (ensuring name isn't currently in use)
         tourist.setCustomName(Component.literal("Ned Flanders"));
@@ -418,7 +427,7 @@ public class TourismManager {
         );
 
         tourist.snapTo(spawnPoint, world.random.nextFloat() * 360.0F, 0.0F);
-        tourist.setBeaconTarget(beaconBlockEntity.getBlockPos());
+        tourist.beginJourney(beaconBlockEntity.getBlockPos());
         tourist.finalizeSpawn(world, world.getCurrentDifficultyAt(tourist.blockPosition()), EntitySpawnReason.COMMAND, null);
         tourist.setCustomName(Component.literal("Tassian Candor"));
         world.addFreshEntity(tourist);
