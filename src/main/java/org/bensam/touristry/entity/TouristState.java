@@ -5,8 +5,14 @@ import com.mojang.serialization.DataResult;
 
 public enum TouristState {
     IDLE,
-    TRAVELLING,
-    AT_BEACON,
+    PLANNING_NEXT_MOVE,
+    TRAVELLING_TO_BEACON,
+    CHOOSING_EXPERIENCE,
+    ENJOYING_EXPERIENCE,
+    WANDERING_AT_BEACON,
+    WANDERING_WORLD,
+    SLEEPING,
+    DESPAWNING,
     LOST,
     FINISHED;
 

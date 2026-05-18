@@ -33,8 +33,8 @@ import java.util.List;
 
 public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
     private static final int INVENTORY_SIZE = 9;
-    private static final double MIN_REPUTATION = -100.0d;
-    private static final double MAX_REPUTATION = 100.0d;
+    private static final double MIN_REPUTATION = -100.0;
+    private static final double MAX_REPUTATION = 100.0;
     public static final int DATA_REPUTATION = 0;
     public static final int DATA_OPEN_FOR_BUSINESS = 1;
     public static final int DATA_COUNT = 2;
@@ -210,6 +210,7 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
             case HURT_EN_ROUTE, HURT_ON_PREMISES -> () -> this.touristsHurt++;
             case KILLED_EN_ROUTE, KILLED_ON_PREMISES -> () -> this.touristsKilled++;
             case FAILED_SPAWN -> () -> this.failedSpawns++;
+            case UNFAVORABLE -> () -> {};
         };
         update.run();
 
@@ -222,7 +223,7 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
         double change = switch (result) {
             case GOOD, GREAT ->
                     result.baseReputationDelta() * (1.0 - positiveNormalized) * (1.0 + 0.5 * negativeNormalized);
-            case FAILED_SPAWN, LOST, CLOSED_ON_SPAWN, CLOSED_ON_ARRIVAL, HURT_EN_ROUTE, HURT_ON_PREMISES, KILLED_EN_ROUTE, KILLED_ON_PREMISES ->
+            case UNFAVORABLE, FAILED_SPAWN, LOST, CLOSED_ON_SPAWN, CLOSED_ON_ARRIVAL, HURT_EN_ROUTE, HURT_ON_PREMISES, KILLED_EN_ROUTE, KILLED_ON_PREMISES ->
                     result.baseReputationDelta() * (0.75 + 0.5 * positiveNormalized);
         };
 
@@ -260,7 +261,7 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
 
         TouristBeaconExperience experience = valueInput.read("BeaconExperience", TouristBeaconExperience.CODEC)
                 .orElse(TouristBeaconExperience.EMPTY);
-        this.experiences = List.copyOf(experience.experiences());
+        this.experiences = new ArrayList<>(experience.experiences());
         this.experienceSlots = experience.experienceSlots();
         this.openForBusiness = experience.beaconOpenForBusiness();
 
@@ -296,7 +297,7 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
                 ModComponents.TOURIST_BEACON_EXPERIENCE,
                 TouristBeaconExperience.EMPTY
         );
-        this.experiences = List.copyOf(experience.experiences());
+        this.experiences = new ArrayList<>(experience.experiences());
         this.experienceSlots = experience.experienceSlots();
         this.openForBusiness = experience.beaconOpenForBusiness();
 

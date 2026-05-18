@@ -23,12 +23,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
+import java.util.function.Predicate;
 
 public class TourismManager {
     public record ScheduledTouristSpawn(int timeOfDay, BlockPos beaconPos) {}
     public static final Comparator<ScheduledTouristSpawn> SCHEDULED_TOURIST_SPAWN_COMPARATOR =
             Comparator.comparingInt(ScheduledTouristSpawn::timeOfDay);
 
+    private static final boolean VERBOSE_LOGGING = true; // TODO: move this to config
     private static final int SPAWNS_PER_BEACON_PER_DAY = 5;
     private static final int EARLIEST_SPAWN_TIME = 2000; // 8:00 AM
     private static final int LATEST_SPAWN_TIME_EXCLUSIVE = 9001; // 3:00 PM
@@ -65,7 +67,7 @@ public class TourismManager {
     }
 
     public static void initialize(ServerLevel overworld) {
-        Touristry.LOGGER.info("Initializing TourismManager");
+        logActivity("Initializing TourismManager");
         if (overworld == null) {
             Touristry.LOGGER.error("Overworld is null! TourismManager will not be initialized.");
             return;
@@ -84,6 +86,22 @@ public class TourismManager {
         pendingSpawns.clear();
         loadedTouristBeacons.clear();
         loadedTourists.clear();
+    }
+
+    protected static void logActivity(String message) {
+        if (VERBOSE_LOGGING) {
+            Touristry.LOGGER.info("[TourismManager] {}", message);
+        } else {
+            Touristry.LOGGER.debug("[TourismManager] {}", message);
+        }
+    }
+
+    protected static void logActivity(String message, Object... args) {
+        if (VERBOSE_LOGGING) {
+            Touristry.LOGGER.info("[TourismManager] " + message, args);
+        } else {
+            Touristry.LOGGER.debug("[TourismManager] " + message, args);
+        }
     }
 
     private static void loadPersistentState(ServerLevel overworld) {
@@ -140,16 +158,37 @@ public class TourismManager {
         return closest;
     }
 
-    public static @Nullable TouristBeaconBlockEntity getBeaconBlockEntity(@NonNull Level level, @NonNull BlockPos pos) {
+    public static @Nullable TouristBeaconBlockEntity getBeaconBlockEntity(Level level, BlockPos pos) {
+        if (level == null || pos == null) {
+            return null;
+        }
+
         if (level.getBlockEntity(pos) instanceof TouristBeaconBlockEntity beaconBlockEntity) {
             return beaconBlockEntity;
         }
+
         return null;
     }
 
     public static List<TouristBeaconBlockEntity> getLoadedTouristBeacons(ServerLevel overworld) {
         pruneInvalidTouristBeacons(overworld);
         return List.copyOf(loadedTouristBeacons.values());
+    }
+
+    public static List<TouristBeaconBlockEntity> getLoadedTouristBeaconsByDistance(ServerLevel overworld, BlockPos pos) {
+        return getLoadedTouristBeaconsByDistance(overworld, pos, beaconBlockEntity -> true);
+    }
+
+    public static List<TouristBeaconBlockEntity> getLoadedTouristBeaconsByDistance(
+            ServerLevel overworld,
+            BlockPos pos,
+            Predicate<TouristBeaconBlockEntity> filter
+    ) {
+        pruneInvalidTouristBeacons(overworld);
+        return loadedTouristBeacons.values().stream()
+                .filter(filter)
+                .sorted(Comparator.comparingDouble(beaconBlockEntity -> pos.distSqr(beaconBlockEntity.getBlockPos())))
+                .toList();
     }
 
     private static void pruneInvalidTouristBeacons(ServerLevel overworld) {
@@ -187,7 +226,7 @@ public class TourismManager {
         }
 
         loadedTourists.clear();
-        Touristry.LOGGER.info("[TourismManager] Despawned all loaded tourists at midnight");
+        logActivity("Despawned all loaded tourists at midnight");
     }
 
     private static void pruneInvalidTourists(ServerLevel overworld) {
@@ -237,11 +276,10 @@ public class TourismManager {
         int tickHour = tickTimeOfDay / 1000;
 
         // (Informational only) Write hourly heartbeat to log.
-        // TODO: Remove (or change to LOGGER.debug()) before publishing
         if (dayCount > lastDayThreshold || tickHour > lastHourThreshold) {
             lastDayThreshold = dayCount;
             lastHourThreshold = tickHour;
-            Touristry.LOGGER.info("[TourismManager] Minecraft Day: {}; Time: {}; Ticks: {}", dayCount, getFriendlyTimeOfDay(dayTime), dayTime);
+            logActivity("Minecraft Day: {}; Time: {}; Ticks: {}", dayCount, getFriendlyTimeOfDay(dayTime), dayTime);
         }
 
         if (despawnAllTourists) {
@@ -318,7 +356,7 @@ public class TourismManager {
         RandomSource random = world.getRandom();
 
         if (currentTickTime >= LATEST_SPAWN_TIME_EXCLUSIVE) {
-            Touristry.LOGGER.info("[TourismManager] Too late in the day to add spawn times");
+            logActivity("Too late in the day to add spawn times");
             return;
         }
 
@@ -342,8 +380,7 @@ public class TourismManager {
 
             for (int spawnTime : spawnTimes) {
                 pendingSpawns.add(new ScheduledTouristSpawn(spawnTime, beaconPos));
-                Touristry.LOGGER.info(
-                        "[TourismManager] Added pending spawn for {} at {} @ time {} ticks ({})",
+                logActivity("Added pending spawn for {} at {} @ time {} ticks ({})",
                         beaconBlockEntity.getPlainTextName(),
                         beaconPos,
                         spawnTime,
@@ -376,8 +413,7 @@ public class TourismManager {
         BlockPos spawnPoint = getSpawnPoint(world, scheduledTouristSpawn.beaconPos(), tourist);
         if (spawnPoint == null) {
             beaconBlockEntity.rateVisit(VisitResult.FAILED_SPAWN);
-            Touristry.LOGGER.warn(
-                    "[TourismManager] No safe spawn point found for {} at {} for scheduled time {} ticks ({})",
+            logActivity("No safe spawn point found for {} at {} for scheduled time {} ticks ({})",
                     beaconBlockEntity.getPlainTextName(),
                     scheduledTouristSpawn.beaconPos(),
                     scheduledTouristSpawn.timeOfDay(),
@@ -386,8 +422,7 @@ public class TourismManager {
             return;
         }
 
-        Touristry.LOGGER.info(
-                "[TourismManager] Spawning tourist at {} for {} at {} for scheduled time {} ticks ({})",
+        logActivity("Spawning tourist at {} for {} at {} for scheduled time {} ticks ({})",
                 spawnPoint,
                 beaconBlockEntity.getPlainTextName(),
                 scheduledTouristSpawn.beaconPos(),
@@ -396,7 +431,7 @@ public class TourismManager {
         );
 
         tourist.snapTo(spawnPoint, world.random.nextFloat() * 360.0F, 0.0F);
-        tourist.beginJourney(scheduledTouristSpawn.beaconPos());
+        tourist.prepareForJourney(scheduledTouristSpawn.beaconPos());
         tourist.finalizeSpawn(world, world.getCurrentDifficultyAt(tourist.blockPosition()), EntitySpawnReason.EVENT, null);
         // TODO: Implement random tourist names (ensuring name isn't currently in use)
         tourist.setCustomName(Component.literal("Ned Flanders"));
@@ -411,23 +446,21 @@ public class TourismManager {
 
         BlockPos spawnPoint = (requestedSpawnPoint != null) ? requestedSpawnPoint : getSpawnPoint(world, beaconBlockEntity.getBlockPos(), tourist);
         if (spawnPoint == null) {
-            Touristry.LOGGER.warn(
-                    "[TourismManager] No safe spawn point found for {} at {}",
+            logActivity("No safe spawn point found for {} at {}",
                     beaconBlockEntity.getPlainTextName(),
                     beaconBlockEntity.getBlockPos()
             );
             return false;
         }
 
-        Touristry.LOGGER.info(
-                "[TourismManager] Spawning tourist at {} for {} at {} by command",
+        logActivity("Spawning tourist at {} for {} at {} by command",
                 spawnPoint,
                 beaconBlockEntity.getPlainTextName(),
                 beaconBlockEntity.getBlockPos()
         );
 
         tourist.snapTo(spawnPoint, world.random.nextFloat() * 360.0F, 0.0F);
-        tourist.beginJourney(beaconBlockEntity.getBlockPos());
+        tourist.prepareForJourney(beaconBlockEntity.getBlockPos());
         tourist.finalizeSpawn(world, world.getCurrentDifficultyAt(tourist.blockPosition()), EntitySpawnReason.COMMAND, null);
         tourist.setCustomName(Component.literal("Tassian Candor"));
         world.addFreshEntity(tourist);

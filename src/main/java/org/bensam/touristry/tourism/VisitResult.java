@@ -1,24 +1,31 @@
 package org.bensam.touristry.tourism;
 
 public enum VisitResult {
-    GOOD(1.0),
-    GREAT(2.0),
-    FAILED_SPAWN(-1.0),
-    CLOSED_ON_SPAWN(-1.0),
-    LOST(-1.5),
-    CLOSED_ON_ARRIVAL(-2.0),
-    HURT_EN_ROUTE(-3.0),
-    HURT_ON_PREMISES(-6.0),
-    KILLED_EN_ROUTE(-3.0),
-    KILLED_ON_PREMISES(-9.0);
+    GOOD(1.0, 1.0),
+    GREAT(2.0, 2.0),
+    UNFAVORABLE(-1.5, -1.0),
+    FAILED_SPAWN(-1.0, 0),
+    CLOSED_ON_SPAWN(-1.0, -1.0),
+    LOST(-1.5, -1.0),
+    CLOSED_ON_ARRIVAL(-2.0, -1.0),
+    HURT_EN_ROUTE(-2.0, -2.0),
+    HURT_ON_PREMISES(-4.0, -2.0),
+    KILLED_EN_ROUTE(-3.0, 0),
+    KILLED_ON_PREMISES(-9.0, 0);
 
     private final double baseReputationDelta;
+    private final double moodDelta;
 
-    VisitResult(double baseReputationDelta) {
+    VisitResult(double baseReputationDelta, double moodDelta) {
         this.baseReputationDelta = baseReputationDelta;
+        this.moodDelta = moodDelta;
     }
 
     public double baseReputationDelta() {
         return this.baseReputationDelta;
+    }
+
+    public double moodDelta() {
+        return this.moodDelta;
     }
 }

@@ -74,6 +74,11 @@ public final class PlayerCommands {
         TouristBeaconExperience experience = beaconBlockEntity.getBeaconExperience();
         source.sendSuccess(() -> Component.literal(" - status: " + (experience.beaconOpenForBusiness() ? "open for business" : "closed for business")), false);
 
+        // experiences
+        source.sendSuccess(() -> Component.literal(
+                " - experiences: " + experience.experiences().size() + " / " + experience.experienceSlots()),
+                false);
+
         // stats
         TouristBeaconStats stats = beaconBlockEntity.getBeaconStats();
         source.sendSuccess(() -> Component.literal(
