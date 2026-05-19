@@ -1,6 +1,7 @@
 package org.bensam.touristry.entity;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
@@ -431,7 +432,19 @@ public class TouristEntity extends AbstractVillager {
     }
 
     public void deSpawn() {
-        if (this.level() instanceof ServerLevel) {
+        if (this.level() instanceof ServerLevel serverLevel) {
+            serverLevel.sendParticles(
+                    ParticleTypes.PORTAL,
+                    this.getRandomX(0.5),
+                    this.getRandomY(),
+                    this.getRandomZ(0.5),
+                    15, // # of particles
+                    0.3, 0.4, 0.3, // spread
+                    0.02 // particle speed
+            );
+
+            this.playSound(SoundEvents.ENDERMAN_TELEPORT);
+
             TourismManager.unregisterTourist(this);
             this.discard();
         }
