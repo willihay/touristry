@@ -12,7 +12,10 @@
               "function": "minecraft:copy_components",
               "source": "block_entity",
               "include": [
-                "minecraft:container"
+                "minecraft:container",
+                "minecraft:custom_name",
+                "touristry:tourist_beacon_experience",
+                "touristry:tourist_beacon_stats"
               ]
             }
           ]
