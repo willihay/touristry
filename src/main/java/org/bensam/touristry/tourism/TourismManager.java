@@ -360,22 +360,21 @@ public class TourismManager {
             return;
         }
 
+        int effectiveStartTime = Math.max(currentTickTime, EARLIEST_SPAWN_TIME);
+        int windowLength = LATEST_SPAWN_TIME_EXCLUSIVE - EARLIEST_SPAWN_TIME;
+        int remainingWindow = Math.max(0, LATEST_SPAWN_TIME_EXCLUSIVE - effectiveStartTime);
+        double remainingFraction = (double) remainingWindow / windowLength;
+        int spawnCount = Math.max(1, (int) Math.ceil(SPAWNS_PER_BEACON_PER_DAY * remainingFraction));
+
         for (TouristBeaconBlockEntity beaconBlockEntity : getLoadedTouristBeacons(world)) {
             if (!beaconBlockEntity.isOpenForBusiness()) {
                 continue;
             }
-            int effectiveStartTime = Math.max(currentTickTime, EARLIEST_SPAWN_TIME);
-            int windowLength = LATEST_SPAWN_TIME_EXCLUSIVE - EARLIEST_SPAWN_TIME;
-            int remainingWindow = Math.max(0, LATEST_SPAWN_TIME_EXCLUSIVE - effectiveStartTime);
-
-            double remainingFraction = (double) remainingWindow / windowLength;
-            int spawnCount = Math.max(1, (int) Math.ceil(SPAWNS_PER_BEACON_PER_DAY * remainingFraction));
-
             BlockPos beaconPos = beaconBlockEntity.getBlockPos().immutable();
             Set<Integer> spawnTimes = new LinkedHashSet<>(spawnCount);
 
             while (spawnTimes.size() < spawnCount) {
-                spawnTimes.add(random.nextInt(currentTickTime, LATEST_SPAWN_TIME_EXCLUSIVE));
+                spawnTimes.add(random.nextInt(effectiveStartTime, LATEST_SPAWN_TIME_EXCLUSIVE));
             }
 
             for (int spawnTime : spawnTimes) {
