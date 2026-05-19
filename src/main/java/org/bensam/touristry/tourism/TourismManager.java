@@ -34,7 +34,6 @@ public class TourismManager {
     private static final int SPAWNS_PER_BEACON_PER_DAY = 5;
     private static final int EARLIEST_SPAWN_TIME = 2000; // 8:00 AM
     private static final int LATEST_SPAWN_TIME_EXCLUSIVE = 9001; // 3:00 PM
-    private static final int MIDNIGHT_DESPAWN_TIME = 18000; // 12:00 AM
     private static final double SPAWN_DISTANCE_FROM_BEACON_MIN = 35.0D;
     private static final double SPAWN_DISTANCE_FROM_BEACON_MAX = 70.0D;
     private static final double SPAWN_DISTANCE_RANGE_DELTA = SPAWN_DISTANCE_FROM_BEACON_MAX - SPAWN_DISTANCE_FROM_BEACON_MIN;
@@ -218,25 +217,6 @@ public class TourismManager {
     //endregion
 
     //region Tourist Helpers
-    private static void despawnTouristsAtMidnight(ServerLevel overworld) {
-        pruneInvalidTourists(overworld);
-
-        for (TouristEntity touristEntity : List.copyOf(loadedTourists.values())) {
-            touristEntity.discard();
-        }
-
-        loadedTourists.clear();
-        logActivity("Despawned all loaded tourists at midnight");
-    }
-
-    private static void pruneInvalidTourists(ServerLevel overworld) {
-        loadedTourists.entrySet().removeIf(entry -> {
-            TouristEntity touristEntity = entry.getValue();
-            return touristEntity.isRemoved()
-                    || touristEntity.level() != overworld;
-        });
-    }
-
     public static void registerTourist(TouristEntity touristEntity) {
         if (!(touristEntity.level() instanceof ServerLevel serverLevel)) {
             return;
@@ -297,13 +277,6 @@ public class TourismManager {
             if (lastPreparedDay != dayCount) {
                 lastPreparedDay = dayCount; // we never want the lastPreparedDay to get *ahead* of the actual day count on the server (e.g. from a time set command)
                 persistPendingSpawns();
-            }
-
-            // (Scaffolding, until tourists have autonomy) Despawn tourists at midnight.
-            if (tickTimeOfDay >= MIDNIGHT_DESPAWN_TIME
-                    && (lastTickTimeOfDay < MIDNIGHT_DESPAWN_TIME || lastTickTimeOfDay > tickTimeOfDay)) {
-                despawnTouristsAtMidnight(overworld);
-                // TODO: When this moves to tourist logic, record failed visits when applicable.
             }
 
             // Spawn tourists throughout the day according to schedule.
