@@ -318,7 +318,8 @@ public class TouristEntity extends AbstractVillager {
                 if (beaconBlockEntity != null) {
                     if (beaconBlockEntity.isOpenForBusiness()) {
                         Component experienceMessage = Component.literal("arrived at");
-                        this.rateExperience(VisitResult.GOOD, false, false, experienceMessage, true, true);
+                        // TODO: Set applyRatingToBeacon to false when experiences are available. Arriving shouldn't count as a successful visit.
+                        this.rateExperience(VisitResult.ARRIVED, true, false, experienceMessage, true, true);
                         this.playSound(SoundEvents.VILLAGER_CELEBRATE);
                         nextState = TouristState.CHOOSING_EXPERIENCE;
                     } else {
@@ -591,7 +592,7 @@ public class TouristEntity extends AbstractVillager {
         double negativeNormalized = Math.max(0.0, -this.mood) / MAX_MOOD;
 
         double change = switch (result) {
-            case GOOD, GREAT -> {
+            case ARRIVED, GOOD, GREAT -> {
                 this.goodExperiencesToday++;
                 VisitResult modifiedResult = this.goodExperiencesToday % 3 == 0 ? VisitResult.GREAT : result;
                 yield modifiedResult.moodDelta() * (1.0 - positiveNormalized) * (1.0 + 0.5 * negativeNormalized);

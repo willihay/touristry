@@ -1,6 +1,7 @@
 package org.bensam.touristry.tourism;
 
 public enum VisitResult {
+    ARRIVED(0.0, 1.0),
     GOOD(1.0, 1.0),
     GREAT(2.0, 2.0),
     UNFAVORABLE(-1.5, -1.0),
