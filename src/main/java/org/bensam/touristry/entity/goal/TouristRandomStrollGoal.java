@@ -4,6 +4,7 @@ import net.minecraft.world.entity.ai.goal.RandomStrollGoal;
 import net.minecraft.world.entity.ai.util.LandRandomPos;
 import net.minecraft.world.phys.Vec3;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
+import org.bensam.touristry.config.Verbosity;
 import org.bensam.touristry.entity.TouristEntity;
 import org.bensam.touristry.tourism.TourismManager;
 import org.jspecify.annotations.Nullable;
@@ -39,9 +40,9 @@ public class TouristRandomStrollGoal extends RandomStrollGoal {
             if (beaconBlockEntity != null) {
                 beaconName = beaconBlockEntity.getPlainTextName();
             }
-            TouristEntity.logActivity("Starting TouristRandomStrollGoal to wander around " + beaconName);
+            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "Starting TouristRandomStrollGoal to wander around " + beaconName);
         } else {
-            TouristEntity.logActivity("Starting TouristRandomStrollGoal to wander in the world");
+            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "Starting TouristRandomStrollGoal to wander in the world");
         }
     }
 

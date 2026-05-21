@@ -12,6 +12,8 @@ import net.minecraft.world.level.levelgen.Heightmap;
 import org.bensam.touristry.ModEntities;
 import org.bensam.touristry.Touristry;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
+import org.bensam.touristry.config.ModServerConfigManager;
+import org.bensam.touristry.config.Verbosity;
 import org.bensam.touristry.entity.TouristEntity;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -30,13 +32,6 @@ public class TourismManager {
     public static final Comparator<ScheduledTouristSpawn> SCHEDULED_TOURIST_SPAWN_COMPARATOR =
             Comparator.comparingInt(ScheduledTouristSpawn::timeOfDay);
 
-    private static final boolean VERBOSE_LOGGING = true; // TODO: move this to config
-    private static final int SPAWNS_PER_BEACON_PER_DAY = 5;
-    private static final int EARLIEST_SPAWN_TIME = 2000; // 8:00 AM
-    private static final int LATEST_SPAWN_TIME_EXCLUSIVE = 9001; // 3:00 PM
-    private static final double SPAWN_DISTANCE_FROM_BEACON_MIN = 35.0D;
-    private static final double SPAWN_DISTANCE_FROM_BEACON_MAX = 70.0D;
-    private static final double SPAWN_DISTANCE_RANGE_DELTA = SPAWN_DISTANCE_FROM_BEACON_MAX - SPAWN_DISTANCE_FROM_BEACON_MIN;
     private static final int SPAWN_ATTEMPTS_PER_BEACON = 8;
 
     private static @Nullable TourismSavedData tourismSavedData;
@@ -66,9 +61,9 @@ public class TourismManager {
     }
 
     public static void initialize(ServerLevel overworld) {
-        logActivity("Initializing TourismManager");
+        logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "Initializing TourismManager");
         if (overworld == null) {
-            Touristry.LOGGER.error("Overworld is null! TourismManager will not be initialized.");
+            logActivity(Verbosity.ERRORS, "Overworld is null! TourismManager will not be initialized.");
             return;
         }
 
@@ -87,16 +82,22 @@ public class TourismManager {
         loadedTourists.clear();
     }
 
-    protected static void logActivity(String message) {
-        if (VERBOSE_LOGGING) {
+    protected static void logActivity(Verbosity verbosityLevel, String message) {
+        Verbosity verbosityConfig = ModServerConfigManager.getConfig().tourismManager().getVerbosityLevel();
+        if (verbosityLevel == Verbosity.ERRORS) {
+            Touristry.LOGGER.error("[TourismManager] {}", message);
+        } else if (verbosityLevel.ordinal() <= verbosityConfig.ordinal()) {
             Touristry.LOGGER.info("[TourismManager] {}", message);
         } else {
             Touristry.LOGGER.debug("[TourismManager] {}", message);
         }
     }
 
-    protected static void logActivity(String message, Object... args) {
-        if (VERBOSE_LOGGING) {
+    protected static void logActivity(Verbosity verbosityLevel, String message, Object... args) {
+        Verbosity verbosityConfig = ModServerConfigManager.getConfig().tourismManager().getVerbosityLevel();
+        if (verbosityLevel == Verbosity.ERRORS) {
+            Touristry.LOGGER.error("[TourismManager] " + message, args);
+        } else if (verbosityLevel.ordinal() <= verbosityConfig.ordinal()) {
             Touristry.LOGGER.info("[TourismManager] " + message, args);
         } else {
             Touristry.LOGGER.debug("[TourismManager] " + message, args);
@@ -259,7 +260,7 @@ public class TourismManager {
         if (dayCount > lastDayThreshold || tickHour > lastHourThreshold) {
             lastDayThreshold = dayCount;
             lastHourThreshold = tickHour;
-            logActivity("Minecraft Day: {}; Time: {}; Ticks: {}", dayCount, getFriendlyTimeOfDay(dayTime), dayTime);
+            logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "Minecraft Day: {}; Time: {}; Ticks: {}", dayCount, getFriendlyTimeOfDay(dayTime), dayTime);
         }
 
         if (despawnAllTourists) {
@@ -327,17 +328,19 @@ public class TourismManager {
     private static void prepareSpawnTimes(ServerLevel world, int currentTickTime) {
         pendingSpawns.clear();
         RandomSource random = world.getRandom();
+        int latestSpawnTimeExclusive = Math.max(1, ModServerConfigManager.getConfig().tourismManager().getLatestSpawnTimeTicks() + 1) % 24000;
 
-        if (currentTickTime >= LATEST_SPAWN_TIME_EXCLUSIVE) {
-            logActivity("Too late in the day to add spawn times");
+        if (currentTickTime >= latestSpawnTimeExclusive) {
+            logActivity(Verbosity.GAMEPLAY_WARNINGS, "Too late in the day to add spawn times");
             return;
         }
 
-        int effectiveStartTime = Math.max(currentTickTime, EARLIEST_SPAWN_TIME);
-        int windowLength = LATEST_SPAWN_TIME_EXCLUSIVE - EARLIEST_SPAWN_TIME;
-        int remainingWindow = Math.max(0, LATEST_SPAWN_TIME_EXCLUSIVE - effectiveStartTime);
+        int earliestSpawnTime = Math.max(0, ModServerConfigManager.getConfig().tourismManager().getEarliestSpawnTimeTicks()) % 24000;
+        int effectiveStartTime = Math.max(currentTickTime, earliestSpawnTime);
+        int windowLength = Math.max(1, latestSpawnTimeExclusive - earliestSpawnTime);
+        int remainingWindow = Math.max(0, latestSpawnTimeExclusive - effectiveStartTime);
         double remainingFraction = (double) remainingWindow / windowLength;
-        int spawnCount = Math.max(1, (int) Math.ceil(SPAWNS_PER_BEACON_PER_DAY * remainingFraction));
+        int spawnCount = Math.max(1, (int) Math.ceil(ModServerConfigManager.getConfig().tourismManager().getMaxSpawnsPerBeaconPerDay() * remainingFraction));
 
         for (TouristBeaconBlockEntity beaconBlockEntity : getLoadedTouristBeacons(world)) {
             if (!beaconBlockEntity.isOpenForBusiness()) {
@@ -347,12 +350,13 @@ public class TourismManager {
             Set<Integer> spawnTimes = new LinkedHashSet<>(spawnCount);
 
             while (spawnTimes.size() < spawnCount) {
-                spawnTimes.add(random.nextInt(effectiveStartTime, LATEST_SPAWN_TIME_EXCLUSIVE));
+                spawnTimes.add(random.nextInt(effectiveStartTime, latestSpawnTimeExclusive));
             }
 
             for (int spawnTime : spawnTimes) {
                 pendingSpawns.add(new ScheduledTouristSpawn(spawnTime, beaconPos));
-                logActivity("Added pending spawn for {} at {} @ time {} ticks ({})",
+                logActivity(Verbosity.LEVEL_2_DIAGNOSTICS,
+                        "Added pending spawn for {} at {} @ time {} ticks ({})",
                         beaconBlockEntity.getPlainTextName(),
                         beaconPos,
                         spawnTime,
@@ -385,7 +389,8 @@ public class TourismManager {
         BlockPos spawnPoint = getSpawnPoint(world, scheduledTouristSpawn.beaconPos(), tourist);
         if (spawnPoint == null) {
             beaconBlockEntity.rateVisit(VisitResult.FAILED_SPAWN);
-            logActivity("No safe spawn point found for {} at {} for scheduled time {} ticks ({})",
+            logActivity(Verbosity.GAMEPLAY_WARNINGS,
+                    "No safe spawn point found for {} at {} for scheduled time {} ticks ({})",
                     beaconBlockEntity.getPlainTextName(),
                     scheduledTouristSpawn.beaconPos(),
                     scheduledTouristSpawn.timeOfDay(),
@@ -394,7 +399,8 @@ public class TourismManager {
             return;
         }
 
-        logActivity("Spawning tourist at {} for {} at {} for scheduled time {} ticks ({})",
+        logActivity(Verbosity.MAJOR_EVENTS,
+                "Spawning tourist at {} for {} at {} for scheduled time {} ticks ({})",
                 spawnPoint,
                 beaconBlockEntity.getPlainTextName(),
                 scheduledTouristSpawn.beaconPos(),
@@ -418,14 +424,16 @@ public class TourismManager {
 
         BlockPos spawnPoint = (requestedSpawnPoint != null) ? requestedSpawnPoint : getSpawnPoint(world, beaconBlockEntity.getBlockPos(), tourist);
         if (spawnPoint == null) {
-            logActivity("No safe spawn point found for {} at {}",
+            logActivity(Verbosity.GAMEPLAY_WARNINGS,
+                    "No safe spawn point found for {} at {}",
                     beaconBlockEntity.getPlainTextName(),
                     beaconBlockEntity.getBlockPos()
             );
             return false;
         }
 
-        logActivity("Spawning tourist at {} for {} at {} by command",
+        logActivity(Verbosity.MAJOR_EVENTS,
+                "Spawning tourist at {} for {} at {} by command",
                 spawnPoint,
                 beaconBlockEntity.getPlainTextName(),
                 beaconBlockEntity.getBlockPos()
@@ -441,9 +449,11 @@ public class TourismManager {
 
     public static @Nullable BlockPos getSpawnPoint(ServerLevel world, BlockPos beaconPos, Entity touristEntity) {
         RandomSource random = world.getRandom();
+        int minSpawnDistanceToBeacon = Math.max(0, ModServerConfigManager.getConfig().tourismManager().getMinSpawnDistanceToBeacon());
+        int spawnDistanceRangeDelta = Math.max(0, ModServerConfigManager.getConfig().tourismManager().getMaxSpawnDistanceToBeacon() - minSpawnDistanceToBeacon);
 
         for (int attempt = 0; attempt < SPAWN_ATTEMPTS_PER_BEACON; attempt++) {
-            double distance = SPAWN_DISTANCE_FROM_BEACON_MIN + (random.nextDouble() * SPAWN_DISTANCE_RANGE_DELTA);
+            double distance = minSpawnDistanceToBeacon + (random.nextDouble() * spawnDistanceRangeDelta);
             double angle = random.nextDouble() * (Math.PI * 2.0D);
             int offsetX = (int)Math.round(Math.cos(angle) * distance);
             int offsetZ = (int)Math.round(Math.sin(angle) * distance);

@@ -1,9 +1,11 @@
 package org.bensam.touristry.entity;
 
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.DataResult;
+import net.minecraft.util.StringRepresentable;
 
-public enum TouristState {
+import java.util.Locale;
+
+public enum TouristState implements StringRepresentable {
     IDLE,
     PLANNING_NEXT_MOVE,
     TRAVELLING_TO_BEACON,
@@ -16,14 +18,10 @@ public enum TouristState {
     LOST,
     FINISHED;
 
-    public static final Codec<TouristState> CODEC = Codec.STRING.comapFlatMap(
-            stateName -> {
-                try {
-                    return DataResult.success(TouristState.valueOf(stateName));
-                } catch (IllegalArgumentException e) {
-                    return DataResult.error(() -> "Unknown tourist state: " + stateName);
-                }
-            },
-            TouristState::name
-    );
+    public static final Codec<TouristState> CODEC = StringRepresentable.fromEnum(TouristState::values);
+
+    @Override
+    public String getSerializedName() {
+        return name().toLowerCase(Locale.ROOT);
+    }
 }

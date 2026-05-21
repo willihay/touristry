@@ -2,6 +2,7 @@ package org.bensam.touristry.entity.goal;
 
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
+import org.bensam.touristry.config.Verbosity;
 import org.bensam.touristry.entity.TouristEntity;
 
 import java.util.EnumSet;
@@ -32,6 +33,6 @@ public class TouristRandomLookAroundGoal extends RandomLookAroundGoal {
 
         if (this.tourist.level().isClientSide()) return;
 
-        TouristEntity.logActivity("Starting TouristRandomLookAroundGoal");
+        TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "Starting TouristRandomLookAroundGoal");
     }
 }

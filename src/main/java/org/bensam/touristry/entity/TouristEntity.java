@@ -24,6 +24,8 @@ import net.minecraft.world.level.storage.ValueOutput;
 import org.bensam.touristry.ModEntities;
 import org.bensam.touristry.Touristry;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
+import org.bensam.touristry.config.ModServerConfigManager;
+import org.bensam.touristry.config.Verbosity;
 import org.bensam.touristry.entity.goal.*;
 import org.bensam.touristry.tourism.TourismManager;
 import org.bensam.touristry.tourism.VisitResult;
@@ -38,13 +40,10 @@ public class TouristEntity extends AbstractVillager {
     private static final int MIN_ACTIVITY_INTERVAL_TICKS = 500;
     private static final int MAX_ACTIVITY_INTERVAL_TICKS = 2000;
     private static final int CHECK_MOOD_INTERVAL_TICKS = 250;
-    private static final double MAX_TRAVEL_DISTANCE_TO_NEXT_BEACON = 150.0;
-    private static final boolean VERBOSE_LOGGING = true; // TODO: move this to config
 
     // persisted data
     private TouristState state;
     private BlockPos beaconTarget;
-    private double speedModifier;
     private double closestDistanceToBeacon;
     private int consecutiveFailedProgressChecks;
     private boolean reportedHurtEnRoute;
@@ -87,11 +86,25 @@ public class TouristEntity extends AbstractVillager {
                 .add(Attributes.FOLLOW_RANGE, 32.0);
     }
 
-    public static void logActivity(String message) {
-        if (VERBOSE_LOGGING) {
+    public static void logActivity(Verbosity verbosityLevel, String message) {
+        Verbosity verbosityConfig = ModServerConfigManager.getConfig().touristEntity().getVerbosityLevel();
+        if (verbosityLevel == Verbosity.ERRORS) {
+            Touristry.LOGGER.error("[TouristEntity] {}", message);
+        } else if (verbosityLevel.ordinal() <= verbosityConfig.ordinal()) {
             Touristry.LOGGER.info("[TouristEntity] {}", message);
         } else {
             Touristry.LOGGER.debug("[TouristEntity] {}", message);
+        }
+    }
+
+    public static void logActivity(Verbosity verbosityLevel, String message, Object... args) {
+        Verbosity verbosityConfig = ModServerConfigManager.getConfig().touristEntity().getVerbosityLevel();
+        if (verbosityLevel == Verbosity.ERRORS) {
+            Touristry.LOGGER.error("[TouristEntity] " + message, args);
+        } else if (verbosityLevel.ordinal() <= verbosityConfig.ordinal()) {
+            Touristry.LOGGER.info("[TouristEntity] " + message, args);
+        } else {
+            Touristry.LOGGER.debug("[TouristEntity] " + message, args);
         }
     }
 
@@ -126,7 +139,18 @@ public class TouristEntity extends AbstractVillager {
         this.isStayingOvernight = false;
     }
 
-    //region Class Overrides
+    @Override
+    protected void registerGoals() {
+        this.goalSelector.addGoal(0, new FloatGoal(this));
+        this.goalSelector.addGoal(1, new MoveToBeaconGoal(this)); // MOVE
+        this.goalSelector.addGoal(2, new TouristRandomStrollGoal(this, 0.6)); // MOVE
+        this.goalSelector.addGoal(3, new TouristLookAtPlayerGoal(this, Player.class, 12.0f, 0.02f)); // LOOK
+        this.goalSelector.addGoal(4, new LookAtTargetPosGoal(this)); // LOOK
+        this.goalSelector.addGoal(5, new TouristLookAtPlayerGoal(this, AbstractVillager.class, 8.0f, 0.02f)); // LOOK
+        this.goalSelector.addGoal(6, new TouristLookAtPlayerGoal(this, Animal.class, 8.0f, 0.01f)); // LOOK
+        this.goalSelector.addGoal(7, new TouristRandomLookAroundGoal(this)); // LOOK
+    }
+
     @Override
     public void die(DamageSource damageSource) {
         if (this.level() instanceof ServerLevel) {
@@ -195,22 +219,6 @@ public class TouristEntity extends AbstractVillager {
     }
 
     @Override
-    protected void registerGoals() {
-        if (this.level() instanceof ServerLevel) {
-            this.speedModifier = this.chooseSpeedModifier();
-            logActivity("Set speedModifier in registerGoals to " + this.speedModifier);
-        }
-        this.goalSelector.addGoal(0, new FloatGoal(this));
-        this.goalSelector.addGoal(1, new MoveToBeaconGoal(this, this.speedModifier)); // MOVE
-        this.goalSelector.addGoal(2, new TouristRandomStrollGoal(this, this.speedModifier)); // MOVE
-        this.goalSelector.addGoal(3, new TouristLookAtPlayerGoal(this, Player.class, 12.0f, 0.02f)); // LOOK
-        this.goalSelector.addGoal(4, new LookAtTargetPosGoal(this)); // LOOK
-        this.goalSelector.addGoal(5, new TouristLookAtPlayerGoal(this, AbstractVillager.class, 8.0f, 0.02f)); // LOOK
-        this.goalSelector.addGoal(6, new TouristLookAtPlayerGoal(this, Animal.class, 8.0f, 0.01f)); // LOOK
-        this.goalSelector.addGoal(7, new TouristRandomLookAroundGoal(this)); // LOOK
-    }
-
-    @Override
     public boolean removeWhenFarAway(double distanceToClosestPlayer) {
         return false; // prevents entity from de-spawning
     }
@@ -233,7 +241,6 @@ public class TouristEntity extends AbstractVillager {
         if (beaconTarget != null) {
             valueOutput.store("BeaconTarget", BlockPos.CODEC, this.beaconTarget);
         }
-        valueOutput.putDouble("SpeedModifier", this.speedModifier);
         valueOutput.putDouble("ClosestDistanceToBeacon", this.closestDistanceToBeacon);
         valueOutput.putInt("FailedProgressChecks", this.consecutiveFailedProgressChecks);
         valueOutput.putBoolean("ReportedHurtEnRoute", this.reportedHurtEnRoute);
@@ -252,8 +259,6 @@ public class TouristEntity extends AbstractVillager {
         this.beaconTarget = valueInput.read("BeaconTarget", BlockPos.CODEC).orElse(null);
         this.state = valueInput.read("State", TouristState.CODEC).orElse(
                 (this.beaconTarget != null ? TouristState.TRAVELLING_TO_BEACON : TouristState.IDLE));
-        this.speedModifier = valueInput.getDoubleOr("SpeedModifier", this.chooseSpeedModifier());
-        logActivity("Set speedModifier in readAdditionalSaveData to " + this.speedModifier);
         this.closestDistanceToBeacon = valueInput.getDoubleOr("ClosestDistanceToBeacon", Double.MAX_VALUE);
         this.consecutiveFailedProgressChecks = valueInput.getIntOr("FailedProgressChecks", 0);
         this.reportedHurtEnRoute = valueInput.getBooleanOr("ReportedHurtEnRoute", false);
@@ -264,7 +269,6 @@ public class TouristEntity extends AbstractVillager {
         this.isHungry = valueInput.getBooleanOr("IsHungry", false);
         this.isStayingOvernight = valueInput.getBooleanOr("IsStayingOvernight", false);
     }
-    //endregion
 
     //region State Management
     private void transitionTo(TouristState newState) {
@@ -279,7 +283,7 @@ public class TouristEntity extends AbstractVillager {
         this.state = newState;
         // TODO: Always sync to client?
 
-        logActivity("Transitioning state to " + newState);
+        logActivity(Verbosity.MAJOR_EVENTS, "Transitioning state to " + newState);
 
         switch (newState) {
             case PLANNING_NEXT_MOVE -> this.planNextTarget();
@@ -359,13 +363,16 @@ public class TouristEntity extends AbstractVillager {
         List<TouristBeaconBlockEntity> closestBeacons;
 
         if (this.level() instanceof ServerLevel serverLevel) {
+            double maxTravelDistanceToNextBeacon = ModServerConfigManager.getConfig().touristEntity().getMaxTravelDistanceToNextBeacon();
+            double maxTravelDistanceToNextBeaconSqr = maxTravelDistanceToNextBeacon * maxTravelDistanceToNextBeacon;
             if (beaconTarget == null) {
                 closestBeacons = TourismManager.getLoadedTouristBeaconsByDistance(
                         serverLevel,
                         this.blockPosition(),
                         beaconBlockEntity ->
                                 beaconBlockEntity.isOpenForBusiness()
-                                && this.blockPosition().distSqr(beaconBlockEntity.getBlockPos()) <= (MAX_TRAVEL_DISTANCE_TO_NEXT_BEACON * MAX_TRAVEL_DISTANCE_TO_NEXT_BEACON));
+                                && this.blockPosition().distSqr(beaconBlockEntity.getBlockPos()) <= maxTravelDistanceToNextBeaconSqr
+                );
             } else {
                 closestBeacons = TourismManager.getLoadedTouristBeaconsByDistance(
                         serverLevel,
@@ -373,7 +380,7 @@ public class TouristEntity extends AbstractVillager {
                         beaconBlockEntity ->
                                 !beaconBlockEntity.getBlockPos().equals(this.beaconTarget)
                                 && beaconBlockEntity.isOpenForBusiness()
-                                && this.blockPosition().distSqr(beaconBlockEntity.getBlockPos()) <= (MAX_TRAVEL_DISTANCE_TO_NEXT_BEACON * MAX_TRAVEL_DISTANCE_TO_NEXT_BEACON)
+                                && this.blockPosition().distSqr(beaconBlockEntity.getBlockPos()) <= maxTravelDistanceToNextBeaconSqr
                 );
             }
 
@@ -564,11 +571,7 @@ public class TouristEntity extends AbstractVillager {
             this.sendMessageToNearbyPlayers(serverLevel, message);
         }
 
-        if (VERBOSE_LOGGING) {
-            Touristry.LOGGER.info(message.getString());
-        } else {
-            Touristry.LOGGER.debug(message.getString());
-        }
+        logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, message.getString());
     }
 
     public boolean avoidWater() {

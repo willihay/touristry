@@ -3,7 +3,10 @@ package org.bensam.touristry.entity.goal;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ai.goal.Goal;
+import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
+import org.bensam.touristry.config.Verbosity;
 import org.bensam.touristry.entity.TouristEntity;
+import org.bensam.touristry.tourism.TourismManager;
 import org.jspecify.annotations.NonNull;
 
 import java.util.EnumSet;
@@ -15,13 +18,11 @@ public class MoveToBeaconGoal extends Goal {
     private static final int PROGRESS_CHECK_RETRIES = 5;
 
     private final TouristEntity tourist;
-    private final double speedModifier;
     private int nextRepathTicks;
     private int nextCheckProgressTicks;
 
-    public MoveToBeaconGoal(TouristEntity tourist, double speedModifier) {
+    public MoveToBeaconGoal(TouristEntity tourist) {
         this.tourist = tourist;
-        this.speedModifier = speedModifier;
         this.setFlags(EnumSet.of(Goal.Flag.MOVE));
     }
 
@@ -42,6 +43,17 @@ public class MoveToBeaconGoal extends Goal {
         BlockPos beaconTarget = this.tourist.getBeaconTarget();
         if (beaconTarget == null) {
             return;
+        }
+
+        if (this.tourist.level().isClientSide()) {
+            return;
+        }
+
+        TouristBeaconBlockEntity beaconBlockEntity = TourismManager.getBeaconBlockEntity(this.tourist.level(), this.tourist.getBeaconTarget());
+        if (beaconBlockEntity != null) {
+            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "Starting MoveToBeaconGoal to navigate to " + beaconBlockEntity.getPlainTextName());
+        } else {
+            TouristEntity.logActivity(Verbosity.GAMEPLAY_WARNINGS, "Starting MoveToBeaconGoal to navigate to *unknown beacon*");
         }
 
         double distanceToTarget = Math.sqrt(this.getDistanceToBeaconSqr(beaconTarget));
@@ -92,7 +104,7 @@ public class MoveToBeaconGoal extends Goal {
                     this.tourist.markLost();
                 } else {
                     if (this.tourist.level() instanceof ServerLevel) {
-                        TouristEntity.logActivity("[MoveToBeaconGoal] " + this.tourist.getDisplayName().getString() + " failed " + consecutiveFailedProgressChecks + " consecutive nav progress checks");
+                        TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[MoveToBeaconGoal] " + this.tourist.getDisplayName().getString() + " failed " + consecutiveFailedProgressChecks + " consecutive nav progress checks");
                     }
                 }
             } else {
@@ -117,13 +129,15 @@ public class MoveToBeaconGoal extends Goal {
                 beaconTarget.getX() + 0.5,
                 beaconTarget.getY(),
                 beaconTarget.getZ() + 0.5,
-                this.speedModifier
+                1.0 // speed modifier
         );
 
-//        if (!moveStarted && this.tourist.level() instanceof ServerLevel) {
-//            TouristEntity.logActivity("[MoveToBeaconGoal] Unable to path " + this.tourist.getDisplayName().getString()
-//                    + " toward beacon at " + beaconTarget.toShortString());
-//        }
+        if (!moveStarted && this.tourist.level() instanceof ServerLevel) {
+            TouristEntity.logActivity(Verbosity.LEVEL_1_DIAGNOSTICS,
+                    "[MoveToBeaconGoal] Unable to path {} toward beacon at {}",
+                    this.tourist.getDisplayName().getString(),
+                    beaconTarget.toShortString());
+        }
 
         this.nextRepathTicks = REPATH_INTERVAL_GOALTICKS;
     }
