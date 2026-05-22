@@ -20,6 +20,7 @@ import net.minecraft.world.level.storage.ValueOutput;
 import org.bensam.touristry.ModBlockEntities;
 import org.bensam.touristry.ModComponents;
 import org.bensam.touristry.Touristry;
+import org.bensam.touristry.block.TouristBeaconBlock;
 import org.bensam.touristry.menu.TouristBeaconMenu;
 import org.bensam.touristry.tourism.TourismManager;
 import org.bensam.touristry.tourism.TouristBeaconExperience;
@@ -180,6 +181,10 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
 
     public void setOpenForBusiness(boolean openForBusiness) {
         this.openForBusiness = openForBusiness;
+        BlockState blockState = this.getBlockState();
+        if (blockState.hasProperty(TouristBeaconBlock.OPEN_FOR_BUSINESS) && this.level != null) {
+            this.level.setBlockAndUpdate(this.getBlockPos(), blockState.setValue(TouristBeaconBlock.OPEN_FOR_BUSINESS, openForBusiness));
+        }
         this.setChanged();
     }
 
@@ -236,6 +241,16 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
         // Register this block entity for tourism when block entity is attached back into a chunk/world.
         this.syncTourismRegistration();
     }
+
+//    @Override
+//    public void setChanged() {
+//        super.setChanged();
+//
+//        if (this.level != null) {
+//            // Send update to neighbors AND clients (bitmask = 3) since this block's light level can change.
+//            this.level.sendBlockUpdated(this.getBlockPos(), this.getBlockState(), this.getBlockState(), 3);
+//        }
+//    }
 
     @Override
     public void setRemoved() {

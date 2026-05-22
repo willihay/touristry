@@ -33,21 +33,11 @@ public class ModBlocks {
                 BlockBehaviour.Properties.of()
                         .mapColor(MapColor.COLOR_PURPLE)
                         .instrument(NoteBlockInstrument.BASEDRUM)
+                        .lightLevel(blockState -> blockState.getValue(TouristBeaconBlock.OPEN_FOR_BUSINESS) ? 12 : 0)
                         .requiresCorrectToolForDrops()
                         .sound(SoundType.STONE)
                         .strength(5.0f, 1200.0f)
         );
-//        wandEnchantingTableInternal = register(
-//                "wand_enchanting_table",
-//                BlockWandEnchantingTable::new,
-//                BlockBehaviour.Properties.of()
-//                        .mapColor(MapColor.COLOR_CYAN)
-//                        .instrument(NoteBlockInstrument.BASEDRUM)
-//                        .requiresCorrectToolForDrops()
-//                        .lightLevel(blockState -> blockState.getValue(BlockWandEnchantingTable.HAS_LAPIS) ? 9 : 0)
-//                        .sound(SoundType.STONE)
-//                        .strength(5.0f, 1200.0f)
-//        );
     }
 
     public static <T extends Block> T register(

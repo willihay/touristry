@@ -1,7 +1,10 @@
 {
   "variants": {
-    "": {
-      "model": "touristry:block/tourist_beacon"
+    "open_for_business=false": {
+      "model": "touristry:block/tourist_beacon_unlit"
+    },
+    "open_for_business=true": {
+      "model": "touristry:block/tourist_beacon_lit"
     }
   }
 }

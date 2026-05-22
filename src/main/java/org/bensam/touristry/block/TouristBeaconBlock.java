@@ -9,8 +9,11 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
 import org.jspecify.annotations.NonNull;
@@ -18,10 +21,12 @@ import org.jspecify.annotations.Nullable;
 
 public class TouristBeaconBlock extends BaseEntityBlock {
     public static final MapCodec<TouristBeaconBlock> CODEC = simpleCodec(TouristBeaconBlock::new);
+    public static final BooleanProperty OPEN_FOR_BUSINESS = BooleanProperty.create("open_for_business");
 
 	public TouristBeaconBlock(Properties properties)
 	{
         super(properties);
+        this.registerDefaultState(this.defaultBlockState().setValue(OPEN_FOR_BUSINESS, false));
     }
 
     @Override
@@ -32,6 +37,11 @@ public class TouristBeaconBlock extends BaseEntityBlock {
     @Override
     protected void affectNeighborsAfterRemoval(@NonNull BlockState blockState, @NonNull ServerLevel serverLevel, @NonNull BlockPos blockPos, boolean bl) {
         Containers.updateNeighboursAfterDestroy(blockState, serverLevel, blockPos);
+    }
+
+    @Override
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(OPEN_FOR_BUSINESS);
     }
 
     @Override

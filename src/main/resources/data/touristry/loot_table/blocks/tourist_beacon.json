@@ -17,6 +17,13 @@
                 "touristry:tourist_beacon_experience",
                 "touristry:tourist_beacon_stats"
               ]
+            },
+            {
+              "function": "minecraft:copy_state",
+              "block": "touristry:tourist_beacon",
+              "properties": [
+                "open_for_business"
+              ]
             }
           ]
         }

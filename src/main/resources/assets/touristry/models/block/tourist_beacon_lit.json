@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "touristry:block/tourist_beacon_bottom",
+    "down": "touristry:block/tourist_beacon_bottom",
+    "up": "touristry:block/tourist_beacon_top_lit",
+    "north": "touristry:block/tourist_beacon_side_lit",
+    "south": "touristry:block/tourist_beacon_side_lit",
+    "west": "touristry:block/tourist_beacon_side_lit",
+    "east": "touristry:block/tourist_beacon_side_lit"
+  }
+}

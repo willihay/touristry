@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "RER",
+    "ALA",
+    "OOO"
+  ],
+  "key": {
+    "A": "minecraft:amethyst_shard",
+    "E": "minecraft:ender_eye",
+    "L": "minecraft:lapis_lazuli",
+    "O": "minecraft:obsidian",
+    "R": "minecraft:redstone"
+  },
+  "result": {
+    "id": "touristry:tourist_beacon"
+  }
+}
