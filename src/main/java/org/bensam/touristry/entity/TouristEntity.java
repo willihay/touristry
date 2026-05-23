@@ -17,6 +17,8 @@ import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.npc.villager.AbstractVillager;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.ValueInput;
@@ -299,9 +301,12 @@ public class TouristEntity extends AbstractVillager {
         return state;
     }
 
-    public void prepareForJourney(@NonNull BlockPos beaconTarget) {
+    public void prepareForJourney(@NonNull BlockPos beaconTarget, boolean withMap) {
         this.beaconTarget = beaconTarget.immutable();
         this.resetBeaconJourneyStats();
+        if (withMap) {
+            this.giveItemToHold(new ItemStack(Items.MAP));
+        }
         this.transitionTo(TouristState.TRAVELLING_TO_BEACON);
     }
 
@@ -313,6 +318,7 @@ public class TouristEntity extends AbstractVillager {
         this.getNavigation().stop();
 
         if (this.level() instanceof ServerLevel) {
+            this.clearItemHeld();
             TouristState nextState = TouristState.PLANNING_NEXT_MOVE;
             BlockPos beaconTarget = this.beaconTarget;
 
@@ -392,7 +398,7 @@ public class TouristEntity extends AbstractVillager {
                 }
 
                 TouristBeaconBlockEntity beaconBlockEntity = closestBeacons.get(beaconIndex);
-                this.prepareForJourney(beaconBlockEntity.getBlockPos());
+                this.prepareForJourney(beaconBlockEntity.getBlockPos(), true);
                 return;
             }
 
@@ -405,12 +411,14 @@ public class TouristEntity extends AbstractVillager {
     }
 
     protected void beginWanderingAtBeacon() {
+        this.clearItemHeld();
         this.nextChooseActivityTicks = this.chooseNextChooseActivityTicks();
     }
 
     protected void beginWanderingWorld() {
         this.beaconTarget = null;
         this.resetBeaconJourneyStats();
+        this.clearItemHeld();
         this.nextChooseActivityTicks = this.chooseNextChooseActivityTicks();
     }
 
@@ -578,6 +586,10 @@ public class TouristEntity extends AbstractVillager {
         return this.state == TouristState.WANDERING_AT_BEACON;
     }
 
+    protected void clearItemHeld() {
+        this.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+    }
+
     public @Nullable BlockPos getBeaconTarget() {
         return this.beaconTarget;
     }
@@ -605,6 +617,10 @@ public class TouristEntity extends AbstractVillager {
         };
 
         return Mth.clamp(this.mood + change, MIN_MOOD, MAX_MOOD);
+    }
+
+    protected void giveItemToHold(ItemStack itemStack) {
+        this.setItemSlot(EquipmentSlot.MAINHAND, itemStack);
     }
 
     public boolean isCurrentActivityAtBeacon() {
