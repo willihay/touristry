@@ -7,36 +7,26 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.Item;
 import org.bensam.touristry.config.ModServerConfig;
+import org.bensam.touristry.item.BeaconKeyItem;
 
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 public final class ModItems {
     private ModItems() {}
 
-    //private static ItemArcaneWand arcaneWandInternal;
-
-    //public static final Supplier<ItemArcaneWand> ARCANE_WAND = () -> arcaneWandInternal;
-
-//    private static final WandDefinition ARCANE_WAND_DEFINITION =
-//            new WandDefinition(
-//                    "item." + ArcaneRelics.MOD_ID + ".arcane_wand.info",
-//                    2);
+    private static BeaconKeyItem beaconKeyItem;
+    public static final Supplier<BeaconKeyItem> BEACON_KEY = () -> beaconKeyItem;
 
     public static void initialize() {
         ModServerConfig defaults = ModServerConfig.defaults();
 
         // Register mod items.
-//        arcaneWandInternal = register(
-//                "arcane_wand",
-//                props -> new ItemArcaneWand(props, ARCANE_WAND_DEFINITION),
-//                ARCANE_WAND_DEFINITION.createProperties(ItemArcaneWand.INITIAL_CHARGES, false)
-//        );
-
-//        windWandInternal = register(
-//                "wind_wand",
-//                props -> new ItemWindWand(props, WIND_WAND_DEFINITION),
-//                WIND_WAND_DEFINITION.createProperties(defaults.windWand().balance().initialCharges(), true)
-//        );
+        beaconKeyItem = register(
+                "beacon_key",
+                BeaconKeyItem::new,
+                new Item.Properties()
+        );
     }
 
     public static <T extends Item> T register(

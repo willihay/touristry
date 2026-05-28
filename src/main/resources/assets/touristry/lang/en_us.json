@@ -8,6 +8,8 @@
 
   "entity.touristry.tourist": "Tourist",
 
+  "item.touristry.beacon_key": "Beacon Key",
+
   "itemGroup.touristry": "Touristry",
 
   "message.touristry.tourist_beacon.open_for_business": "OPEN for business",

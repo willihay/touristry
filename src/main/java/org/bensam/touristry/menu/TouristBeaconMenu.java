@@ -15,9 +15,13 @@ public class TouristBeaconMenu extends AbstractContainerMenu {
     public static final int BUTTON_TOGGLE_OPEN_FOR_BUSINESS = 0;
 
     // Slot layout
-    private static final int BEACON_SLOT_COUNT = 9;
-    private static final int BEACON_SLOT_START_X = 116;
-    private static final int BEACON_SLOT_START_Y = 14;
+    private static final int BEACON_SLOT_COUNT = TouristBeaconBlockEntity.TOTAL_INVENTORY_SIZE;
+    private static final int BEACON_PAYMENT_SLOT_COUNT = TouristBeaconBlockEntity.PAYMENT_SLOT_SIZE;
+    private static final int BEACON_PAYMENT_SLOT_START_X = 116;
+    private static final int BEACON_PAYMENT_SLOT_START_Y = 14;
+    private static final int BEACON_KEY_SLOT = TouristBeaconBlockEntity.BEACON_KEY_SLOT_INDEX;
+    private static final int BEACON_KEY_SLOT_X = 80;
+    private static final int BEACON_KEY_SLOT_Y = 32;
     private static final int SLOT_SIDE_LENGTH = 18;
 
     // Player inventory layout
@@ -49,8 +53,19 @@ public class TouristBeaconMenu extends AbstractContainerMenu {
         this.beaconContainerData = data;
         this.containerLevelAccess = access;
 
-        // Add beacon inventory slots.
-        add3x3GridSlots(beaconInventory, BEACON_SLOT_START_X, BEACON_SLOT_START_Y);
+        // Add beacon payment slots.
+        add3x3GridSlots(beaconInventory, BEACON_PAYMENT_SLOT_START_X, BEACON_PAYMENT_SLOT_START_Y);
+
+        // Add beacon key slot.
+        this.addSlot(new Slot(beaconInventory, BEACON_KEY_SLOT, BEACON_KEY_SLOT_X, BEACON_KEY_SLOT_Y) {
+            @Override
+            public boolean mayPlace(ItemStack stack) { return false; }
+
+            @Override
+            public void onTake(Player player, ItemStack stack) {
+                TouristBeaconMenu.this.onKeyTake(player, stack);
+            }
+        });
 
         // Add the player inventory slots.
         this.addStandardInventorySlots(playerInventory, PLAYER_INVENTORY_ROW_X, PLAYER_INVENTORY_ROW_Y);
@@ -98,6 +113,13 @@ public class TouristBeaconMenu extends AbstractContainerMenu {
         return true;
     }
 
+    protected void onKeyTake(Player player, ItemStack itemStack) {
+        if (this.beaconInventory instanceof TouristBeaconBlockEntity touristBeaconBlockEntity) {
+            Slot slot = this.slots.get(BEACON_KEY_SLOT);
+            slot.set(touristBeaconBlockEntity.getBeaconKey());
+        }
+    }
+
     @Override
     public @NonNull ItemStack quickMoveStack(@NonNull Player player, int slotIndex) {
         Slot slot = this.slots.get(slotIndex);
@@ -110,7 +132,22 @@ public class TouristBeaconMenu extends AbstractContainerMenu {
         ItemStack sourceStack = slot.getItem();
         ItemStack returnStack = sourceStack.copy();
 
-        // Payment slot -> player inventory
+        // The beacon key slot is intentionally infinite. Returning the copied
+        // key here would make Minecraft's quick-move loop keep pulling keys
+        // while the refilled slot still matches the returned stack.
+        if (slotIndex == BEACON_KEY_SLOT) {
+            ItemStack keyToMove = sourceStack.copy();
+            keyToMove.setCount(1);
+
+            if (!this.moveItemStackTo(keyToMove, PLAYER_SLOT_START, inventorySize, false)) {
+                return ItemStack.EMPTY;
+            }
+
+            slot.onTake(player, sourceStack);
+            return ItemStack.EMPTY;
+        }
+
+        // Beacon slot -> player inventory
         if (slotIndex < BEACON_SLOT_COUNT) {
             if (!this.moveItemStackTo(sourceStack, PLAYER_SLOT_START, inventorySize, false)) {
                 return ItemStack.EMPTY;
@@ -133,7 +170,6 @@ public class TouristBeaconMenu extends AbstractContainerMenu {
             return ItemStack.EMPTY;
         }
 
-        slot.onTake(player, sourceStack);
         return returnStack;
     }
 

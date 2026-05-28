@@ -98,7 +98,7 @@ public final class PlayerCommands {
         // inventory
         MutableComponent inventoryMessage = Component.literal(" - inventory: ");
         Map<Item, Integer> totals = new LinkedHashMap<>();
-        for (int i = 0; i < beaconBlockEntity.getContainerSize(); ++i) {
+        for (int i = 0; i < beaconBlockEntity.getPaymentSlotSize(); ++i) {
             ItemStack itemStack = beaconBlockEntity.getItem(i);
             if (!itemStack.isEmpty()) {
                 totals.merge(itemStack.getItem(), itemStack.getCount(), Integer::sum);
@@ -118,6 +118,10 @@ public final class PlayerCommands {
             }
         }
         source.sendSuccess(() -> inventoryMessage, false);
+
+        // uuid
+        source.sendSuccess(() -> Component.literal(" - uuid: " + beaconBlockEntity.getUUID().toString()), false);
+
         return 1;
     }
 
