@@ -29,7 +29,7 @@ public class BeaconKeyItem extends Item {
     }
 
     public final UUID getBeaconUUID(ItemStack stack) {
-        return stack.getOrDefault(ModComponents.TOURIST_BEACON_UUID, UUID.randomUUID());
+        return stack.getOrDefault(ModComponents.TOURIST_BEACON_UUID, new UUID(0, 0));
     }
 
     public void setBeaconUUID(ItemStack stack, UUID beaconUUID) {

@@ -62,6 +62,12 @@ public class TouristBeaconScreen extends AbstractContainerScreen<TouristBeaconMe
     }
 
     @Override
+    public void render(GuiGraphics guiGraphics, int i, int j, float f) {
+        super.render(guiGraphics, i, j, f);
+        this.renderTooltip(guiGraphics, i, j);
+    }
+
+    @Override
     protected void renderBg(GuiGraphics guiGraphics, float f, int i, int j) {
         int xo = (this.width - this.imageWidth) / 2;
         int yo = (this.height - this.imageHeight) / 2;

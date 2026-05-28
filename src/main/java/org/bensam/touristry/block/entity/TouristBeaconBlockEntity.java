@@ -5,7 +5,9 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.core.component.DataComponentMap;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.ContainerHelper;
@@ -190,8 +192,17 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
 
     public ItemStack getBeaconKey() {
         ItemStack key = new ItemStack(ModItems.BEACON_KEY.get());
+
+        // Give key a custom name using the beacon's name.
+        MutableComponent keyName = Component.literal("Key for ").append(this.getName().copy());
+        if (!this.hasCustomName()) {
+            keyName.append(" " + this.uuid.toString().substring(0, 8));
+        }
+        key.set(DataComponents.ITEM_NAME, keyName);
+
+        // Associate the key with this beacon's UUID.
         if (key.getItem() instanceof BeaconKeyItem beaconKeyItem) {
-            beaconKeyItem.setBeaconUUID(key, this.getUUID());
+            beaconKeyItem.setBeaconUUID(key, this.uuid);
         }
         return key;
     }
