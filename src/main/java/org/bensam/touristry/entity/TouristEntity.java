@@ -14,6 +14,7 @@ import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
+import net.minecraft.world.entity.ai.goal.OpenDoorGoal;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.npc.villager.AbstractVillager;
 import net.minecraft.world.entity.player.Player;
@@ -145,7 +146,8 @@ public class TouristEntity extends AbstractVillager {
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(1, new MoveToBeaconGoal(this)); // MOVE
-        this.goalSelector.addGoal(2, new TouristRandomStrollGoal(this, 0.6)); // MOVE
+        this.goalSelector.addGoal(2, new OpenDoorGoal(this, true));
+        this.goalSelector.addGoal(3, new TouristRandomStrollGoal(this, 0.6)); // MOVE
         this.goalSelector.addGoal(3, new TouristLookAtPlayerGoal(this, Player.class, 12.0f, 0.02f)); // LOOK
         this.goalSelector.addGoal(4, new LookAtTargetPosGoal(this)); // LOOK
         this.goalSelector.addGoal(5, new TouristLookAtPlayerGoal(this, AbstractVillager.class, 8.0f, 0.02f)); // LOOK
