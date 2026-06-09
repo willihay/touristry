@@ -57,12 +57,12 @@ public class MoveToBeaconGoal extends Goal {
         }
 
         double distanceToTarget = Math.sqrt(this.getDistanceToBeaconSqr(beaconTarget));
-        this.tourist.reportProgressTowardsBeaconTarget(distanceToTarget, 0);
+        this.tourist.getMind().recordProgressTowardsBeaconTarget(distanceToTarget, 0);
 
         if (!this.isAtBeacon(beaconTarget)) {
             this.moveToBeacon();
         } else {
-            this.tourist.getNavigation().stop();
+            this.tourist.stopNavigation();
         }
     }
 
@@ -76,7 +76,7 @@ public class MoveToBeaconGoal extends Goal {
         }
 
         if (this.isAtBeacon(beaconTarget)) {
-            this.tourist.arriveAtBeacon();
+            this.tourist.getMind().arriveAtBeacon();
             return;
         }
 
@@ -98,17 +98,17 @@ public class MoveToBeaconGoal extends Goal {
             if ((closestDistanceToBeacon - distanceToTarget) < 0.5) {
                 int consecutiveFailedProgressChecks = this.tourist.getConsecutiveFailedProgressChecks();
                 consecutiveFailedProgressChecks++;
-                this.tourist.reportProgressTowardsBeaconTarget(closestDistanceToBeacon, consecutiveFailedProgressChecks);
+                this.tourist.getMind().recordProgressTowardsBeaconTarget(closestDistanceToBeacon, consecutiveFailedProgressChecks);
 
                 if (consecutiveFailedProgressChecks > PROGRESS_CHECK_RETRIES) {
-                    this.tourist.markLost();
+                    this.tourist.getMind().onLost();
                 } else {
                     if (this.tourist.level() instanceof ServerLevel) {
                         TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[MoveToBeaconGoal] " + this.tourist.getDisplayName().getString() + " failed " + consecutiveFailedProgressChecks + " consecutive nav progress checks");
                     }
                 }
             } else {
-                this.tourist.reportProgressTowardsBeaconTarget(distanceToTarget, 0);
+                this.tourist.getMind().recordProgressTowardsBeaconTarget(distanceToTarget, 0);
             }
             this.nextCheckProgressTicks = CHECK_PROGRESS_GOALTICKS;
         }
@@ -116,7 +116,7 @@ public class MoveToBeaconGoal extends Goal {
 
     @Override
     public void stop() {
-        this.tourist.getNavigation().stop();
+        this.tourist.stopNavigation();
     }
 
     private void moveToBeacon() {

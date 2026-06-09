@@ -20,12 +20,12 @@ public class TouristRandomStrollGoal extends RandomStrollGoal {
 
     @Override
     public boolean canUse() {
-        return super.canUse() && this.tourist.isWandering();
+        return super.canUse() && this.tourist.getMind().isWandering();
     }
 
     @Override
     public boolean canContinueToUse() {
-        return super.canContinueToUse() && this.tourist.isWandering();
+        return super.canContinueToUse() && this.tourist.getMind().isWandering();
     }
 
     @Override
@@ -49,11 +49,11 @@ public class TouristRandomStrollGoal extends RandomStrollGoal {
     @Nullable
     @Override
     protected Vec3 getPosition() {
-        if (this.mob.isInWater()) {
-            Vec3 vec3 = LandRandomPos.getPos(this.mob, 15, 7);
+        if (this.tourist.isInWater()) {
+            Vec3 vec3 = LandRandomPos.getPos(this.tourist, 15, 7);
             return vec3 == null ? super.getPosition() : vec3;
         } else {
-            return this.tourist.avoidWater() || (this.mob.getRandom().nextFloat() >= 0.5f) ? LandRandomPos.getPos(this.mob, 10, 7) : super.getPosition();
+            return this.tourist.getMind().avoidWater() || (this.tourist.getRandom().nextFloat() >= 0.5f) ? LandRandomPos.getPos(this.tourist, 10, 7) : super.getPosition();
         }
     }
 }

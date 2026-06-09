@@ -409,7 +409,7 @@ public class TourismManager {
         );
 
         tourist.snapTo(spawnPoint, world.random.nextFloat() * 360.0F, 0.0F);
-        tourist.prepareForJourney(scheduledTouristSpawn.beaconPos(), false);
+        tourist.getMind().prepareForJourney(scheduledTouristSpawn.beaconPos());
         tourist.finalizeSpawn(world, world.getCurrentDifficultyAt(tourist.blockPosition()), EntitySpawnReason.EVENT, null);
         // TODO: Implement random tourist names (ensuring name isn't currently in use)
         tourist.setCustomName(Component.literal("Ned Flanders"));
@@ -440,7 +440,7 @@ public class TourismManager {
         );
 
         tourist.snapTo(spawnPoint, world.random.nextFloat() * 360.0F, 0.0F);
-        tourist.prepareForJourney(beaconBlockEntity.getBlockPos(), false);
+        tourist.getMind().prepareForJourney(beaconBlockEntity.getBlockPos());
         tourist.finalizeSpawn(world, world.getCurrentDifficultyAt(tourist.blockPosition()), EntitySpawnReason.COMMAND, null);
         tourist.setCustomName(Component.literal("Tassian Candor"));
         world.addFreshEntity(tourist);
