@@ -148,7 +148,10 @@ public final class PlayerCommands {
         for (TouristBeaconBlockEntity beaconBlockEntity : loadedBeacons) {
             Component message = Component.literal(" - ")
                     .append(beaconBlockEntity.getName().copy())
-                    .append(Component.literal(" @ " + beaconBlockEntity.getBlockPos().toShortString()));
+                    .append(Component.literal(" @ " + beaconBlockEntity.getBlockPos().toShortString() + " ("))
+                    .append(Component.translatable("message." + Touristry.MOD_ID
+                            + (beaconBlockEntity.isOpenForBusiness() ? ".tourist_beacon.open_for_business" : ".tourist_beacon.closed_for_business")))
+                    .append(Component.literal(")"));
             source.sendSuccess(() -> message, false);
         }
         return 1;

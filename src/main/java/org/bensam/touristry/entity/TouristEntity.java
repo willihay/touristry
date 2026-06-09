@@ -208,11 +208,13 @@ public class TouristEntity extends AbstractVillager {
     public boolean hurtServer(ServerLevel serverLevel, DamageSource damageSource, float f) {
         if (this.isCurrentActivityAtBeacon()) {
             if (!this.mind.hasReportedHurtOnPremises()) {
+                this.mind.updateMood(VisitResult.HURT_ON_PREMISES);
                 Component experienceMessage = getHurtMessage(damageSource).append(Component.literal(" while at"));
                 this.mind.recordExperience(serverLevel, VisitResult.HURT_ON_PREMISES, true, true, experienceMessage, true, true);
             }
         } else if (this.isTravellingToBeacon()) {
             if (!this.mind.hasReportedHurtEnRoute()) {
+                this.mind.updateMood(VisitResult.HURT_EN_ROUTE);
                 Component experienceMessage = getHurtMessage(damageSource).append(Component.literal(" while travelling to"));
                 this.mind.recordExperience(serverLevel, VisitResult.HURT_EN_ROUTE, true, true, experienceMessage, true, true);
             }

@@ -125,8 +125,6 @@ public final class TouristMind {
             case HURT_ON_PREMISES -> this.reportedHurtOnPremises = true;
         }
 
-        this.mood = this.getUpdatedMood(result);
-
         this.tourist.applyExperienceToWorld(serverLevel, result, applyRatingToBeacon, sendToNearbyPlayers, experienceMessage, prependTouristName, appendBeaconTargetName, soundEvent);
     }
 
@@ -135,12 +133,32 @@ public final class TouristMind {
         this.consecutiveFailedProgressChecks = consecutiveFailedProgressChecks;
     }
 
+    public void updateMood(VisitResult result) {
+        double positiveNormalized = Math.max(0.0, this.mood) / (MAX_MOOD + 1.0);
+        double negativeNormalized = Math.max(0.0, -this.mood) / MAX_MOOD;
+
+        double change = switch (result) {
+            case ARRIVED, GOOD, GREAT -> {
+                this.goodExperiencesToday++;
+                VisitResult modifiedResult = this.goodExperiencesToday % 3 == 0 ? VisitResult.GREAT : result;
+                yield modifiedResult.moodDelta() * (1.0 - positiveNormalized) * (1.0 + 0.5 * negativeNormalized);
+            }
+            case UNFAVORABLE, FAILED_SPAWN, LOST, CLOSED_ON_SPAWN, CLOSED_ON_ARRIVAL, HURT_EN_ROUTE, HURT_ON_PREMISES, KILLED_EN_ROUTE, KILLED_ON_PREMISES ->
+                    result.moodDelta() * (0.75 + 0.5 * positiveNormalized);
+        };
+
+        this.mood = Mth.clamp(this.mood + change, MIN_MOOD, MAX_MOOD);
+    }
+
     public void tick(ServerLevel serverLevel) {
         if (this.state == TouristState.FINISHED || this.state == TouristState.SLEEPING) {
             return;
         }
 
         if (this.isTimeToDespawn()) {
+            if (this.isCurrentActivityAtBeacon() && !this.isInMoodToDespawn()) {
+                this.recordGoodExperience(serverLevel);
+            }
             this.transitionTo(TouristState.DESPAWNING);
             return;
         }
@@ -178,8 +196,7 @@ public final class TouristMind {
                 }
 
                 if (this.isCurrentActivityAtBeacon()) {
-                    Component moodMessage = Component.literal("had a good time at");
-                    this.recordExperience(serverLevel, VisitResult.GOOD, true, false, moodMessage, true, true);
+                    this.recordGoodExperience(serverLevel);
                 }
 
                 this.transitionTo(TouristState.PLANNING_NEXT_MOVE);
@@ -197,23 +214,6 @@ public final class TouristMind {
 
     private double chooseStartingMood() {
         return 1.0 + this.random().nextDouble();
-    }
-
-    private double getUpdatedMood(VisitResult result) {
-        double positiveNormalized = Math.max(0.0, this.mood) / (MAX_MOOD + 1.0);
-        double negativeNormalized = Math.max(0.0, -this.mood) / MAX_MOOD;
-
-        double change = switch (result) {
-            case ARRIVED, GOOD, GREAT -> {
-                this.goodExperiencesToday++;
-                VisitResult modifiedResult = this.goodExperiencesToday % 3 == 0 ? VisitResult.GREAT : result;
-                yield modifiedResult.moodDelta() * (1.0 - positiveNormalized) * (1.0 + 0.5 * negativeNormalized);
-            }
-            case UNFAVORABLE, FAILED_SPAWN, LOST, CLOSED_ON_SPAWN, CLOSED_ON_ARRIVAL, HURT_EN_ROUTE, HURT_ON_PREMISES, KILLED_EN_ROUTE, KILLED_ON_PREMISES ->
-                    result.moodDelta() * (0.75 + 0.5 * positiveNormalized);
-        };
-
-        return Mth.clamp(this.mood + change, MIN_MOOD, MAX_MOOD);
     }
 
     private boolean isInMoodToDespawn() {
@@ -242,6 +242,22 @@ public final class TouristMind {
 
     private RandomSource random() {
         return this.tourist.getRandom();
+    }
+
+    private void recordGoodExperience(ServerLevel serverLevel) {
+        Component moodMessage = null;
+        VisitResult result = VisitResult.GOOD;
+
+        this.updateMood(result);
+
+        if (this.mood >= MAX_MOOD) {
+            moodMessage = Component.literal("had a great time at");
+            result = VisitResult.GREAT;
+        } else {
+            moodMessage = Component.literal("had a good time at");
+        }
+
+        this.recordExperience(serverLevel, result, true, false, moodMessage, true, true);
     }
 
     private void resetBeaconJourneyStats() {
@@ -301,15 +317,18 @@ public final class TouristMind {
 
                 if (beaconBlockEntity != null) {
                     if (beaconBlockEntity.isOpenForBusiness()) {
+                        this.updateMood(VisitResult.ARRIVED);
                         Component experienceMessage = Component.literal("arrived at");
                         this.recordExperience(serverLevel, VisitResult.ARRIVED, false, false, experienceMessage, true, true);
                         nextState = TouristState.CHOOSING_EXPERIENCE;
                     } else {
+                        this.updateMood(VisitResult.CLOSED_ON_ARRIVAL);
                         Component experienceMessage = Component.literal("found beacon closed at");
                         this.recordExperience(serverLevel, VisitResult.CLOSED_ON_ARRIVAL, true, true, experienceMessage, true, true);
                     }
                 } else {
                     // No beacon found at beaconTarget!
+                    this.updateMood(VisitResult.LOST);
                     Component experienceMessage = Component.literal("did not find a beacon at " + beaconTarget.toShortString());
                     this.recordExperience(serverLevel, VisitResult.LOST, true, true, experienceMessage, true, false);
                 }
@@ -352,9 +371,9 @@ public final class TouristMind {
         this.tourist.stopNavigation();
 
         if (this.tourist.level() instanceof ServerLevel serverLevel) {
+            this.updateMood(VisitResult.LOST);
             Component experienceMessage = Component.literal("got lost travelling to");
             this.recordExperience(serverLevel, VisitResult.LOST, true, true, experienceMessage, true, true);
-            this.tourist.playSound(SoundEvents.VILLAGER_NO);
         }
 
         this.transitionTo(TouristState.LOST);
@@ -366,10 +385,11 @@ public final class TouristMind {
 
         int tickTimeOfDay = (int) (serverLevel.getDayTime() % 24000L);
         if (tickTimeOfDay <= 1000 && !this.reportedHurtOnPremises) {
-            Component experienceMessage = Component.literal("woke up in a good mood at");
+            Component experienceMessage = Component.literal("woke up in a good mood at"); // resetDailyStats() determines how good of a mood
             this.recordExperience(serverLevel, VisitResult.GOOD, true, false, experienceMessage, true, true);
             this.transitionTo(TouristState.CHOOSING_EXPERIENCE);
         } else {
+            this.updateMood(VisitResult.UNFAVORABLE);
             Component experienceMessage = Component.literal("woke up abruptly at");
             this.recordExperience(serverLevel, VisitResult.UNFAVORABLE, true, false, experienceMessage, true, true);
             this.transitionTo(TouristState.DESPAWNING);

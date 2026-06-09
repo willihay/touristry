@@ -245,13 +245,13 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
 
         // Use a Runnable to make compiler catch forgotten updates when new VisitResult enums are added.
         Runnable update = switch (result) {
-            case ARRIVED, GOOD, GREAT -> () -> this.successfulVisits++;
+            case GOOD, GREAT -> () -> this.successfulVisits++;
             case CLOSED_ON_SPAWN, CLOSED_ON_ARRIVAL -> () -> this.closedEarly++;
             case LOST -> () -> this.navFailures++;
             case HURT_EN_ROUTE, HURT_ON_PREMISES -> () -> this.touristsHurt++;
             case KILLED_EN_ROUTE, KILLED_ON_PREMISES -> () -> this.touristsKilled++;
             case FAILED_SPAWN -> () -> this.failedSpawns++;
-            case UNFAVORABLE -> () -> {};
+            case ARRIVED, UNFAVORABLE -> () -> {};
         };
         update.run();
 
