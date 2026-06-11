@@ -1,19 +1,34 @@
 package org.bensam.touristry.item;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.LecternBlockEntity;
+import org.bensam.touristry.ModAttachments;
 import org.bensam.touristry.ModComponents;
+import org.bensam.touristry.tourism.TouristExperience;
 
 import java.util.UUID;
 
 public class BeaconKeyItem extends Item {
     public BeaconKeyItem(Properties properties) {
         super(properties);
+    }
+
+    public final UUID getBeaconUUID(ItemStack itemStack) {
+        return itemStack.getOrDefault(ModComponents.TOURIST_BEACON_UUID, new UUID(0, 0));
+    }
+
+    public void setBeaconUUID(ItemStack itemStack, UUID beaconUUID) {
+        itemStack.set(ModComponents.TOURIST_BEACON_UUID, beaconUUID);
     }
 
     @Override
@@ -28,11 +43,61 @@ public class BeaconKeyItem extends Item {
         return super.use(level, player, interactionHand);
     }
 
-    public final UUID getBeaconUUID(ItemStack stack) {
-        return stack.getOrDefault(ModComponents.TOURIST_BEACON_UUID, new UUID(0, 0));
+    @Override
+    public InteractionResult useOn(UseOnContext useOnContext) {
+        Level level = useOnContext.getLevel();
+        ItemStack stack = useOnContext.getItemInHand();
+        UUID beaconUUID = this.getBeaconUUID(stack);
+        BlockPos blockPos = useOnContext.getClickedPos();
+        BlockEntity blockEntity = level.getBlockEntity(blockPos);
+
+//        if (blockEntity instanceof LecternBlockEntity lectern) {
+//            if (level instanceof ServerLevel) {
+//                lectern.setAttached(ModAttachments.LECTERN_TOURIST_BEACON_UUID, beaconUUID);
+//                TourismManager.registerExperience(beaconUUID, new SightseeingExperience(beaconUUID, blockPos.immutable(), true));
+//            }
+//            return InteractionResult.SUCCESS;
+//        }
+
+        return super.useOn(useOnContext);
     }
 
-    public void setBeaconUUID(ItemStack stack, UUID beaconUUID) {
-        stack.set(ModComponents.TOURIST_BEACON_UUID, beaconUUID);
+    public InteractionResult useOnLectern(ServerLevel serverLevel, Player player, ItemStack key, LecternBlockEntity lectern) {
+        UUID beaconUUID = this.getBeaconUUID(key);
+
+        if (beaconUUID.equals(new UUID(0, 0))) {
+            return InteractionResult.FAIL;
+        }
+
+        // TODO: Lookup beacon name to use in player messages.
+        if (player.isShiftKeyDown()) {
+            if (lectern.hasAttached(ModAttachments.LECTERN_TOURIST_BEACON_UUID)) {
+                UUID attachedUUID = lectern.getAttached(ModAttachments.LECTERN_TOURIST_BEACON_UUID);
+                if (beaconUUID.equals(attachedUUID)) {
+                    lectern.removeAttached(ModAttachments.LECTERN_TOURIST_BEACON_UUID);
+                    TouristExperience.unregisterLectern(lectern);
+                    player.displayClientMessage(
+                            Component.literal("Unlinked Lectern from beacon "),
+                            true
+                    );
+                } else {
+                    player.displayClientMessage(
+                            Component.literal("Must use key from linked Beacon to unlink this Lectern"),
+                            true
+                    );
+                }
+            }
+        } else {
+            // TODO: Check if Lectern is within a configurable max range of the beacon.
+            lectern.setAttached(ModAttachments.LECTERN_TOURIST_BEACON_UUID, beaconUUID);
+            if (TouristExperience.registerLecternIfLinked(lectern)) {
+                player.displayClientMessage(
+                        Component.literal("Linked Lectern to beacon "),
+                        true
+                );
+            }
+        }
+
+        return InteractionResult.SUCCESS;
     }
 }

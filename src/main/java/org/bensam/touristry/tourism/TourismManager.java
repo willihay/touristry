@@ -7,30 +7,30 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.LecternBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
+import org.bensam.touristry.ModAttachments;
 import org.bensam.touristry.ModEntities;
 import org.bensam.touristry.Touristry;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
 import org.bensam.touristry.config.ModServerConfigManager;
 import org.bensam.touristry.config.Verbosity;
 import org.bensam.touristry.entity.TouristEntity;
+import org.bensam.touristry.tourism.experience.SightseeingExperience;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-import java.util.Comparator;
-import java.util.LinkedHashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.PriorityQueue;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Predicate;
 
 public class TourismManager {
     public record ScheduledTouristSpawn(int timeOfDay, BlockPos beaconPos) {}
     public static final Comparator<ScheduledTouristSpawn> SCHEDULED_TOURIST_SPAWN_COMPARATOR =
             Comparator.comparingInt(ScheduledTouristSpawn::timeOfDay);
+
+    public record RegisteredExperience(UUID beaconUUID, SightseeingExperience experience) {}
 
     private static final int SPAWN_ATTEMPTS_PER_BEACON = 8;
 
@@ -42,7 +42,10 @@ public class TourismManager {
     private static int lastTickTimeOfDay = -1;
 
     private static final PriorityQueue<ScheduledTouristSpawn> pendingSpawns = new PriorityQueue<>(SCHEDULED_TOURIST_SPAWN_COMPARATOR);
+    // TODO: Change this Map to use beacon UUID as the key. This will require updating spawn schedule to use beacon UUIDs too.
     private static final Map<BlockPos, TouristBeaconBlockEntity> loadedTouristBeacons = new LinkedHashMap<>();
+    private static final Map<BlockPos, SightseeingExperience> loadedTouristExperiences = new LinkedHashMap<>();
+    private static final Map<UUID, Set<BlockPos>> loadedTouristExperiencesByBeaconId = new LinkedHashMap<>();
     private static final Map<Integer, TouristEntity> loadedTourists = new LinkedHashMap<>();
 
     private static boolean despawnAllTourists = false;
@@ -142,6 +145,54 @@ public class TourismManager {
         );
     }
 
+    //region Experience Helpers
+    public static @Nullable SightseeingExperience getTouristExperience(BlockPos blockPos) {
+        return loadedTouristExperiences.get(blockPos);
+    }
+
+    public static List<SightseeingExperience> getLoadedTouristExperiences(ServerLevel overworld) {
+        pruneInvalidTouristExperiences(overworld);
+        return List.copyOf(loadedTouristExperiences.values());
+    }
+
+    public static List<BlockPos> getLoadedTouristExperiencesForBeacon(ServerLevel overworld, UUID beaconUUID) {
+        pruneInvalidTouristExperiences(overworld);
+        return List.copyOf(loadedTouristExperiencesByBeaconId.get(beaconUUID));
+    }
+
+    public static void pruneInvalidTouristExperiences(ServerLevel overworld) {
+        loadedTouristExperiences.entrySet().removeIf(entry -> {
+            BlockPos blockPos = entry.getKey();
+            SightseeingExperience experience = entry.getValue();
+            BlockEntity blockEntity = overworld.getBlockEntity(blockPos);
+
+            if (!(blockEntity instanceof LecternBlockEntity lectern) || lectern.isRemoved()) {
+                return true;
+            }
+
+            UUID attachedUUID = lectern.getAttached(ModAttachments.LECTERN_TOURIST_BEACON_UUID);
+            return !(experience.beaconUUID().equals(attachedUUID));
+        });
+    }
+
+    public static void registerTouristExperience(BlockPos blockPos, SightseeingExperience experience) {
+        loadedTouristExperiences.put(blockPos.immutable(), experience);
+        // TODO: Add entry to convenience map loadedTouristExperiencesByBeaconId too.
+    }
+
+    public static void unregisterTouristExperience(BlockPos blockPos) {
+        loadedTouristExperiences.remove(blockPos);
+    }
+
+    public static void unregisterTouristExperience(BlockPos blockPos, UUID beaconUUID) {
+        SightseeingExperience experience = loadedTouristExperiences.get(blockPos);
+        if (experience != null && experience.beaconUUID().equals(beaconUUID)) {
+            unregisterTouristExperience(blockPos);
+
+        }
+    }
+    //endregion
+
     //region Tourist Beacon Helpers
     public static @Nullable TouristBeaconBlockEntity findClosestBeaconEntity(BlockPos pos) {
         TouristBeaconBlockEntity closest = null;
@@ -212,8 +263,8 @@ public class TourismManager {
         loadedTouristBeacons.put(beaconBlockEntity.getBlockPos(), beaconBlockEntity);
     }
 
-    public static void unregisterTouristBeacon(TouristBeaconBlockEntity touristBeaconBlockEntity) {
-        loadedTouristBeacons.remove(touristBeaconBlockEntity.getBlockPos(), touristBeaconBlockEntity);
+    public static void unregisterTouristBeacon(TouristBeaconBlockEntity beaconBlockEntity) {
+        loadedTouristBeacons.remove(beaconBlockEntity.getBlockPos(), beaconBlockEntity);
     }
     //endregion
 

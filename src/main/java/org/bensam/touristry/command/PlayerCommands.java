@@ -15,6 +15,7 @@ import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
 import org.bensam.touristry.tourism.TourismManager;
 import org.bensam.touristry.tourism.TouristBeaconExperience;
 import org.bensam.touristry.tourism.TouristBeaconStats;
+import org.bensam.touristry.tourism.experience.SightseeingExperience;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -38,6 +39,8 @@ public final class PlayerCommands {
         root.then(Commands.literal("list")
                 .then(Commands.literal("beacons")
                         .executes(ctx -> listBeacons(ctx.getSource())))
+                .then(Commands.literal("experiences")
+                        .executes(ctx -> listExperiences(ctx.getSource())))
                 .then(Commands.literal("touristSchedule")
                         .executes(ctx -> listTouristSchedule(ctx.getSource()))));
 
@@ -152,6 +155,26 @@ public final class PlayerCommands {
                     .append(Component.translatable("message." + Touristry.MOD_ID
                             + (beaconBlockEntity.isOpenForBusiness() ? ".tourist_beacon.open_for_business" : ".tourist_beacon.closed_for_business")))
                     .append(Component.literal(")"));
+            source.sendSuccess(() -> message, false);
+        }
+        return 1;
+    }
+
+    private static int listExperiences(CommandSourceStack source) {
+        List<SightseeingExperience> loadedExperiences = TourismManager.getLoadedTouristExperiences(source.getServer().overworld());
+        if (loadedExperiences.isEmpty()) {
+            source.sendSuccess(() -> Component.literal("No tourist experiences found"), false);
+            return 1;
+        }
+
+        source.sendSuccess(() -> Component.literal("Tourist experiences:"), false);
+
+        // TODO: Show beacon name (or UUID subset) instead of full beacon UUID.
+        for (SightseeingExperience experience : loadedExperiences) {
+            Component message = Component.literal(" - ")
+                    .append(experience.getClass().getSimpleName())
+                    .append(Component.literal(" @ " + experience.blockPos().toShortString() + " for beacon "))
+                    .append(Component.literal(experience.beaconUUID().toString()));
             source.sendSuccess(() -> message, false);
         }
         return 1;
