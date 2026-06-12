@@ -14,6 +14,7 @@
               "include": [
                 "minecraft:container",
                 "minecraft:custom_name",
+                "touristry:tourist_beacon_uuid",
                 "touristry:tourist_beacon_experience",
                 "touristry:tourist_beacon_stats"
               ]

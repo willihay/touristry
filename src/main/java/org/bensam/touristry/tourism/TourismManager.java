@@ -7,6 +7,7 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.WrittenBookContent;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.LecternBlockEntity;
@@ -152,7 +153,7 @@ public class TourismManager {
     
     /**
      * Gets the display name for a tourist experience block.
-     * Priority: 1) Book custom name, 2) Lectern custom name, 3) Block name
+     * Priority: 1) Lectern custom name, 2) Book custom name, 3) Block name
      * @param level The level to get the block entity from
      * @param experience The sightseeing experience
      * @return The display name component
@@ -162,18 +163,21 @@ public class TourismManager {
         if (!(blockEntity instanceof LecternBlockEntity lectern)) {
             return Component.literal("Unknown");
         }
-        
-        // Priority 1: Check if lectern has a book with a custom name
-        ItemStack book = lectern.getBook();
-        if (!book.isEmpty() && book.has(net.minecraft.core.component.DataComponents.CUSTOM_NAME)) {
-            return book.getHoverName().copy();
-        }
-        
-        // Priority 2: Check if the lectern block itself has a custom name
+
+        // Priority 1: Check if the lectern block itself has a custom name
         ItemStack lecternItem = new ItemStack(blockEntity.getBlockState().getBlock());
         lecternItem.applyComponents(blockEntity.collectComponents());
         if (lecternItem.has(net.minecraft.core.component.DataComponents.CUSTOM_NAME)) {
             return lecternItem.getHoverName().copy();
+        }
+
+        // Priority 2: Check if lectern has a book with a custom name
+        ItemStack book = lectern.getBook();
+        if (!book.isEmpty() && book.has(net.minecraft.core.component.DataComponents.WRITTEN_BOOK_CONTENT)) {
+            WrittenBookContent content = book.get(net.minecraft.core.component.DataComponents.WRITTEN_BOOK_CONTENT);
+            if (content != null) {
+                return Component.literal(content.title().get(true));
+            }
         }
         
         // Priority 3: Use translated block name (e.g., "Lectern")
@@ -329,11 +333,12 @@ public class TourismManager {
             return;
         }
 
+        loadedTouristBeacons.entrySet().removeIf(entry -> entry.getValue() == beaconBlockEntity);
         loadedTouristBeacons.put(beaconBlockEntity.getUUID(), beaconBlockEntity);
     }
 
     public static void unregisterTouristBeacon(TouristBeaconBlockEntity beaconBlockEntity) {
-        loadedTouristBeacons.remove(beaconBlockEntity.getUUID(), beaconBlockEntity);
+        loadedTouristBeacons.entrySet().removeIf(entry -> entry.getValue() == beaconBlockEntity);
     }
     
     public static @Nullable TouristBeaconBlockEntity getBeaconBlockEntityByUUID(UUID beaconUUID) {

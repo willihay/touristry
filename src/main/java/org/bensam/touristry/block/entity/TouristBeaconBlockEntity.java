@@ -345,7 +345,6 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
     @Override
     protected void applyImplicitComponents(@NonNull DataComponentGetter dataComponentGetter) {
         super.applyImplicitComponents(dataComponentGetter);
-        this.setItem(BEACON_KEY_SLOT_INDEX, this.getBeaconKey());
 
         // Restore additional components when BlockItem is placed as a Block/Block Entity.
         this.uuid = dataComponentGetter.getOrDefault(
@@ -372,6 +371,9 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
         this.touristsHurt = stats.touristsHurt();
         this.touristsKilled = stats.touristsKilled();
         this.reputation = stats.reputation();
+
+        this.setItem(BEACON_KEY_SLOT_INDEX, this.getBeaconKey());
+        this.syncTourismRegistration();
     }
 
     @Override
