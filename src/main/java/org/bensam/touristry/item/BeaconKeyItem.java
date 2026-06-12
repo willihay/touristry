@@ -66,44 +66,66 @@ public class BeaconKeyItem extends Item {
     }
 
     public InteractionResult useOnLectern(ServerLevel serverLevel, Player player, ItemStack key, LecternBlockEntity lectern) {
-        UUID beaconUUID = this.getBeaconUUID(key);
+        UUID keyBeaconUUID = this.getBeaconUUID(key);
 
-        if (beaconUUID.equals(new UUID(0, 0))) {
+        if (keyBeaconUUID.equals(new UUID(0, 0))) {
             return InteractionResult.FAIL;
         }
 
-        TouristBeaconBlockEntity beaconBlockEntity = TourismManager.getBeaconBlockEntityByUUID(beaconUUID);
-        MutableComponent beaconNameComponent = beaconBlockEntity == null
-                ? Component.literal(beaconUUID.toString().substring(0, 8))
-                : beaconBlockEntity.getName().copy();
+        TouristBeaconBlockEntity keyBeacon = TourismManager.getBeaconBlockEntityByUUID(keyBeaconUUID);
+        MutableComponent keyBeaconNameComponent = keyBeacon == null
+                ? Component.literal(keyBeaconUUID.toString().substring(0, 8))
+                : keyBeacon.getName().copy();
 
         if (player.isShiftKeyDown()) {
             if (lectern.hasAttached(ModAttachments.LECTERN_TOURIST_BEACON_UUID)) {
                 UUID attachedUUID = lectern.getAttached(ModAttachments.LECTERN_TOURIST_BEACON_UUID);
-                if (beaconUUID.equals(attachedUUID)) {
+                if (keyBeaconUUID.equals(attachedUUID)) {
                     lectern.removeAttached(ModAttachments.LECTERN_TOURIST_BEACON_UUID);
                     TouristExperience.unregisterLectern(lectern);
                     player.displayClientMessage(
                             Component.literal("Unlinked Lectern from beacon ")
-                                    .append(beaconNameComponent),
+                                    .append(keyBeaconNameComponent),
                             true
                     );
                 } else {
+                    TouristBeaconBlockEntity linkedBeacon = TourismManager.getBeaconBlockEntityByUUID(attachedUUID);
+                    MutableComponent linkedBeaconNameComponent = linkedBeacon == null
+                            ? Component.literal(attachedUUID.toString().substring(0, 8))
+                            : linkedBeacon.getName().copy();
                     player.displayClientMessage(
                             Component.literal("Must use key from linked beacon ")
-                                    .append(beaconNameComponent)
-                                    .append(Component.literal(" to unlink this Lectern")),
+                                    .append(linkedBeaconNameComponent)
+                                    .append(" to unlink this Lectern"),
                             true
                     );
                 }
             }
         } else {
             // TODO: Check if Lectern is within a configurable max range of the beacon.
-            lectern.setAttached(ModAttachments.LECTERN_TOURIST_BEACON_UUID, beaconUUID);
+
+            if (lectern.hasAttached(ModAttachments.LECTERN_TOURIST_BEACON_UUID)) {
+                UUID attachedUUID = lectern.getAttached(ModAttachments.LECTERN_TOURIST_BEACON_UUID);
+                if (!(keyBeaconUUID.equals(attachedUUID))) {
+                    TouristBeaconBlockEntity linkedBeacon = TourismManager.getBeaconBlockEntityByUUID(attachedUUID);
+                    MutableComponent linkedBeaconNameComponent = linkedBeacon == null
+                            ? Component.literal(attachedUUID.toString().substring(0, 8))
+                            : linkedBeacon.getName().copy();
+                    player.displayClientMessage(
+                            Component.literal("Must unlink Lectern from beacon ")
+                                    .append(linkedBeaconNameComponent)
+                                    .append(" first"),
+                            true
+                    );
+                    return InteractionResult.FAIL;
+                }
+            }
+
+            lectern.setAttached(ModAttachments.LECTERN_TOURIST_BEACON_UUID, keyBeaconUUID);
             if (TouristExperience.registerLecternIfLinked(lectern)) {
                 player.displayClientMessage(
                         Component.literal("Linked Lectern to beacon ")
-                                .append(beaconNameComponent),
+                                .append(keyBeaconNameComponent),
                         true
                 );
             }
