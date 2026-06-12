@@ -2,6 +2,7 @@ package org.bensam.touristry.item;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -14,6 +15,8 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.LecternBlockEntity;
 import org.bensam.touristry.ModAttachments;
 import org.bensam.touristry.ModComponents;
+import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
+import org.bensam.touristry.tourism.TourismManager;
 import org.bensam.touristry.tourism.TouristExperience;
 
 import java.util.UUID;
@@ -69,7 +72,11 @@ public class BeaconKeyItem extends Item {
             return InteractionResult.FAIL;
         }
 
-        // TODO: Lookup beacon name to use in player messages.
+        TouristBeaconBlockEntity beaconBlockEntity = TourismManager.getBeaconBlockEntityByUUID(beaconUUID);
+        MutableComponent beaconNameComponent = beaconBlockEntity == null
+                ? Component.literal(beaconUUID.toString().substring(0, 8))
+                : beaconBlockEntity.getName().copy();
+
         if (player.isShiftKeyDown()) {
             if (lectern.hasAttached(ModAttachments.LECTERN_TOURIST_BEACON_UUID)) {
                 UUID attachedUUID = lectern.getAttached(ModAttachments.LECTERN_TOURIST_BEACON_UUID);
@@ -77,12 +84,15 @@ public class BeaconKeyItem extends Item {
                     lectern.removeAttached(ModAttachments.LECTERN_TOURIST_BEACON_UUID);
                     TouristExperience.unregisterLectern(lectern);
                     player.displayClientMessage(
-                            Component.literal("Unlinked Lectern from beacon "),
+                            Component.literal("Unlinked Lectern from beacon ")
+                                    .append(beaconNameComponent),
                             true
                     );
                 } else {
                     player.displayClientMessage(
-                            Component.literal("Must use key from linked Beacon to unlink this Lectern"),
+                            Component.literal("Must use key from linked beacon ")
+                                    .append(beaconNameComponent)
+                                    .append(Component.literal(" to unlink this Lectern")),
                             true
                     );
                 }
@@ -92,7 +102,8 @@ public class BeaconKeyItem extends Item {
             lectern.setAttached(ModAttachments.LECTERN_TOURIST_BEACON_UUID, beaconUUID);
             if (TouristExperience.registerLecternIfLinked(lectern)) {
                 player.displayClientMessage(
-                        Component.literal("Linked Lectern to beacon "),
+                        Component.literal("Linked Lectern to beacon ")
+                                .append(beaconNameComponent),
                         true
                 );
             }

@@ -74,13 +74,25 @@ public final class PlayerCommands {
         source.sendSuccess(() -> message, false);
 
         // business status
-        TouristBeaconExperience experience = beaconBlockEntity.getBeaconExperience();
-        source.sendSuccess(() -> Component.literal(" - status: " + (experience.beaconOpenForBusiness() ? "open for business" : "closed for business")), false);
+        TouristBeaconExperience beaconExperience = beaconBlockEntity.getBeaconExperience();
+        source.sendSuccess(() -> Component.literal(" - status: " + (beaconExperience.beaconOpenForBusiness() ? "open for business" : "closed for business")), false);
 
         // experiences
+        List<SightseeingExperience> experiences = TourismManager.getLoadedTouristExperiencesForBeacon(source.getServer().overworld(), beaconBlockEntity.getUUID());
         source.sendSuccess(() -> Component.literal(
-                " - experiences: " + experience.experiences().size() + " / " + experience.experienceSlots()),
+                        " - experiences: " + experiences.size()),
                 false);
+        if (!experiences.isEmpty()) {
+            for (SightseeingExperience experience : experiences) {
+                Component experienceName = TourismManager.getExperienceDisplayName(source.getLevel(), experience);
+                Component experienceMessage = Component.literal("   - ")
+                        .append(experienceName)
+                        .append(Component.literal(" ("))
+                        .append(experience.getClass().getSimpleName())
+                        .append(Component.literal(") @ " + experience.blockPos().toShortString()));
+                source.sendSuccess(() -> experienceMessage, false);
+            }
+        }
 
         // stats
         TouristBeaconStats stats = beaconBlockEntity.getBeaconStats();
@@ -169,12 +181,17 @@ public final class PlayerCommands {
 
         source.sendSuccess(() -> Component.literal("Tourist experiences:"), false);
 
-        // TODO: Show beacon name (or UUID subset) instead of full beacon UUID.
         for (SightseeingExperience experience : loadedExperiences) {
+            Component experienceName = TourismManager.getExperienceDisplayName(source.getLevel(), experience);
+            TouristBeaconBlockEntity beaconBlockEntity = TourismManager.getBeaconBlockEntityByUUID(experience.beaconUUID());
+            MutableComponent beaconNameComponent = beaconBlockEntity == null
+                    ? Component.literal(experience.beaconUUID().toString().substring(0, 8))
+                    : beaconBlockEntity.getName().copy();
             Component message = Component.literal(" - ")
-                    .append(experience.getClass().getSimpleName())
+                    .append(experienceName)
+                    .append(" (" + experience.getClass().getSimpleName() + ")")
                     .append(Component.literal(" @ " + experience.blockPos().toShortString() + " for beacon "))
-                    .append(Component.literal(experience.beaconUUID().toString()));
+                    .append(beaconNameComponent);
             source.sendSuccess(() -> message, false);
         }
         return 1;
@@ -191,12 +208,13 @@ public final class PlayerCommands {
 
         for (TourismManager.ScheduledTouristSpawn spawn : pendingSpawns) {
             MutableComponent message = Component.literal(" - " + TourismManager.getFriendlyTimeOfDay(spawn.timeOfDay()) + " for ");
-            if (source.getServer().overworld().getBlockEntity(spawn.beaconPos()) instanceof TouristBeaconBlockEntity beaconBlockEntity) {
+            TouristBeaconBlockEntity beaconBlockEntity = TourismManager.getBeaconBlockEntityByUUID(spawn.beaconUUID());
+            if (beaconBlockEntity != null) {
                 message.append(beaconBlockEntity.getName().copy());
+                message.append(Component.literal(" @ " + beaconBlockEntity.getBlockPos().toShortString()));
             } else {
-                message.append(Component.literal("unknown beacon"));
+                message.append(Component.literal("beacon UUID: " + spawn.beaconUUID()));
             }
-            message.append(Component.literal(" @ " + spawn.beaconPos().toShortString()));
             source.sendSuccess(() -> message, false);
         }
         return 1;
@@ -211,12 +229,13 @@ public final class PlayerCommands {
 
         TourismManager.ScheduledTouristSpawn nextSpawn = pendingSpawns.getFirst();
         MutableComponent message = Component.literal("Next spawn at " + TourismManager.getFriendlyTimeOfDay(nextSpawn.timeOfDay()) + " for ");
-        if (source.getServer().overworld().getBlockEntity(nextSpawn.beaconPos()) instanceof TouristBeaconBlockEntity beaconBlockEntity) {
+        TouristBeaconBlockEntity beaconBlockEntity = TourismManager.getBeaconBlockEntityByUUID(nextSpawn.beaconUUID());
+        if (beaconBlockEntity != null) {
             message.append(beaconBlockEntity.getName().copy());
+            message.append(Component.literal(" @ " + beaconBlockEntity.getBlockPos().toShortString()));
         } else {
-            message.append(Component.literal("unknown beacon"));
+            message.append(Component.literal("beacon UUID: " + nextSpawn.beaconUUID()));
         }
-        message.append(Component.literal(" @ " + nextSpawn.beaconPos().toShortString()));
         source.sendSuccess(() -> message, false);
         return 1;
     }

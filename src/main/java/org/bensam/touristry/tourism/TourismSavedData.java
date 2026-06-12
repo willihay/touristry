@@ -2,7 +2,7 @@ package org.bensam.touristry.tourism;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.core.BlockPos;
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.util.datafix.DataFixTypes;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
@@ -10,12 +10,13 @@ import net.minecraft.world.level.saveddata.SavedDataType;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 public final class TourismSavedData extends SavedData {
-    public record PendingTouristSpawnData(int timeOfDay, BlockPos beaconPos) {
+    public record PendingTouristSpawnData(int timeOfDay, UUID beaconUUID) {
         public static final Codec<PendingTouristSpawnData> CODEC = RecordCodecBuilder.create(instance -> instance.group(
                 Codec.INT.fieldOf("time_of_day").forGetter(PendingTouristSpawnData::timeOfDay),
-                BlockPos.CODEC.fieldOf("beacon_pos").forGetter(PendingTouristSpawnData::beaconPos)
+                UUIDUtil.CODEC.fieldOf("beacon_uuid").forGetter(PendingTouristSpawnData::beaconUUID)
         ).apply(instance, PendingTouristSpawnData::new));
     }
 
