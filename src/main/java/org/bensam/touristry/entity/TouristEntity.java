@@ -63,7 +63,7 @@ public class TouristEntity extends AbstractVillager {
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
-        this.goalSelector.addGoal(1, new MoveToBeaconGoal(this)); // MOVE
+        this.goalSelector.addGoal(1, new MoveToTargetGoal(this)); // MOVE
         this.goalSelector.addGoal(2, new OpenDoorGoal(this, true));
         this.goalSelector.addGoal(3, new TouristRandomStrollGoal(this, 0.6)); // MOVE
         this.goalSelector.addGoal(3, new TouristLookAtPlayerGoal(this, Player.class, 12.0f, 0.02f)); // LOOK
@@ -160,7 +160,7 @@ public class TouristEntity extends AbstractVillager {
             if (this.isCurrentActivityAtBeacon()) {
                 Component experienceMessage = deathMessage.copy().append(Component.literal(" while at"));
                 this.mind.recordExperience(serverLevel, VisitResult.KILLED_ON_PREMISES, true, true, experienceMessage, false, true);
-            } else if (this.isTravellingToBeacon()) {
+            } else if (this.isTravellingToTarget()) {
                 Component experienceMessage = deathMessage.copy().append(Component.literal(" while travelling to"));
                 this.mind.recordExperience(serverLevel, VisitResult.KILLED_EN_ROUTE, true, true, experienceMessage, false, true);
             }
@@ -178,8 +178,8 @@ public class TouristEntity extends AbstractVillager {
         return null; // not applicable
     }
 
-    public double getClosestDistanceToBeacon() {
-        return this.mind.getClosestDistanceToBeacon();
+    public double getClosestDistanceToTarget() {
+        return this.mind.getClosestDistanceToTarget();
     }
 
     public int getConsecutiveFailedProgressChecks() {
@@ -200,6 +200,14 @@ public class TouristEntity extends AbstractVillager {
         return this.mind;
     }
 
+    public @Nullable BlockPos getMoveToTarget() {
+        return this.mind.getMoveToTarget();
+    }
+
+    public String getMoveToTargetName() {
+        return this.mind.getMoveToTargetName();
+    }
+
     public void giveItemToHold(ItemStack itemStack) {
         this.setItemSlot(EquipmentSlot.MAINHAND, itemStack);
     }
@@ -212,7 +220,7 @@ public class TouristEntity extends AbstractVillager {
                 Component experienceMessage = getHurtMessage(damageSource).append(Component.literal(" while at"));
                 this.mind.recordExperience(serverLevel, VisitResult.HURT_ON_PREMISES, true, true, experienceMessage, true, true);
             }
-        } else if (this.isTravellingToBeacon()) {
+        } else if (this.isTravellingToTarget()) {
             if (!this.mind.hasReportedHurtEnRoute()) {
                 this.mind.updateMood(VisitResult.HURT_EN_ROUTE);
                 Component experienceMessage = getHurtMessage(damageSource).append(Component.literal(" while travelling to"));
@@ -227,8 +235,8 @@ public class TouristEntity extends AbstractVillager {
         return this.mind.isCurrentActivityAtBeacon();
     }
 
-    public boolean isTravellingToBeacon() {
-        return this.mind.isTravellingToBeacon();
+    public boolean isTravellingToTarget() {
+        return this.mind.isTravellingToTarget();
     }
 
     public void onDespawn() {

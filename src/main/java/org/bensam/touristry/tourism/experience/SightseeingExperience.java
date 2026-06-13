@@ -12,4 +12,8 @@ public record SightseeingExperience(UUID beaconUUID, BlockPos blockPos) {
             UUIDUtil.CODEC.fieldOf("beacon_UUID").forGetter(SightseeingExperience::beaconUUID),
             BlockPos.CODEC.fieldOf("block_pos").forGetter(SightseeingExperience::blockPos)
     ).apply(instance, SightseeingExperience::new));
+
+    public BlockPos getTargetPos() {
+        return this.blockPos;
+    }
 }

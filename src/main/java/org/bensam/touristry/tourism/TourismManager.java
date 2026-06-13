@@ -158,7 +158,7 @@ public class TourismManager {
      * @param experience The sightseeing experience
      * @return The display name component
      */
-    public static Component getExperienceDisplayName(Level level, SightseeingExperience experience) {
+    public static Component getTouristExperienceDisplayName(Level level, SightseeingExperience experience) {
         BlockEntity blockEntity = level.getBlockEntity(experience.blockPos());
         if (!(blockEntity instanceof LecternBlockEntity lectern)) {
             return Component.literal("Unknown");
@@ -184,12 +184,12 @@ public class TourismManager {
         return blockEntity.getBlockState().getBlock().getName();
     }
 
-    public static List<SightseeingExperience> getLoadedTouristExperiences(ServerLevel overworld) {
+    public static List<SightseeingExperience> getTouristExperiences(ServerLevel overworld) {
         pruneInvalidTouristExperiences(overworld);
         return List.copyOf(loadedTouristExperiences.values());
     }
 
-    public static List<SightseeingExperience> getLoadedTouristExperiencesForBeacon(ServerLevel overworld, UUID beaconUUID) {
+    public static List<SightseeingExperience> getTouristExperiencesForBeacon(ServerLevel overworld, UUID beaconUUID) {
         pruneInvalidTouristExperiences(overworld);
         Set<BlockPos> experiencePositions = loadedTouristExperiencesByBeaconId.get(beaconUUID);
         if (experiencePositions == null || experiencePositions.isEmpty()) {
@@ -294,16 +294,16 @@ public class TourismManager {
         return null;
     }
 
-    public static List<TouristBeaconBlockEntity> getLoadedTouristBeacons(ServerLevel overworld) {
+    public static List<TouristBeaconBlockEntity> getTouristBeacons(ServerLevel overworld) {
         pruneInvalidTouristBeacons(overworld);
         return List.copyOf(loadedTouristBeacons.values());
     }
 
-    public static List<TouristBeaconBlockEntity> getLoadedTouristBeaconsByDistance(ServerLevel overworld, BlockPos pos) {
-        return getLoadedTouristBeaconsByDistance(overworld, pos, beaconBlockEntity -> true);
+    public static List<TouristBeaconBlockEntity> getTouristBeaconsByDistance(ServerLevel overworld, BlockPos pos) {
+        return getTouristBeaconsByDistance(overworld, pos, beaconBlockEntity -> true);
     }
 
-    public static List<TouristBeaconBlockEntity> getLoadedTouristBeaconsByDistance(
+    public static List<TouristBeaconBlockEntity> getTouristBeaconsByDistance(
             ServerLevel overworld,
             BlockPos pos,
             Predicate<TouristBeaconBlockEntity> filter
@@ -369,13 +369,7 @@ public class TourismManager {
     }
 
     public static boolean shouldForceDespawn(TouristEntity touristEntity) {
-        if (despawnAllTourists) {
-            return true;
-        }
-
-        // TODO: Implement single entity check for despawn.
-
-        return false;
+        return despawnAllTourists;
     }
     //endregion
 
@@ -471,7 +465,7 @@ public class TourismManager {
         double remainingFraction = (double) remainingWindow / windowLength;
         int spawnCount = Math.max(1, (int) Math.ceil(ModServerConfigManager.getConfig().tourismManager().getMaxSpawnsPerBeaconPerDay() * remainingFraction));
 
-        for (TouristBeaconBlockEntity beaconBlockEntity : getLoadedTouristBeacons(world)) {
+        for (TouristBeaconBlockEntity beaconBlockEntity : getTouristBeacons(world)) {
             if (!beaconBlockEntity.isOpenForBusiness()) {
                 continue;
             }

@@ -78,13 +78,13 @@ public final class PlayerCommands {
         source.sendSuccess(() -> Component.literal(" - status: " + (beaconExperience.beaconOpenForBusiness() ? "open for business" : "closed for business")), false);
 
         // experiences
-        List<SightseeingExperience> experiences = TourismManager.getLoadedTouristExperiencesForBeacon(source.getServer().overworld(), beaconBlockEntity.getUUID());
+        List<SightseeingExperience> experiences = TourismManager.getTouristExperiencesForBeacon(source.getServer().overworld(), beaconBlockEntity.getUUID());
         source.sendSuccess(() -> Component.literal(
                         " - experiences: " + experiences.size()),
                 false);
         if (!experiences.isEmpty()) {
             for (SightseeingExperience experience : experiences) {
-                Component experienceName = TourismManager.getExperienceDisplayName(source.getLevel(), experience);
+                Component experienceName = TourismManager.getTouristExperienceDisplayName(source.getLevel(), experience);
                 Component experienceMessage = Component.literal("   - ")
                         .append(experienceName)
                         .append(Component.literal(" ("))
@@ -152,7 +152,7 @@ public final class PlayerCommands {
     }
 
     private static int listBeacons(CommandSourceStack source) {
-        List<TouristBeaconBlockEntity> loadedBeacons = TourismManager.getLoadedTouristBeacons(source.getServer().overworld());
+        List<TouristBeaconBlockEntity> loadedBeacons = TourismManager.getTouristBeacons(source.getServer().overworld());
         if (loadedBeacons.isEmpty()) {
             source.sendSuccess(() -> Component.literal("No tourist beacons found"), false);
             return 1;
@@ -173,7 +173,7 @@ public final class PlayerCommands {
     }
 
     private static int listExperiences(CommandSourceStack source) {
-        List<SightseeingExperience> loadedExperiences = TourismManager.getLoadedTouristExperiences(source.getServer().overworld());
+        List<SightseeingExperience> loadedExperiences = TourismManager.getTouristExperiences(source.getServer().overworld());
         if (loadedExperiences.isEmpty()) {
             source.sendSuccess(() -> Component.literal("No tourist experiences found"), false);
             return 1;
@@ -182,7 +182,7 @@ public final class PlayerCommands {
         source.sendSuccess(() -> Component.literal("Tourist experiences:"), false);
 
         for (SightseeingExperience experience : loadedExperiences) {
-            Component experienceName = TourismManager.getExperienceDisplayName(source.getLevel(), experience);
+            Component experienceName = TourismManager.getTouristExperienceDisplayName(source.getLevel(), experience);
             TouristBeaconBlockEntity beaconBlockEntity = TourismManager.getBeaconBlockEntityByUUID(experience.beaconUUID());
             MutableComponent beaconNameComponent = beaconBlockEntity == null
                     ? Component.literal(experience.beaconUUID().toString().substring(0, 8))
