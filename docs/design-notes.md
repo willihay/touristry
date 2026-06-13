@@ -58,7 +58,57 @@ Registered instances are stored in private static fields and exposed through `Su
 
 ## Tourist architecture
 
-[placeholder]
+### State machine pattern: Pre-compute prerequisites in transition methods
+
+Tourist AI uses a state machine (`TouristMind`) with states like `CHOOSING_EXPERIENCE`, `TRAVELING`, `EXPERIENCING`, etc. 
+
+**Architectural rule**: Pre-compute prerequisites (such as `ServerLevel` or `TouristBeaconBlockEntity`) in the calling method (typically `transitionTo()`) rather than computing them inside each state handler method.
+
+**Rationale**:
+
+1. **Error handling before transition** — Validate that the beacon exists, the world is available, etc. before entering the state. If prerequisites fail, abort the transition gracefully instead of ending up in a partially-changed state.
+
+2. **Testability** — State handler methods become pure logic functions with explicit dependencies. This makes them easy to unit test with mock data without constructing full Tourist entities.
+
+3. **Clear contracts** — Method signatures document what data each state needs. Reduces hidden dependencies on `this.tourist` or `this.beaconTarget` class fields.
+
+4. **Reusability** — State logic can be called from multiple contexts and isn't tightly coupled to specific class fields.
+
+**Example pattern**:
+
+```java
+private void transitionTo(TouristState newState) {
+    // Pre-compute prerequisites ONCE
+    ServerLevel serverLevel = (ServerLevel) tourist.level();
+    TouristBeaconBlockEntity beacon = beaconTarget != null 
+        ? TourismManager.getBeaconBlockEntityByUUID(serverLevel, beaconTarget)
+        : null;
+    
+    // Validate before transition
+    if (newState.requiresBeacon() && beacon == null) {
+        LOGGER.warn("Cannot transition to {} - beacon not found", newState);
+        transitionTo(TouristState.WANDERING);
+        return;
+    }
+    
+    currentState = newState;
+    
+    // Pass to state handler
+    switch (newState) {
+        case CHOOSING_EXPERIENCE -> chooseExperienceOrWander(serverLevel, beacon);
+        // ...
+    }
+}
+
+private void chooseExperienceOrWander(ServerLevel serverLevel, TouristBeaconBlockEntity beacon) {
+    // Pure logic - prerequisites guaranteed, no null checks needed
+    List<SightseeingExperience> experiences = 
+        TourismManager.getLoadedTouristExperiencesByBeaconUUID(serverLevel, beacon.getUUID());
+    // ...
+}
+```
+
+**Exception**: Trivial getters like `tourist.position()` or `tourist.getBoundingBox()` can be computed locally in state methods since they have no failure cases.
 
 ## Config architecture
 
