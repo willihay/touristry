@@ -2,11 +2,9 @@ package org.bensam.touristry;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerBlockEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
-import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.ItemStack;
@@ -17,7 +15,6 @@ import org.bensam.touristry.config.ModServerConfigSync;
 import org.bensam.touristry.config.SyncedClientConfig;
 import org.bensam.touristry.item.BeaconKeyItem;
 import org.bensam.touristry.tourism.TourismManager;
-import org.bensam.touristry.tourism.TouristExperience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,22 +63,22 @@ public class Touristry implements ModInitializer {
 			TourismManager.tick(server.overworld());
 		});
 
+		/*
 		ServerBlockEntityEvents.BLOCK_ENTITY_LOAD.register((blockEntity, serverLevel) -> {
             if (blockEntity instanceof LecternBlockEntity lectern) {
 				// Defer Tourist Experience registration to ensure all serialized data is ready, per Java doc note for BLOCK_ENTITY_LOAD.
 				serverLevel.getServer().execute(() -> {
-					TouristExperience.registerLecternIfLinked(lectern);
+					LecternTarget.registerLecternIfLinked(lectern);
 				});
             }
         });
 
 		ServerBlockEntityEvents.BLOCK_ENTITY_UNLOAD.register((blockEntity, serverLevel) -> {
 			if (blockEntity instanceof LecternBlockEntity lectern) {
-				// TODO: Remove log output.
-				LOGGER.info("***** Unloading LecternBlockEntity");
-				TouristExperience.unregisterLectern(lectern);
+				LecternTarget.unregisterLectern(lectern);
 			}
 		});
+		*/
 
 		UseBlockCallback.EVENT.register((player, level, hand, hitResult) -> {
 			ItemStack itemStack = player.getItemInHand(hand);

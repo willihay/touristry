@@ -44,6 +44,7 @@ public final class TouristMind {
     private int eveningDespawnTimeTicks;
     private boolean isHungry;
     private boolean isStayingOvernight;
+    private int ticksAtCurrentTarget;
 
     private int nextChooseActivityTicks;
     private int nextMoodCheckTicks;
@@ -61,6 +62,7 @@ public final class TouristMind {
         this.eveningDespawnTimeTicks = this.chooseEveningDespawnTime();
         this.isHungry = false;
         this.isStayingOvernight = false;
+        this.ticksAtCurrentTarget = 0;
     }
 
     public boolean avoidWater() {
@@ -80,27 +82,31 @@ public final class TouristMind {
     }
 
     public @Nullable BlockPos getMoveToTarget() {
-        if (this.state == TouristState.TRAVELLING_TO_BEACON) {
+        if (this.state == TouristState.TRAVELING_TO_BEACON) {
             return this.beaconTarget;
-        } else if (this.state == TouristState.TRAVELLING_TO_EXPERIENCE) {
+        } else if (this.state == TouristState.TRAVELING_TO_EXPERIENCE) {
             return this.experienceTarget;
         }
         return null;
     }
 
     public String getMoveToTargetName() {
-        if (this.state == TouristState.TRAVELLING_TO_BEACON) {
+        if (this.state == TouristState.TRAVELING_TO_BEACON) {
             TouristBeaconBlockEntity beaconBlockEntity = TourismManager.getBeaconBlockEntity(this.tourist.level(), this.beaconTarget);
             if (beaconBlockEntity != null) {
                 return beaconBlockEntity.getPlainTextName();
             }
-        } else if (this.state == TouristState.TRAVELLING_TO_EXPERIENCE) {
+        } else if (this.state == TouristState.TRAVELING_TO_EXPERIENCE) {
             SightseeingExperience experience = TourismManager.getTouristExperience(this.experienceTarget);
             if (experience != null) {
                 return TourismManager.getTouristExperienceDisplayName(this.tourist.level(), experience).getString();
             }
         }
         return "";
+    }
+
+    public int getTicksAtCurrentTarget() {
+        return this.ticksAtCurrentTarget;
     }
 
     public boolean hasReportedHurtEnRoute() {
@@ -113,7 +119,7 @@ public final class TouristMind {
 
     public boolean isCurrentActivityAtBeacon() {
         return this.state == TouristState.CHOOSING_EXPERIENCE
-                || this.state == TouristState.TRAVELLING_TO_EXPERIENCE
+                || this.state == TouristState.TRAVELING_TO_EXPERIENCE
                 || this.state == TouristState.ENJOYING_EXPERIENCE
                 || this.state == TouristState.WANDERING_AT_BEACON;
     }
@@ -122,8 +128,8 @@ public final class TouristMind {
         return this.state == TouristState.PLANNING_NEXT_MOVE || this.state == TouristState.CHOOSING_EXPERIENCE;
     }
 
-    public boolean isTravellingToTarget() {
-        return this.state == TouristState.TRAVELLING_TO_BEACON || this.state == TouristState.TRAVELLING_TO_EXPERIENCE;
+    public boolean isTravelingToTarget() {
+        return this.state == TouristState.TRAVELING_TO_BEACON || this.state == TouristState.TRAVELING_TO_EXPERIENCE;
     }
 
     public boolean isWandering() {
@@ -209,8 +215,11 @@ public final class TouristMind {
 
         if (this.state == TouristState.ENJOYING_EXPERIENCE) {
             // TODO: Execute Experience tick.
-
-        } else if (!this.isTravellingToTarget() && !this.isPlanningActivity()) {
+            // TODO: Consider adding substates that a TouristExperience will manage.
+            // EXPERIENCING_TARGET might be a good candidate for moving to a substate.
+            //     In this state, you'd advance ticksAtCurrentTarget, among other things.
+            // TODO: Determine which class is responsible for persisting ticksAtCurrentTarget.
+        } else if (!this.isTravelingToTarget() && !this.isPlanningActivity()) {
             if (this.nextChooseActivityTicks > 0) {
                 this.nextChooseActivityTicks--;
             }
@@ -299,6 +308,7 @@ public final class TouristMind {
         this.nextMoodCheckTicks = this.random().nextInt(CHECK_MOOD_INTERVAL_TICKS);
         this.eveningDespawnTimeTicks = 12000 + this.random().nextInt(1000);
         this.isStayingOvernight = false;
+        this.ticksAtCurrentTarget = 0;
     }
 
     private void resetExperienceJourneyStats() {
@@ -334,7 +344,7 @@ public final class TouristMind {
         switch (newState) {
             case PLANNING_NEXT_MOVE -> this.planNextTarget(serverLevel);
             case CHOOSING_EXPERIENCE -> this.chooseActivityAtBeacon(serverLevel, beaconBlockEntity);
-            case TRAVELLING_TO_EXPERIENCE -> this.resetExperienceJourneyStats();
+            case TRAVELING_TO_EXPERIENCE -> this.resetExperienceJourneyStats();
             case WANDERING_WORLD -> this.beginWanderingWorld();
             case WANDERING_AT_BEACON -> this.beginWanderingAtBeacon();
             case DESPAWNING, LOST -> this.deSpawn();
@@ -344,7 +354,7 @@ public final class TouristMind {
 
     //region State Transition Methods
     public void arriveAtTarget() {
-        if (!this.isTravellingToTarget()) {
+        if (!this.isTravelingToTarget()) {
             return;
         }
 
@@ -356,7 +366,7 @@ public final class TouristMind {
 
         this.tourist.clearHeldItem();
 
-        if (this.state == TouristState.TRAVELLING_TO_EXPERIENCE) {
+        if (this.state == TouristState.TRAVELING_TO_EXPERIENCE) {
             this.arriveAtExperienceTarget(serverLevel);
         } else {
             this.arriveAtBeaconTarget(serverLevel);
@@ -428,7 +438,7 @@ public final class TouristMind {
         int index = this.random().nextInt(experiences.size());
         SightseeingExperience experience = experiences.get(index);
         this.experienceTarget = experience.getTargetPos().immutable();
-        this.transitionTo(TouristState.TRAVELLING_TO_EXPERIENCE);
+        this.transitionTo(TouristState.TRAVELING_TO_EXPERIENCE);
     }
 
     private void deSpawn() {
@@ -441,7 +451,7 @@ public final class TouristMind {
     }
 
     public void onLost() {
-        if (!this.isTravellingToTarget()) {
+        if (!this.isTravelingToTarget()) {
             return;
         }
 
@@ -453,7 +463,7 @@ public final class TouristMind {
 
         this.updateMood(VisitResult.LOST);
 
-        if (this.state == TouristState.TRAVELLING_TO_EXPERIENCE) {
+        if (this.state == TouristState.TRAVELING_TO_EXPERIENCE) {
             SightseeingExperience experience = TourismManager.getTouristExperience(this.experienceTarget);
             Component experienceMessage;
             if (experience == null) {
@@ -531,7 +541,7 @@ public final class TouristMind {
         this.beaconTarget = beaconTarget.immutable();
         this.resetBeaconJourneyStats();
         this.tourist.giveItemToHold(new ItemStack(Items.MAP));
-        this.transitionTo(TouristState.TRAVELLING_TO_BEACON);
+        this.transitionTo(TouristState.TRAVELING_TO_BEACON);
     }
     //endregion
 
@@ -557,7 +567,7 @@ public final class TouristMind {
     public void readAdditionalSaveData(ValueInput valueInput) {
         this.beaconTarget = valueInput.read("BeaconTarget", BlockPos.CODEC).orElse(null);
         this.state = valueInput.read("State", TouristState.CODEC).orElse(
-                (this.beaconTarget != null ? TouristState.TRAVELLING_TO_BEACON : TouristState.IDLE));
+                (this.beaconTarget != null ? TouristState.TRAVELING_TO_BEACON : TouristState.IDLE));
         this.experienceTarget = valueInput.read("ExperienceTarget", BlockPos.CODEC).orElse(null);
         this.closestDistanceToTarget = valueInput.getDoubleOr("ClosestDistanceToBeacon", Double.MAX_VALUE);
         this.consecutiveFailedProgressChecks = valueInput.getIntOr("FailedProgressChecks", 0);

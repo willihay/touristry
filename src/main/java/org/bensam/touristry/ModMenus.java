@@ -6,6 +6,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
+import org.bensam.touristry.menu.SightseeingExperienceMenu;
 import org.bensam.touristry.menu.TouristBeaconMenu;
 
 import java.util.function.Supplier;
@@ -16,8 +17,12 @@ public final class ModMenus {
     private static MenuType<TouristBeaconMenu> touristBeaconMenu;
     public static final Supplier<MenuType<TouristBeaconMenu>> TOURIST_BEACON_MENU = () -> touristBeaconMenu;
 
+    private static MenuType<SightseeingExperienceMenu> sightseeingExperienceMenu;
+    public static final Supplier<MenuType<SightseeingExperienceMenu>> SIGHTSEEING_EXPERIENCE_MENU = () -> sightseeingExperienceMenu;
+
     public static void initialize() {
         touristBeaconMenu = register("tourist_beacon_menu", TouristBeaconMenu::new);
+        sightseeingExperienceMenu = register("sightseeing_experience_menu", SightseeingExperienceMenu::new);
     }
 
     public static <T extends AbstractContainerMenu> MenuType<T> register(

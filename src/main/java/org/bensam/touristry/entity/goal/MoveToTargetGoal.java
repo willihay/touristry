@@ -26,12 +26,12 @@ public class MoveToTargetGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        return this.tourist.getMoveToTarget() != null && this.tourist.isTravellingToTarget();
+        return this.tourist.getMoveToTarget() != null && this.tourist.isTravelingToTarget();
     }
 
     @Override
     public boolean canContinueToUse() {
-        return this.tourist.getMoveToTarget() != null && this.tourist.isTravellingToTarget();
+        return this.tourist.getMoveToTarget() != null && this.tourist.isTravelingToTarget();
     }
 
     @Override

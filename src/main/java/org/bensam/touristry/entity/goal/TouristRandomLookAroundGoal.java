@@ -19,12 +19,12 @@ public class TouristRandomLookAroundGoal extends RandomLookAroundGoal {
 
     @Override
     public boolean canUse() {
-        return !this.tourist.isTravellingToTarget() && super.canUse();
+        return !this.tourist.isTravelingToTarget() && super.canUse();
     }
 
     @Override
     public boolean canContinueToUse() {
-        return !this.tourist.isTravellingToTarget() && super.canContinueToUse();
+        return !this.tourist.isTravelingToTarget() && super.canContinueToUse();
     }
 
     @Override

@@ -8,6 +8,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.Item;
 import org.bensam.touristry.config.ModServerConfig;
 import org.bensam.touristry.item.BeaconKeyItem;
+import org.bensam.touristry.item.ExperienceKeyItem;
 
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -18,6 +19,9 @@ public final class ModItems {
     private static BeaconKeyItem beaconKeyItem;
     public static final Supplier<BeaconKeyItem> BEACON_KEY = () -> beaconKeyItem;
 
+    private static ExperienceKeyItem experienceKeyItem;
+    public static final Supplier<ExperienceKeyItem> EXPERIENCE_KEY = () -> experienceKeyItem;
+
     public static void initialize() {
         ModServerConfig defaults = ModServerConfig.defaults();
 
@@ -25,6 +29,12 @@ public final class ModItems {
         beaconKeyItem = register(
                 "beacon_key",
                 BeaconKeyItem::new,
+                new Item.Properties()
+        );
+
+        experienceKeyItem = register(
+                "experience_key",
+                ExperienceKeyItem::new,
                 new Item.Properties()
         );
     }

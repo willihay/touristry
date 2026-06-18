@@ -1,13 +1,18 @@
 package org.bensam.touristry;
 
+import com.mojang.serialization.Codec;
 import net.minecraft.core.Registry;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.resources.Identifier;
 import org.bensam.touristry.tourism.TouristBeaconExperience;
 import org.bensam.touristry.tourism.TouristBeaconStats;
+import org.bensam.touristry.tourism.experience.ExperienceStatistics;
+import org.bensam.touristry.tourism.experience.ExperienceTarget;
 
+import java.util.List;
 import java.util.UUID;
 
 public final class ModComponents {
@@ -35,6 +40,55 @@ public final class ModComponents {
         DataComponentType.<TouristBeaconStats>builder()
                 .persistent(TouristBeaconStats.CODEC)
                 .build()
+    );
+
+    public static final DataComponentType<UUID> TOURIST_EXPERIENCE_KEY_UUID = Registry.register(
+            BuiltInRegistries.DATA_COMPONENT_TYPE,
+            Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tourist_experience_key_uuid"),
+            DataComponentType.<UUID>builder()
+                    .persistent(UUIDUtil.CODEC)
+                    .build()
+    );
+
+    public static final DataComponentType<UUID> TOURIST_EXPERIENCE_BLOCK_UUID = Registry.register(
+            BuiltInRegistries.DATA_COMPONENT_TYPE,
+            Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tourist_experience_block_uuid"),
+            DataComponentType.<UUID>builder()
+                    .persistent(UUIDUtil.CODEC)
+                    .build()
+    );
+
+    public static final DataComponentType<UUID> TOURIST_EXPERIENCE_PARENT_UUID = Registry.register(
+            BuiltInRegistries.DATA_COMPONENT_TYPE,
+            Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tourist_experience_parent_uuid"),
+            DataComponentType.<UUID>builder()
+                    .persistent(UUIDUtil.CODEC)
+                    .build()
+    );
+
+    public static final DataComponentType<Boolean> TOURIST_EXPERIENCE_STATUS = Registry.register(
+            BuiltInRegistries.DATA_COMPONENT_TYPE,
+            Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tourist_experience_status"),
+            DataComponentType.<Boolean>builder()
+                    .persistent(Codec.BOOL)
+                    .build()
+    );
+
+    public static final DataComponentType<ExperienceStatistics> TOURIST_EXPERIENCE_STATISTICS = Registry.register(
+            BuiltInRegistries.DATA_COMPONENT_TYPE,
+            Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tourist_experience_statistics"),
+            DataComponentType.<ExperienceStatistics>builder()
+                    .persistent(ExperienceStatistics.CODEC)
+                    .build()
+    );
+
+    public static final DataComponentType<List<ExperienceTarget>> TOURIST_EXPERIENCE_TARGETS = Registry.register(
+            BuiltInRegistries.DATA_COMPONENT_TYPE,
+            Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tourist_experience_targets"),
+            DataComponentType.<List<ExperienceTarget>>builder()
+                    .persistent(ExperienceTarget.CODEC.listOf())
+                    .networkSynchronized(ExperienceTarget.STREAM_CODEC.apply(ByteBufCodecs.list()))
+                    .build()
     );
 
     public static void initialize() {
