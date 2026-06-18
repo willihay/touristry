@@ -6,8 +6,8 @@ import org.bensam.touristry.tourism.experience.SightseeingExperience;
 
 import java.util.UUID;
 
-public class TouristExperience {
-    private TouristExperience() {}
+public class LecternTarget {
+    private LecternTarget() {}
 
     public static boolean registerLecternIfLinked(LecternBlockEntity lectern) {
         if (lectern.isRemoved()) {
@@ -19,7 +19,7 @@ public class TouristExperience {
             return false;
         }
 
-        TourismManager.registerTouristExperience(lectern.getBlockPos(), new SightseeingExperience(beaconUUID, lectern.getBlockPos()));
+        TourismManager.registerTouristExperience(new SightseeingExperience(beaconUUID, lectern.getBlockPos()));
         return true;
     }
 

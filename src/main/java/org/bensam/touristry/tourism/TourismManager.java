@@ -21,18 +21,18 @@ import org.bensam.touristry.config.ModServerConfigManager;
 import org.bensam.touristry.config.Verbosity;
 import org.bensam.touristry.entity.TouristEntity;
 import org.bensam.touristry.tourism.experience.SightseeingExperience;
+import org.bensam.touristry.tourism.experience.TouristExperience;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 public class TourismManager {
     public record ScheduledTouristSpawn(int timeOfDay, UUID beaconUUID) {}
     public static final Comparator<ScheduledTouristSpawn> SCHEDULED_TOURIST_SPAWN_COMPARATOR =
             Comparator.comparingInt(ScheduledTouristSpawn::timeOfDay);
-
-    public record RegisteredExperience(UUID beaconUUID, SightseeingExperience experience) {}
 
     private static final int SPAWN_ATTEMPTS_PER_BEACON = 8;
 
@@ -45,7 +45,8 @@ public class TourismManager {
 
     private static final PriorityQueue<ScheduledTouristSpawn> pendingSpawns = new PriorityQueue<>(SCHEDULED_TOURIST_SPAWN_COMPARATOR);
     private static final Map<UUID, TouristBeaconBlockEntity> loadedTouristBeacons = new LinkedHashMap<>();
-    private static final Map<BlockPos, SightseeingExperience> loadedTouristExperiences = new LinkedHashMap<>();
+    private static final Map<UUID, TouristExperience> loadedTouristExperiences = new LinkedHashMap<>();
+    private static final Map<BlockPos, UUID> experienceBlockPosById = new HashMap<>();
     private static final Map<UUID, Set<BlockPos>> loadedTouristExperiencesByBeaconId = new LinkedHashMap<>();
     private static final Map<Integer, TouristEntity> loadedTourists = new LinkedHashMap<>();
 
@@ -150,7 +151,11 @@ public class TourismManager {
     public static @Nullable SightseeingExperience getTouristExperience(BlockPos blockPos) {
         return loadedTouristExperiences.get(blockPos);
     }
-    
+
+    public static TouristExperience getTouristExperienceById(UUID uuid) {
+        return loadedTouristExperiences.get(uuid);
+    }
+
     /**
      * Gets the display name for a tourist experience block.
      * Priority: 1) Lectern custom name, 2) Book custom name, 3) Block name
@@ -184,23 +189,38 @@ public class TourismManager {
         return blockEntity.getBlockState().getBlock().getName();
     }
 
-    public static List<SightseeingExperience> getTouristExperiences(ServerLevel overworld) {
+    public static List<TouristExperience> getTouristExperiences(ServerLevel overworld) {
         pruneInvalidTouristExperiences(overworld);
         return List.copyOf(loadedTouristExperiences.values());
     }
 
-    public static List<SightseeingExperience> getTouristExperiencesForBeacon(ServerLevel overworld, UUID beaconUUID) {
-        pruneInvalidTouristExperiences(overworld);
-        Set<BlockPos> experiencePositions = loadedTouristExperiencesByBeaconId.get(beaconUUID);
-        if (experiencePositions == null || experiencePositions.isEmpty()) {
-            return List.of();
-        }
-        
-        return experiencePositions.stream()
-                .map(loadedTouristExperiences::get)
-                .filter(experience -> experience != null && experience.beaconUUID().equals(beaconUUID))
-                .toList();
+    public static List<TouristExperience> getTouristExperiencesNearBeacon(
+            ServerLevel overworld,
+            TouristBeaconBlockEntity beaconBlockEntity,
+            double radius
+    ) {
+        BlockPos beaconPos = beaconBlockEntity.getBlockPos();
+        double radiusSq = radius * radius;
+
+        return loadedTouristExperiences.values().stream()
+                .filter(exp -> exp.getParentExperienceUUID() == null)
+                .filter(exp -> exp.getBlockPos().distSqr(beaconPos) <= radiusSq)
+                .sorted(Comparator.comparingDouble(exp -> exp.getBlockPos().distSqr(beaconPos)))
+                .collect(Collectors.toList());
     }
+
+//    public static List<TouristExperience> getTouristExperiencesForBeacon(ServerLevel overworld, UUID beaconUUID) {
+//        pruneInvalidTouristExperiences(overworld);
+//        Set<BlockPos> experiencePositions = loadedTouristExperiencesByBeaconId.get(beaconUUID);
+//        if (experiencePositions == null || experiencePositions.isEmpty()) {
+//            return List.of();
+//        }
+//
+//        return experiencePositions.stream()
+//                .map(loadedTouristExperiences::get)
+//                .filter(experience -> experience != null && experience.getUUID().equals(beaconUUID))
+//                .toList();
+//    }
 
     public static void pruneInvalidTouristExperiences(ServerLevel overworld) {
         loadedTouristExperiences.entrySet().removeIf(entry -> {
@@ -237,31 +257,32 @@ public class TourismManager {
         });
     }
 
-    public static void registerTouristExperience(BlockPos blockPos, SightseeingExperience experience) {
-        BlockPos immutablePos = blockPos.immutable();
-        loadedTouristExperiences.put(immutablePos, experience);
-        loadedTouristExperiencesByBeaconId
-                .computeIfAbsent(experience.beaconUUID(), k -> new LinkedHashSet<>())
-                .add(immutablePos);
+    public static void registerTouristExperience(TouristExperience experience) {
+        loadedTouristExperiences.put(experience.getUUID(), experience);
+        experienceBlockPosById.put(experience.getBlockPos(), experience.getUUID());
+//        loadedTouristExperiencesByBeaconId
+//                .computeIfAbsent(experience.getUUID(), k -> new LinkedHashSet<>())
+//                .add(experience.getBlockPos());
     }
 
-    public static void unregisterTouristExperience(BlockPos blockPos) {
-        SightseeingExperience experience = loadedTouristExperiences.remove(blockPos);
+    public static void unregisterTouristExperience(UUID uuid) {
+        TouristExperience experience = loadedTouristExperiences.remove(uuid);
         if (experience != null) {
-            Set<BlockPos> beaconExperiences = loadedTouristExperiencesByBeaconId.get(experience.beaconUUID());
-            if (beaconExperiences != null) {
-                beaconExperiences.remove(blockPos);
-                if (beaconExperiences.isEmpty()) {
-                    loadedTouristExperiencesByBeaconId.remove(experience.beaconUUID());
-                }
-            }
+            experienceBlockPosById.remove(experience.getBlockPos());
+//            Set<BlockPos> beaconExperiences = loadedTouristExperiencesByBeaconId.get(experience.beaconUUID());
+//            if (beaconExperiences != null) {
+//                beaconExperiences.remove(blockPos);
+//                if (beaconExperiences.isEmpty()) {
+//                    loadedTouristExperiencesByBeaconId.remove(experience.beaconUUID());
+//                }
+//            }
         }
     }
 
     public static void unregisterTouristExperience(BlockPos blockPos, UUID beaconUUID) {
         SightseeingExperience experience = loadedTouristExperiences.get(blockPos);
         if (experience != null && experience.beaconUUID().equals(beaconUUID)) {
-            unregisterTouristExperience(blockPos);
+            unregisterTouristExperience(uuid);
         }
     }
     //endregion

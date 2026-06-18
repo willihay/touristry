@@ -1,0 +1,62 @@
+package org.bensam.touristry.block;
+
+import com.mojang.serialization.MapCodec;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.Containers;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BaseEntityBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
+import org.bensam.touristry.block.entity.SightseeingExperienceBlockEntity;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+
+public class SightseeingExperienceBlock extends TouristExperienceBlock {
+    public static final MapCodec<SightseeingExperienceBlock> CODEC = simpleCodec(SightseeingExperienceBlock::new);
+
+    public SightseeingExperienceBlock(Properties properties) {
+        super(properties);
+    }
+
+    @Override
+    protected MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
+    }
+
+    @Override
+    protected void affectNeighborsAfterRemoval(@NonNull BlockState blockState, @NonNull ServerLevel serverLevel, @NonNull BlockPos blockPos, boolean bl) {
+        Containers.updateNeighboursAfterDestroy(blockState, serverLevel, blockPos);
+    }
+
+    @Override
+    protected int getAnalogOutputSignal(@NonNull BlockState blockState, Level level, @NonNull BlockPos blockPos, @NonNull Direction direction) {
+        if (level.getBlockEntity(blockPos) instanceof SightseeingExperienceBlockEntity sightseeingExperienceBlockEntity) {
+            return sightseeingExperienceBlockEntity.isOpenForBusiness() ? 15 : 0;
+        }
+        return 0;
+    }
+
+    @Override
+    protected boolean hasAnalogOutputSignal(@NonNull BlockState blockState) {
+        return true;
+    }
+
+    @Override
+    public @Nullable BlockEntity newBlockEntity(BlockPos blockPos, BlockState blockState) {
+        return new SightseeingExperienceBlockEntity(blockPos, blockState);
+    }
+
+    @Override
+    protected InteractionResult useWithoutItem(BlockState blockState, Level level, BlockPos blockPos, Player player, BlockHitResult blockHitResult) {
+        if (!level.isClientSide() && level.getBlockEntity(blockPos) instanceof SightseeingExperienceBlockEntity sightseeingExperienceBlockEntity) {
+            player.openMenu(sightseeingExperienceBlockEntity);
+        }
+
+        return InteractionResult.SUCCESS;
+    }
+}

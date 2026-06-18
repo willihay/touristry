@@ -1,5 +1,7 @@
 package org.bensam.touristry.entity.goal;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.world.entity.ai.goal.Goal;
 import org.bensam.touristry.entity.TouristEntity;
 
@@ -8,9 +10,13 @@ import java.util.EnumSet;
 public class LookAtTargetPosGoal extends Goal {
 
     private final TouristEntity tourist;
+    private final BlockPos targetPos;
+    private final Direction playerFacing;
 
-    public LookAtTargetPosGoal(TouristEntity tourist) {
+    public LookAtTargetPosGoal(TouristEntity tourist, BlockPos targetPos, Direction playerFacing) {
         this.tourist = tourist;
+        this.targetPos = targetPos;
+        this.playerFacing = playerFacing;
         this.setFlags(EnumSet.of(Goal.Flag.LOOK));
     }
 

@@ -16,8 +16,8 @@ import net.minecraft.world.level.block.entity.LecternBlockEntity;
 import org.bensam.touristry.ModAttachments;
 import org.bensam.touristry.ModComponents;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
+import org.bensam.touristry.tourism.LecternTarget;
 import org.bensam.touristry.tourism.TourismManager;
-import org.bensam.touristry.tourism.TouristExperience;
 
 import java.util.UUID;
 
@@ -82,7 +82,7 @@ public class BeaconKeyItem extends Item {
                 UUID attachedUUID = lectern.getAttached(ModAttachments.LECTERN_TOURIST_BEACON_UUID);
                 if (keyBeaconUUID.equals(attachedUUID)) {
                     lectern.removeAttached(ModAttachments.LECTERN_TOURIST_BEACON_UUID);
-                    TouristExperience.unregisterLectern(lectern);
+                    LecternTarget.unregisterLectern(lectern);
                     player.displayClientMessage(
                             Component.literal("Unlinked Lectern from beacon ")
                                     .append(keyBeaconNameComponent),
@@ -122,7 +122,7 @@ public class BeaconKeyItem extends Item {
             }
 
             lectern.setAttached(ModAttachments.LECTERN_TOURIST_BEACON_UUID, keyBeaconUUID);
-            if (TouristExperience.registerLecternIfLinked(lectern)) {
+            if (LecternTarget.registerLecternIfLinked(lectern)) {
                 player.displayClientMessage(
                         Component.literal("Linked Lectern to beacon ")
                                 .append(keyBeaconNameComponent),

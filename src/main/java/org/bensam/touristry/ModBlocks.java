@@ -14,6 +14,7 @@ import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.properties.NoteBlockInstrument;
 import net.minecraft.world.level.material.MapColor;
+import org.bensam.touristry.block.SightseeingExperienceBlock;
 import org.bensam.touristry.block.TouristBeaconBlock;
 
 import java.util.function.Function;
@@ -24,6 +25,9 @@ public class ModBlocks {
 
     private static TouristBeaconBlock touristBeacon;
     public static final Supplier<TouristBeaconBlock> TOURIST_BEACON = () -> touristBeacon;
+
+    private static SightseeingExperienceBlock sightseeingExperience;
+    public static final Supplier<SightseeingExperienceBlock> SIGHTSEEING_EXPERIENCE = () -> sightseeingExperience;
 
     public static void initialize() {
         // Register mod blocks.
@@ -36,6 +40,13 @@ public class ModBlocks {
                         .lightLevel(blockState -> blockState.getValue(TouristBeaconBlock.OPEN_FOR_BUSINESS) ? 12 : 0)
                         .requiresCorrectToolForDrops()
                         .sound(SoundType.STONE)
+                        .strength(5.0f, 1200.0f)
+        );
+
+        sightseeingExperience = register(
+                "sightseeing_experience",
+                SightseeingExperienceBlock::new,
+                BlockBehaviour.Properties.of()
                         .strength(5.0f, 1200.0f)
         );
     }

@@ -31,11 +31,8 @@ import org.bensam.touristry.tourism.TourismManager;
 import org.bensam.touristry.tourism.TouristBeaconExperience;
 import org.bensam.touristry.tourism.TouristBeaconStats;
 import org.bensam.touristry.tourism.VisitResult;
-import org.bensam.touristry.tourism.experience.SightseeingExperience;
 import org.jspecify.annotations.NonNull;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
@@ -51,8 +48,6 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
     private UUID uuid = UUID.randomUUID();
 
     private NonNullList<ItemStack> beaconItems = NonNullList.withSize(TOTAL_INVENTORY_SIZE, ItemStack.EMPTY);
-    private List<SightseeingExperience> experiences = new ArrayList<>();
-    private int experienceSlots;
 
     // stats
     private boolean openForBusiness;
@@ -91,7 +86,6 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
     public TouristBeaconBlockEntity(BlockPos blockPos, BlockState blockState) {
         super(ModBlockEntities.TOURIST_BEACON.get(), blockPos, blockState);
         this.setItem(BEACON_KEY_SLOT_INDEX, this.getBeaconKey());
-        this.experienceSlots = TouristBeaconExperience.BASE_EXPERIENCE_SLOTS;
         this.openForBusiness = false;
         this.successfulVisits = 0;
         this.closedEarly = 0;
@@ -176,7 +170,7 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
     }
 
     public TouristBeaconExperience getBeaconExperience() {
-        return new TouristBeaconExperience(this.openForBusiness, this.experienceSlots, this.experiences);
+        return new TouristBeaconExperience(this.openForBusiness);
     }
 
     public TouristBeaconStats getBeaconStats() {
@@ -314,8 +308,6 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
 
         TouristBeaconExperience experience = valueInput.read("BeaconExperience", TouristBeaconExperience.CODEC)
                 .orElse(TouristBeaconExperience.EMPTY);
-        this.experiences = new ArrayList<>(experience.experiences());
-        this.experienceSlots = experience.experienceSlots();
         this.openForBusiness = experience.beaconOpenForBusiness();
 
         this.successfulVisits = valueInput.getIntOr("SuccessfulVisits", 0);
@@ -356,8 +348,6 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
                 ModComponents.TOURIST_BEACON_EXPERIENCE,
                 TouristBeaconExperience.EMPTY
         );
-        this.experiences = new ArrayList<>(experience.experiences());
-        this.experienceSlots = experience.experienceSlots();
         this.openForBusiness = experience.beaconOpenForBusiness();
 
         TouristBeaconStats stats = dataComponentGetter.getOrDefault(
