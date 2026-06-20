@@ -11,11 +11,12 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import org.bensam.touristry.Touristry;
+import org.bensam.touristry.block.entity.AbstractExperienceBlockEntity;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
 import org.bensam.touristry.tourism.TourismManager;
 import org.bensam.touristry.tourism.TouristBeaconExperience;
 import org.bensam.touristry.tourism.TouristBeaconStats;
-import org.bensam.touristry.tourism.experience.SightseeingExperience;
+import org.bensam.touristry.tourism.experience.TouristExperience;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -35,6 +36,16 @@ public final class PlayerCommands {
                 .then(addBeaconActions(
                         Commands.literal("nearest"),
                         ctx -> TourCommand.requireNearestBeacon(ctx.getSource()))));
+
+        root.then(Commands.literal("experience")
+                .then(addExperienceActions(
+                        Commands.argument("experiencePos", BlockPosArgument.blockPos()),
+                        ctx -> TourCommand.requireExperience(
+                                ctx.getSource(),
+                                BlockPosArgument.getLoadedBlockPos(ctx, "experiencePos"))))
+                .then(addExperienceActions(
+                        Commands.literal("nearest"),
+                        ctx -> TourCommand.requireNearestExperience(ctx.getSource()))));
 
         root.then(Commands.literal("list")
                 .then(Commands.literal("beacons")
@@ -58,7 +69,7 @@ public final class PlayerCommands {
     ) {
         return parent
                 .then(Commands.literal("info")
-                        .executes(ctx -> showInfo(
+                        .executes(ctx -> showBeaconInfo(
                                 ctx.getSource(),
                                 resolver.resolve(ctx))))
                 .then(Commands.literal("toggleStatus")
@@ -67,7 +78,7 @@ public final class PlayerCommands {
                                 resolver.resolve(ctx))));
     }
 
-    private static int showInfo(CommandSourceStack source, TouristBeaconBlockEntity beaconBlockEntity) {
+    private static int showBeaconInfo(CommandSourceStack source, TouristBeaconBlockEntity beaconBlockEntity) {
         // beacon name
         Component message = beaconBlockEntity.getName().copy()
                 .append(Component.literal(" @ " + beaconBlockEntity.getBlockPos().toShortString() + " info:"));
@@ -77,19 +88,18 @@ public final class PlayerCommands {
         TouristBeaconExperience beaconExperience = beaconBlockEntity.getBeaconExperience();
         source.sendSuccess(() -> Component.literal(" - status: " + (beaconExperience.beaconOpenForBusiness() ? "open for business" : "closed for business")), false);
 
-        // experiences
-        List<SightseeingExperience> experiences = TourismManager.getTouristExperiencesForBeacon(source.getServer().overworld(), beaconBlockEntity.getUUID());
+        // nearby experiences
+        List<TouristExperience> experiences = TourismManager.getTouristExperiencesNearBeacon(beaconBlockEntity);
         source.sendSuccess(() -> Component.literal(
-                        " - experiences: " + experiences.size()),
+                        " - nearby experiences: " + experiences.size()),
                 false);
         if (!experiences.isEmpty()) {
-            for (SightseeingExperience experience : experiences) {
-                Component experienceName = TourismManager.getTouristExperienceDisplayName(source.getLevel(), experience);
+            for (TouristExperience experience : experiences) {
                 Component experienceMessage = Component.literal("   - ")
-                        .append(experienceName)
+                        .append(experience.getDisplayName())
                         .append(Component.literal(" ("))
-                        .append(experience.getClass().getSimpleName())
-                        .append(Component.literal(") @ " + experience.blockPos().toShortString()));
+                        .append(experience.getDisplayName())
+                        .append(Component.literal(") @ " + experience.getBlockPos().toShortString()));
                 source.sendSuccess(() -> experienceMessage, false);
             }
         }
@@ -110,11 +120,57 @@ public final class PlayerCommands {
                         + "; tourists killed: " + stats.touristsKilled()),
                 false);
 
+        // uuid
+        source.sendSuccess(() -> Component.literal(" - uuid: " + beaconBlockEntity.getUUID().toString()), false);
+
+        return 1;
+    }
+
+    private static int toggleBeaconStatus(CommandSourceStack source, TouristBeaconBlockEntity beaconBlockEntity) {
+        beaconBlockEntity.setOpenForBusiness(!beaconBlockEntity.isOpenForBusiness());
+
+        Component message = beaconBlockEntity.getName().copy()
+                .append(Component.literal(" @ " + beaconBlockEntity.getBlockPos().toShortString() + " is now "))
+                .append(Component.translatable("message." + Touristry.MOD_ID
+                        + (beaconBlockEntity.isOpenForBusiness() ? ".tourism_status.open_for_business" : ".tourism_status.closed_for_business")));
+        source.sendSuccess(() -> message,  false);
+        return 1;
+    }
+
+    private static <T extends ArgumentBuilder<CommandSourceStack, T>> T addExperienceActions(
+            T parent,
+            TourCommand.ExperienceResolver resolver
+    ) {
+        return parent
+                .then(Commands.literal("info")
+                        .executes(ctx -> showExperienceInfo(
+                                ctx.getSource(),
+                                resolver.resolve(ctx))))
+                .then(Commands.literal("toggleStatus")
+                        .executes(ctx -> toggleExperienceStatus(
+                                ctx.getSource(),
+                                resolver.resolve(ctx))));
+    }
+
+    private static int showExperienceInfo(CommandSourceStack source, AbstractExperienceBlockEntity experienceBlockEntity) {
+        // beacon name
+        Component message = experienceBlockEntity.getName().copy()
+                .append(Component.literal(" @ " + experienceBlockEntity.getBlockPos().toShortString() + " info:"));
+        source.sendSuccess(() -> message, false);
+
+        // business status
+        source.sendSuccess(() -> Component.literal(" - status: " + (experienceBlockEntity.isOpenForBusiness() ? "open for business" : "closed for business")), false);
+
+        // TODO: list targets, stats
+        // targets
+
+        // stats
+
         // inventory
         MutableComponent inventoryMessage = Component.literal(" - inventory: ");
         Map<Item, Integer> totals = new LinkedHashMap<>();
-        for (int i = 0; i < beaconBlockEntity.getPaymentSlotSize(); ++i) {
-            ItemStack itemStack = beaconBlockEntity.getItem(i);
+        for (int i = 0; i < experienceBlockEntity.getPaymentSlotSize(); ++i) {
+            ItemStack itemStack = experienceBlockEntity.getItem(i);
             if (!itemStack.isEmpty()) {
                 totals.merge(itemStack.getItem(), itemStack.getCount(), Integer::sum);
             }
@@ -135,18 +191,18 @@ public final class PlayerCommands {
         source.sendSuccess(() -> inventoryMessage, false);
 
         // uuid
-        source.sendSuccess(() -> Component.literal(" - uuid: " + beaconBlockEntity.getUUID().toString()), false);
+        source.sendSuccess(() -> Component.literal(" - uuid: " + experienceBlockEntity.getUUID().toString()), false);
 
         return 1;
     }
 
-    private static int toggleBeaconStatus(CommandSourceStack source, TouristBeaconBlockEntity beaconBlockEntity) {
-        beaconBlockEntity.setOpenForBusiness(!beaconBlockEntity.isOpenForBusiness());
+    private static int toggleExperienceStatus(CommandSourceStack source, AbstractExperienceBlockEntity experienceBlockEntity) {
+        experienceBlockEntity.setOpenForBusiness(!experienceBlockEntity.isOpenForBusiness());
 
-        Component message = beaconBlockEntity.getName().copy()
-                .append(Component.literal(" @ " + beaconBlockEntity.getBlockPos().toShortString() + " is now "))
+        Component message = experienceBlockEntity.getName().copy()
+                .append(Component.literal(" @ " + experienceBlockEntity.getBlockPos().toShortString() + " is now "))
                 .append(Component.translatable("message." + Touristry.MOD_ID
-                        + (beaconBlockEntity.isOpenForBusiness() ? ".tourist_beacon.open_for_business" : ".tourist_beacon.closed_for_business")));
+                        + (experienceBlockEntity.isOpenForBusiness() ? ".tourism_status.open_for_business" : ".tourism_status.closed_for_business")));
         source.sendSuccess(() -> message,  false);
         return 1;
     }
@@ -165,7 +221,7 @@ public final class PlayerCommands {
                     .append(beaconBlockEntity.getName().copy())
                     .append(Component.literal(" @ " + beaconBlockEntity.getBlockPos().toShortString() + " ("))
                     .append(Component.translatable("message." + Touristry.MOD_ID
-                            + (beaconBlockEntity.isOpenForBusiness() ? ".tourist_beacon.open_for_business" : ".tourist_beacon.closed_for_business")))
+                            + (beaconBlockEntity.isOpenForBusiness() ? ".tourism_status.open_for_business" : ".tourism_status.closed_for_business")))
                     .append(Component.literal(")"));
             source.sendSuccess(() -> message, false);
         }
@@ -173,7 +229,7 @@ public final class PlayerCommands {
     }
 
     private static int listExperiences(CommandSourceStack source) {
-        List<SightseeingExperience> loadedExperiences = TourismManager.getTouristExperiences(source.getServer().overworld());
+        List<TouristExperience> loadedExperiences = TourismManager.getTouristExperiences(source.getServer().overworld());
         if (loadedExperiences.isEmpty()) {
             source.sendSuccess(() -> Component.literal("No tourist experiences found"), false);
             return 1;
@@ -181,17 +237,11 @@ public final class PlayerCommands {
 
         source.sendSuccess(() -> Component.literal("Tourist experiences:"), false);
 
-        for (SightseeingExperience experience : loadedExperiences) {
-            Component experienceName = TourismManager.getTouristExperienceDisplayName(source.getLevel(), experience);
-            TouristBeaconBlockEntity beaconBlockEntity = TourismManager.getBeaconBlockEntityByUUID(experience.beaconUUID());
-            MutableComponent beaconNameComponent = beaconBlockEntity == null
-                    ? Component.literal(experience.beaconUUID().toString().substring(0, 8))
-                    : beaconBlockEntity.getName().copy();
+        for (TouristExperience experience : loadedExperiences) {
             Component message = Component.literal(" - ")
-                    .append(experienceName)
+                    .append(experience.getDisplayName())
                     .append(" (" + experience.getClass().getSimpleName() + ")")
-                    .append(Component.literal(" @ " + experience.blockPos().toShortString() + " for beacon "))
-                    .append(beaconNameComponent);
+                    .append(Component.literal(" @ " + experience.getBlockPos().toShortString()));
             source.sendSuccess(() -> message, false);
         }
         return 1;

@@ -10,9 +10,9 @@ import java.util.UUID;
 public final class ModAttachments {
     private ModAttachments() {}
 
-    public static final AttachmentType<UUID> LECTERN_TOURIST_BEACON_UUID =
+    public static final AttachmentType<UUID> LINKED_TOURIST_EXPERIENCE_UUID =
             AttachmentRegistry.createPersistent(
-                    Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "lectern_tourist_beacon_uuid"),
+                    Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "linked_tourist_beacon_uuid"),
                     UUIDUtil.CODEC
             );
 

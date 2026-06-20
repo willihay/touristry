@@ -7,7 +7,12 @@ import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.WrittenBookContent;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.LecternBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.bensam.touristry.ModBlockEntities;
 import org.bensam.touristry.Touristry;
@@ -19,6 +24,7 @@ import org.bensam.touristry.tourism.experience.ExperienceTarget;
 import org.jspecify.annotations.Nullable;
 
 public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEntity {
+    public static final int MAX_DISTANCE_TO_TARGET = 50;
     public static final int PAYMENT_SLOT_SIZE = 9;
     public static final int TOTAL_INVENTORY_SIZE = PAYMENT_SLOT_SIZE + 1;
 
@@ -62,9 +68,39 @@ public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEnt
         return Component.translatable("block." + Touristry.MOD_ID + ".sightseeing_experience");
     }
 
+    public Component getTargetDisplayName(ExperienceTarget target) {
+        BlockEntity blockEntity = this.level.getBlockEntity(target.pos());
+        if (!(blockEntity instanceof LecternBlockEntity lectern)) {
+            return Component.literal("Unknown");
+        }
+
+        // Priority 1: Check if the lectern block itself has a custom name
+        ItemStack lecternItem = new ItemStack(blockEntity.getBlockState().getBlock());
+        lecternItem.applyComponents(blockEntity.collectComponents());
+        if (lecternItem.has(net.minecraft.core.component.DataComponents.CUSTOM_NAME)) {
+            return lecternItem.getHoverName().copy();
+        }
+
+        // Priority 2: Check if lectern has a book with a custom name
+        ItemStack book = lectern.getBook();
+        if (!book.isEmpty() && book.has(net.minecraft.core.component.DataComponents.WRITTEN_BOOK_CONTENT)) {
+            WrittenBookContent content = book.get(net.minecraft.core.component.DataComponents.WRITTEN_BOOK_CONTENT);
+            if (content != null) {
+                return Component.literal(content.title().get(true));
+            }
+        }
+
+        // Priority 3: Use translated block name (e.g., "Lectern")
+        return blockEntity.getBlockState().getBlock().getName();
+    }
+
     @Override
     protected int getExperienceKeySlotIndex() {
         return PAYMENT_SLOT_SIZE;
+    }
+
+    public int getMaxDistanceToTarget() {
+        return MAX_DISTANCE_TO_TARGET;
     }
 
     @Override
@@ -77,10 +113,9 @@ public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEnt
         return blockState.is(Blocks.LECTERN);
     }
 
-    @Override
-    protected boolean isTargetValid(ServerLevel serverLevel, ExperienceTarget target) {
+    public boolean isTargetValid(ServerLevel serverLevel, ExperienceTarget target) {
         if (target.isChildExperience()) {
-            return TourismManager.getExperienceByUUID(target.childExperienceUUID()) != null;
+            return this.isTargetChildExperienceValid(target.childExperienceUUID());
         }
 
         // Check if block still exists and is valid for sightseeing.

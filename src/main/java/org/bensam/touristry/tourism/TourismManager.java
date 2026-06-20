@@ -6,21 +6,17 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.component.WrittenBookContent;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.LecternBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
-import org.bensam.touristry.ModAttachments;
 import org.bensam.touristry.ModEntities;
 import org.bensam.touristry.Touristry;
+import org.bensam.touristry.block.entity.AbstractExperienceBlockEntity;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
 import org.bensam.touristry.config.ModServerConfigManager;
 import org.bensam.touristry.config.Verbosity;
 import org.bensam.touristry.entity.TouristEntity;
-import org.bensam.touristry.tourism.experience.SightseeingExperience;
 import org.bensam.touristry.tourism.experience.TouristExperience;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -45,8 +41,8 @@ public class TourismManager {
 
     private static final PriorityQueue<ScheduledTouristSpawn> pendingSpawns = new PriorityQueue<>(SCHEDULED_TOURIST_SPAWN_COMPARATOR);
     private static final Map<UUID, TouristBeaconBlockEntity> loadedTouristBeacons = new LinkedHashMap<>();
-    private static final Map<UUID, TouristExperience> loadedTouristExperiences = new LinkedHashMap<>();
-    private static final Map<BlockPos, UUID> experienceBlockPosById = new HashMap<>();
+    private static final Map<UUID, TouristExperience> loadedExperiences = new LinkedHashMap<>();
+    private static final Map<BlockPos, UUID> loadedExperiencesByPos = new HashMap<>();
     private static final Map<UUID, Set<BlockPos>> loadedTouristExperiencesByBeaconId = new LinkedHashMap<>();
     private static final Map<Integer, TouristEntity> loadedTourists = new LinkedHashMap<>();
 
@@ -65,10 +61,10 @@ public class TourismManager {
         clearDespawnAllNextTick = false;
     }
 
-    public static void initialize(ServerLevel overworld) {
+    public static void initialize(ServerLevel serverLevel) {
         logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "Initializing TourismManager");
-        if (overworld == null) {
-            logActivity(Verbosity.ERRORS, "Overworld is null! TourismManager will not be initialized.");
+        if (serverLevel == null) {
+            logActivity(Verbosity.ERRORS, "ServerLevel is null! TourismManager will not be initialized.");
             return;
         }
 
@@ -76,7 +72,7 @@ public class TourismManager {
         pendingSpawns.clear();
         loadedTouristBeacons.clear();
         loadedTourists.clear();
-        loadPersistentState(overworld);
+        loadPersistentState(serverLevel);
     }
 
     public static void shutdown() {
@@ -109,11 +105,11 @@ public class TourismManager {
         }
     }
 
-    private static void loadPersistentState(ServerLevel overworld) {
-        tourismSavedData = overworld.getDataStorage().computeIfAbsent(TourismSavedData.TYPE);
+    private static void loadPersistentState(ServerLevel serverLevel) {
+        tourismSavedData = serverLevel.getDataStorage().computeIfAbsent(TourismSavedData.TYPE);
 
-        long currentDay = overworld.getDayCount();
-        int currentTimeOfDay = (int)(overworld.getDayTime() % 24000L);
+        long currentDay = serverLevel.getDayCount();
+        int currentTimeOfDay = (int)(serverLevel.getDayTime() % 24000L);
         if (tourismSavedData.getPreparedDay() != currentDay) {
             return;
         }
@@ -148,141 +144,74 @@ public class TourismManager {
     }
 
     //region Experience Helpers
-    public static @Nullable SightseeingExperience getTouristExperience(BlockPos blockPos) {
-        return loadedTouristExperiences.get(blockPos);
-    }
+    public static @Nullable AbstractExperienceBlockEntity findClosestExperienceEntity(BlockPos pos) {
+        TouristExperience closestExperience = null;
+        double closestDistanceSq = Double.MAX_VALUE;
 
-    public static TouristExperience getTouristExperienceById(UUID uuid) {
-        return loadedTouristExperiences.get(uuid);
-    }
-
-    /**
-     * Gets the display name for a tourist experience block.
-     * Priority: 1) Lectern custom name, 2) Book custom name, 3) Block name
-     * @param level The level to get the block entity from
-     * @param experience The sightseeing experience
-     * @return The display name component
-     */
-    public static Component getTouristExperienceDisplayName(Level level, SightseeingExperience experience) {
-        BlockEntity blockEntity = level.getBlockEntity(experience.blockPos());
-        if (!(blockEntity instanceof LecternBlockEntity lectern)) {
-            return Component.literal("Unknown");
-        }
-
-        // Priority 1: Check if the lectern block itself has a custom name
-        ItemStack lecternItem = new ItemStack(blockEntity.getBlockState().getBlock());
-        lecternItem.applyComponents(blockEntity.collectComponents());
-        if (lecternItem.has(net.minecraft.core.component.DataComponents.CUSTOM_NAME)) {
-            return lecternItem.getHoverName().copy();
-        }
-
-        // Priority 2: Check if lectern has a book with a custom name
-        ItemStack book = lectern.getBook();
-        if (!book.isEmpty() && book.has(net.minecraft.core.component.DataComponents.WRITTEN_BOOK_CONTENT)) {
-            WrittenBookContent content = book.get(net.minecraft.core.component.DataComponents.WRITTEN_BOOK_CONTENT);
-            if (content != null) {
-                return Component.literal(content.title().get(true));
+        for (TouristExperience experience : loadedExperiences.values()) {
+            double distanceSq = pos.distSqr(experience.getBlockPos());
+            if (distanceSq < closestDistanceSq) {
+                closestDistanceSq = distanceSq;
+                closestExperience = experience;
             }
         }
-        
-        // Priority 3: Use translated block name (e.g., "Lectern")
-        return blockEntity.getBlockState().getBlock().getName();
+
+        AbstractExperienceBlockEntity closestBlockEntity = null;
+        if (closestExperience instanceof AbstractExperienceBlockEntity experienceBlockEntity) {
+            closestBlockEntity = experienceBlockEntity;
+        }
+        return closestBlockEntity;
     }
 
-    public static List<TouristExperience> getTouristExperiences(ServerLevel overworld) {
-        pruneInvalidTouristExperiences(overworld);
-        return List.copyOf(loadedTouristExperiences.values());
+    public static @Nullable TouristExperience getTouristExperienceByPos(BlockPos blockPos) {
+        return loadedExperiences.get(loadedExperiencesByPos.get(blockPos));
     }
 
-    public static List<TouristExperience> getTouristExperiencesNearBeacon(
-            ServerLevel overworld,
-            TouristBeaconBlockEntity beaconBlockEntity,
-            double radius
-    ) {
+    public static @Nullable TouristExperience getTouristExperienceById(UUID uuid) {
+        return loadedExperiences.get(uuid);
+    }
+
+    public static List<TouristExperience> getTouristExperiences(ServerLevel serverLevel) {
+        pruneInvalidTouristExperiences(serverLevel);
+        return List.copyOf(loadedExperiences.values());
+    }
+
+    public static List<TouristExperience> getTouristExperiencesNearBeacon(TouristBeaconBlockEntity beaconBlockEntity) {
         BlockPos beaconPos = beaconBlockEntity.getBlockPos();
+        double radius = ModServerConfigManager.getConfig().tourismManager().getMaxExperienceDistanceToBeacon();
         double radiusSq = radius * radius;
 
-        return loadedTouristExperiences.values().stream()
+        return loadedExperiences.values().stream()
                 .filter(exp -> exp.getParentExperienceUUID() == null)
                 .filter(exp -> exp.getBlockPos().distSqr(beaconPos) <= radiusSq)
                 .sorted(Comparator.comparingDouble(exp -> exp.getBlockPos().distSqr(beaconPos)))
-                .collect(Collectors.toList());
+                .collect(Collectors.toList()); // TODO: Is this better than just .toList()?
     }
 
-//    public static List<TouristExperience> getTouristExperiencesForBeacon(ServerLevel overworld, UUID beaconUUID) {
-//        pruneInvalidTouristExperiences(overworld);
-//        Set<BlockPos> experiencePositions = loadedTouristExperiencesByBeaconId.get(beaconUUID);
-//        if (experiencePositions == null || experiencePositions.isEmpty()) {
-//            return List.of();
-//        }
-//
-//        return experiencePositions.stream()
-//                .map(loadedTouristExperiences::get)
-//                .filter(experience -> experience != null && experience.getUUID().equals(beaconUUID))
-//                .toList();
-//    }
+    public static void pruneInvalidTouristExperiences(ServerLevel serverLevel) {
+        loadedExperiences.entrySet().removeIf(entry -> {
+            TouristExperience experience = entry.getValue();
+            BlockEntity blockEntity = serverLevel.getBlockEntity(experience.getBlockPos());
 
-    public static void pruneInvalidTouristExperiences(ServerLevel overworld) {
-        loadedTouristExperiences.entrySet().removeIf(entry -> {
-            BlockPos blockPos = entry.getKey();
-            SightseeingExperience experience = entry.getValue();
-            BlockEntity blockEntity = overworld.getBlockEntity(blockPos);
-
-            if (!(blockEntity instanceof LecternBlockEntity lectern) || lectern.isRemoved()) {
-                // Remove from beacon index too
-                Set<BlockPos> beaconExperiences = loadedTouristExperiencesByBeaconId.get(experience.beaconUUID());
-                if (beaconExperiences != null) {
-                    beaconExperiences.remove(blockPos);
-                    if (beaconExperiences.isEmpty()) {
-                        loadedTouristExperiencesByBeaconId.remove(experience.beaconUUID());
-                    }
-                }
+            if (!(blockEntity instanceof TouristExperience) || blockEntity.isRemoved()) {
+                // Remove from BlockPos index too.
+                loadedExperiencesByPos.remove(experience.getBlockPos());
                 return true;
             }
 
-            UUID attachedUUID = lectern.getAttached(ModAttachments.LECTERN_TOURIST_BEACON_UUID);
-            if (!experience.beaconUUID().equals(attachedUUID)) {
-                // Remove from beacon index too
-                Set<BlockPos> beaconExperiences = loadedTouristExperiencesByBeaconId.get(experience.beaconUUID());
-                if (beaconExperiences != null) {
-                    beaconExperiences.remove(blockPos);
-                    if (beaconExperiences.isEmpty()) {
-                        loadedTouristExperiencesByBeaconId.remove(experience.beaconUUID());
-                    }
-                }
-                return true;
-            }
-            
             return false;
         });
     }
 
     public static void registerTouristExperience(TouristExperience experience) {
-        loadedTouristExperiences.put(experience.getUUID(), experience);
-        experienceBlockPosById.put(experience.getBlockPos(), experience.getUUID());
-//        loadedTouristExperiencesByBeaconId
-//                .computeIfAbsent(experience.getUUID(), k -> new LinkedHashSet<>())
-//                .add(experience.getBlockPos());
+        loadedExperiences.put(experience.getUUID(), experience);
+        loadedExperiencesByPos.put(experience.getBlockPos(), experience.getUUID());
     }
 
-    public static void unregisterTouristExperience(UUID uuid) {
-        TouristExperience experience = loadedTouristExperiences.remove(uuid);
-        if (experience != null) {
-            experienceBlockPosById.remove(experience.getBlockPos());
-//            Set<BlockPos> beaconExperiences = loadedTouristExperiencesByBeaconId.get(experience.beaconUUID());
-//            if (beaconExperiences != null) {
-//                beaconExperiences.remove(blockPos);
-//                if (beaconExperiences.isEmpty()) {
-//                    loadedTouristExperiencesByBeaconId.remove(experience.beaconUUID());
-//                }
-//            }
-        }
-    }
-
-    public static void unregisterTouristExperience(BlockPos blockPos, UUID beaconUUID) {
-        SightseeingExperience experience = loadedTouristExperiences.get(blockPos);
-        if (experience != null && experience.beaconUUID().equals(beaconUUID)) {
-            unregisterTouristExperience(uuid);
+    public static void unregisterTouristExperience(TouristExperience experience) {
+        TouristExperience removedExperience = loadedExperiences.remove(experience.getUUID());
+        if (removedExperience != null) {
+            loadedExperiencesByPos.remove(removedExperience.getBlockPos());
         }
     }
     //endregion
@@ -315,33 +244,33 @@ public class TourismManager {
         return null;
     }
 
-    public static List<TouristBeaconBlockEntity> getTouristBeacons(ServerLevel overworld) {
-        pruneInvalidTouristBeacons(overworld);
+    public static List<TouristBeaconBlockEntity> getTouristBeacons(ServerLevel serverLevel) {
+        pruneInvalidTouristBeacons(serverLevel);
         return List.copyOf(loadedTouristBeacons.values());
     }
 
-    public static List<TouristBeaconBlockEntity> getTouristBeaconsByDistance(ServerLevel overworld, BlockPos pos) {
-        return getTouristBeaconsByDistance(overworld, pos, beaconBlockEntity -> true);
+    public static List<TouristBeaconBlockEntity> getTouristBeaconsByDistance(ServerLevel serverLevel, BlockPos pos) {
+        return getTouristBeaconsByDistance(serverLevel, pos, beaconBlockEntity -> true);
     }
 
     public static List<TouristBeaconBlockEntity> getTouristBeaconsByDistance(
-            ServerLevel overworld,
+            ServerLevel serverLevel,
             BlockPos pos,
             Predicate<TouristBeaconBlockEntity> filter
     ) {
-        pruneInvalidTouristBeacons(overworld);
+        pruneInvalidTouristBeacons(serverLevel);
         return loadedTouristBeacons.values().stream()
                 .filter(filter)
                 .sorted(Comparator.comparingDouble(beaconBlockEntity -> pos.distSqr(beaconBlockEntity.getBlockPos())))
                 .toList();
     }
 
-    private static void pruneInvalidTouristBeacons(ServerLevel overworld) {
+    private static void pruneInvalidTouristBeacons(ServerLevel serverLevel) {
         loadedTouristBeacons.entrySet().removeIf(entry -> {
             TouristBeaconBlockEntity beaconBlockEntity = entry.getValue();
             return beaconBlockEntity.isRemoved()
-                    || beaconBlockEntity.getLevel() != overworld
-                    || overworld.getBlockEntity(beaconBlockEntity.getBlockPos()) != beaconBlockEntity;
+                    || beaconBlockEntity.getLevel() != serverLevel
+                    || serverLevel.getBlockEntity(beaconBlockEntity.getBlockPos()) != beaconBlockEntity;
         });
     }
 
@@ -394,9 +323,9 @@ public class TourismManager {
     }
     //endregion
 
-    public static void tick(ServerLevel overworld) {
-        long dayCount = overworld.getDayCount();
-        long dayTime = overworld.getDayTime();
+    public static void tick(ServerLevel serverLevel) {
+        long dayCount = serverLevel.getDayCount();
+        long dayTime = serverLevel.getDayTime();
         int tickTimeOfDay = (int)(dayTime % 24000L);
         int tickHour = tickTimeOfDay / 1000;
 
@@ -417,7 +346,7 @@ public class TourismManager {
         } else {
             // Prepare spawn schedule for the new day.
             if (dayCount > lastPreparedDay) {
-                prepareSpawnTimes(overworld, tickTimeOfDay);
+                prepareSpawnTimes(serverLevel, tickTimeOfDay);
             }
             if (lastPreparedDay != dayCount) {
                 lastPreparedDay = dayCount; // we never want the lastPreparedDay to get *ahead* of the actual day count on the server (e.g. from a time set command)
@@ -426,10 +355,10 @@ public class TourismManager {
 
             // Spawn tourists throughout the day according to schedule.
             while (!pendingSpawns.isEmpty() && tickTimeOfDay >= pendingSpawns.peek().timeOfDay()) {
-                pruneInvalidTouristBeacons(overworld);
+                pruneInvalidTouristBeacons(serverLevel);
                 ScheduledTouristSpawn scheduledTouristSpawn = pendingSpawns.poll();
                 persistPendingSpawns();
-                spawnTouristOnSchedule(overworld, scheduledTouristSpawn);
+                spawnTouristOnSchedule(serverLevel, scheduledTouristSpawn);
             }
         }
 
@@ -469,9 +398,9 @@ public class TourismManager {
                 .toList();
     }
 
-    private static void prepareSpawnTimes(ServerLevel world, int currentTickTime) {
+    private static void prepareSpawnTimes(ServerLevel serverLevel, int currentTickTime) {
         pendingSpawns.clear();
-        RandomSource random = world.getRandom();
+        RandomSource random = serverLevel.getRandom();
         int latestSpawnTimeExclusive = Math.max(1, ModServerConfigManager.getConfig().tourismManager().getLatestSpawnTimeTicks() + 1) % 24000;
 
         if (currentTickTime >= latestSpawnTimeExclusive) {
@@ -486,7 +415,7 @@ public class TourismManager {
         double remainingFraction = (double) remainingWindow / windowLength;
         int spawnCount = Math.max(1, (int) Math.ceil(ModServerConfigManager.getConfig().tourismManager().getMaxSpawnsPerBeaconPerDay() * remainingFraction));
 
-        for (TouristBeaconBlockEntity beaconBlockEntity : getTouristBeacons(world)) {
+        for (TouristBeaconBlockEntity beaconBlockEntity : getTouristBeacons(serverLevel)) {
             if (!beaconBlockEntity.isOpenForBusiness()) {
                 continue;
             }
@@ -510,11 +439,11 @@ public class TourismManager {
             }
         }
 
-        lastPreparedDay = world.getDayCount();
+        lastPreparedDay = serverLevel.getDayCount();
         persistPendingSpawns();
     }
 
-    private static void spawnTouristOnSchedule(ServerLevel world, ScheduledTouristSpawn scheduledTouristSpawn) {
+    private static void spawnTouristOnSchedule(ServerLevel serverLevel, ScheduledTouristSpawn scheduledTouristSpawn) {
         TouristBeaconBlockEntity beaconBlockEntity = loadedTouristBeacons.get(scheduledTouristSpawn.beaconUUID());
         if (beaconBlockEntity == null) {
             // Beacon has been unloaded, moved, or removed. This spawn is skipped.
@@ -534,12 +463,12 @@ public class TourismManager {
             return;
         }
 
-        TouristEntity tourist = ModEntities.TOURIST.get().create(world, EntitySpawnReason.EVENT);
+        TouristEntity tourist = ModEntities.TOURIST.get().create(serverLevel, EntitySpawnReason.EVENT);
         if (tourist == null) {
             return;
         }
 
-        BlockPos spawnPoint = getSpawnPoint(world, beaconPos, tourist);
+        BlockPos spawnPoint = getSpawnPoint(serverLevel, beaconPos, tourist);
         if (spawnPoint == null) {
             beaconBlockEntity.rateVisit(VisitResult.FAILED_SPAWN);
             logActivity(Verbosity.GAMEPLAY_WARNINGS,
@@ -561,21 +490,21 @@ public class TourismManager {
                 getFriendlyTimeOfDay(scheduledTouristSpawn.timeOfDay())
         );
 
-        tourist.snapTo(spawnPoint, world.random.nextFloat() * 360.0F, 0.0F);
+        tourist.snapTo(spawnPoint, serverLevel.random.nextFloat() * 360.0F, 0.0F);
         tourist.getMind().prepareForJourney(beaconPos);
-        tourist.finalizeSpawn(world, world.getCurrentDifficultyAt(tourist.blockPosition()), EntitySpawnReason.EVENT, null);
+        tourist.finalizeSpawn(serverLevel, serverLevel.getCurrentDifficultyAt(tourist.blockPosition()), EntitySpawnReason.EVENT, null);
         // TODO: Implement random tourist names (ensuring name isn't currently in use)
         tourist.setCustomName(Component.literal("Ned Flanders"));
-        world.addFreshEntity(tourist);
+        serverLevel.addFreshEntity(tourist);
     }
 
-    public static boolean trySpawnTouristForBeacon(ServerLevel world, @Nullable BlockPos requestedSpawnPoint, @NonNull TouristBeaconBlockEntity beaconBlockEntity) {
-        TouristEntity tourist = ModEntities.TOURIST.get().create(world, EntitySpawnReason.COMMAND);
+    public static boolean trySpawnTouristForBeacon(ServerLevel serverLevel, @Nullable BlockPos requestedSpawnPoint, @NonNull TouristBeaconBlockEntity beaconBlockEntity) {
+        TouristEntity tourist = ModEntities.TOURIST.get().create(serverLevel, EntitySpawnReason.COMMAND);
         if (tourist == null) {
             return false;
         }
 
-        BlockPos spawnPoint = (requestedSpawnPoint != null) ? requestedSpawnPoint : getSpawnPoint(world, beaconBlockEntity.getBlockPos(), tourist);
+        BlockPos spawnPoint = (requestedSpawnPoint != null) ? requestedSpawnPoint : getSpawnPoint(serverLevel, beaconBlockEntity.getBlockPos(), tourist);
         if (spawnPoint == null) {
             logActivity(Verbosity.GAMEPLAY_WARNINGS,
                     "No safe spawn point found for {} at {}",
@@ -592,16 +521,16 @@ public class TourismManager {
                 beaconBlockEntity.getBlockPos()
         );
 
-        tourist.snapTo(spawnPoint, world.random.nextFloat() * 360.0F, 0.0F);
+        tourist.snapTo(spawnPoint, serverLevel.random.nextFloat() * 360.0F, 0.0F);
         tourist.getMind().prepareForJourney(beaconBlockEntity.getBlockPos());
-        tourist.finalizeSpawn(world, world.getCurrentDifficultyAt(tourist.blockPosition()), EntitySpawnReason.COMMAND, null);
+        tourist.finalizeSpawn(serverLevel, serverLevel.getCurrentDifficultyAt(tourist.blockPosition()), EntitySpawnReason.COMMAND, null);
         tourist.setCustomName(Component.literal("Tassian Candor"));
-        world.addFreshEntity(tourist);
+        serverLevel.addFreshEntity(tourist);
         return true;
     }
 
-    public static @Nullable BlockPos getSpawnPoint(ServerLevel world, BlockPos beaconPos, Entity touristEntity) {
-        RandomSource random = world.getRandom();
+    public static @Nullable BlockPos getSpawnPoint(ServerLevel serverLevel, BlockPos beaconPos, Entity touristEntity) {
+        RandomSource random = serverLevel.getRandom();
         int minSpawnDistanceToBeacon = Math.max(0, ModServerConfigManager.getConfig().tourismManager().getMinSpawnDistanceToBeacon());
         int spawnDistanceRangeDelta = Math.max(0, ModServerConfigManager.getConfig().tourismManager().getMaxSpawnDistanceToBeacon() - minSpawnDistanceToBeacon);
 
@@ -617,10 +546,10 @@ public class TourismManager {
 
             int spawnX = beaconPos.getX() + offsetX;
             int spawnZ = beaconPos.getZ() + offsetZ;
-            int spawnY = world.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, spawnX, spawnZ);
+            int spawnY = serverLevel.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, spawnX, spawnZ);
             BlockPos spawnPos = new BlockPos(spawnX, spawnY, spawnZ);
 
-            if (isSafeSpawnPoint(world, spawnPos, touristEntity)) {
+            if (isSafeSpawnPoint(serverLevel, spawnPos, touristEntity)) {
                 return spawnPos;
             }
         }
@@ -628,21 +557,21 @@ public class TourismManager {
         return null;
     }
 
-    private static boolean isSafeSpawnPoint(ServerLevel world, BlockPos spawnPos, Entity touristEntity) {
+    private static boolean isSafeSpawnPoint(ServerLevel serverLevel, BlockPos spawnPos, Entity touristEntity) {
         BlockPos groundPos = spawnPos.below();
-        BlockState groundState = world.getBlockState(groundPos);
-        if (groundState.isAir() || !groundState.entityCanStandOn(world, groundPos, touristEntity)) {
+        BlockState groundState = serverLevel.getBlockState(groundPos);
+        if (groundState.isAir() || !groundState.entityCanStandOn(serverLevel, groundPos, touristEntity)) {
             return false;
         }
 
-        BlockState feetState = world.getBlockState(spawnPos);
-        if (!feetState.getCollisionShape(world, spawnPos).isEmpty() || !world.getFluidState(spawnPos).isEmpty()) {
+        BlockState feetState = serverLevel.getBlockState(spawnPos);
+        if (!feetState.getCollisionShape(serverLevel, spawnPos).isEmpty() || !serverLevel.getFluidState(spawnPos).isEmpty()) {
             return false;
         }
 
         BlockPos headPos = spawnPos.above();
-        BlockState headState = world.getBlockState(headPos);
-        return headState.getCollisionShape(world, headPos).isEmpty() && world.getFluidState(headPos).isEmpty();
+        BlockState headState = serverLevel.getBlockState(headPos);
+        return headState.getCollisionShape(serverLevel, headPos).isEmpty() && serverLevel.getFluidState(headPos).isEmpty();
     }
     //endregion
 }

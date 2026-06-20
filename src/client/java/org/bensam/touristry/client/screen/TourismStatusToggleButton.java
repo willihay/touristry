@@ -10,22 +10,23 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import org.bensam.touristry.Touristry;
+import org.bensam.touristry.menu.TourismStatusMenu;
 import org.bensam.touristry.menu.TouristBeaconMenu;
 
-public class BeaconToggleButton extends AbstractButton {
+public class TourismStatusToggleButton extends AbstractButton {
     private static final int TEXTURE_WIDTH = 32;
     private static final int TEXTURE_HEIGHT = 32;
     private static final int BUTTON_WIDTH = 32;
     private static final int BUTTON_HEIGHT = 16;
     private static final int DRAW_WIDTH = 16;
     private static final int DRAW_HEIGHT = 8;
-    private static final Component OPEN_FOR_BUSINESS_MESSAGE = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_beacon.open_for_business");
-    private static final Component CLOSED_FOR_BUSINESS_MESSAGE = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_beacon.closed_for_business");
+    private static final Component OPEN_FOR_BUSINESS_MESSAGE = Component.translatable("screen." + Touristry.MOD_ID + ".tourism_status.open_for_business");
+    private static final Component CLOSED_FOR_BUSINESS_MESSAGE = Component.translatable("screen." + Touristry.MOD_ID + ".tourism_status.closed_for_business");
 
-    private final TouristBeaconMenu menu;
+    private final TourismStatusMenu menu;
     private final Identifier texture;
 
-    public BeaconToggleButton(int x, int y, TouristBeaconMenu menu, Identifier texture) {
+    public TourismStatusToggleButton(int x, int y, TourismStatusMenu menu, Identifier texture) {
         super(x, y, DRAW_WIDTH, DRAW_HEIGHT, CLOSED_FOR_BUSINESS_MESSAGE);
         this.menu = menu;
         this.texture = texture;
@@ -39,7 +40,7 @@ public class BeaconToggleButton extends AbstractButton {
         if (minecraft.player != null
                 && minecraft.gameMode != null
                 && this.menu.clickMenuButton(minecraft.player, TouristBeaconMenu.BUTTON_TOGGLE_OPEN_FOR_BUSINESS)) {
-            minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId, TouristBeaconMenu.BUTTON_TOGGLE_OPEN_FOR_BUSINESS);
+            minecraft.gameMode.handleInventoryButtonClick(this.menu.getContainerId(), TouristBeaconMenu.BUTTON_TOGGLE_OPEN_FOR_BUSINESS);
         }
     }
 

@@ -10,6 +10,7 @@ public class TourismManagerConfig {
     private int latestSpawnTimeTicks;
     private int minSpawnDistanceToBeacon;
     private int maxSpawnDistanceToBeacon;
+    private int maxExperienceDistanceToBeacon;
 
     public static final Codec<TourismManagerConfig> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Verbosity.CODEC.fieldOf("verbosityLevel").forGetter(TourismManagerConfig::getVerbosityLevel),
@@ -17,17 +18,20 @@ public class TourismManagerConfig {
             Codec.INT.fieldOf("earliestSpawnTimeTicks").forGetter(TourismManagerConfig::getEarliestSpawnTimeTicks),
             Codec.INT.fieldOf("latestSpawnTimeTicks").forGetter(TourismManagerConfig::getLatestSpawnTimeTicks),
             Codec.INT.fieldOf("minSpawnDistanceToBeacon").forGetter(TourismManagerConfig::getMinSpawnDistanceToBeacon),
-            Codec.INT.fieldOf("maxSpawnDistanceToBeacon").forGetter(TourismManagerConfig::getMaxSpawnDistanceToBeacon)
+            Codec.INT.fieldOf("maxSpawnDistanceToBeacon").forGetter(TourismManagerConfig::getMaxSpawnDistanceToBeacon),
+            Codec.INT.fieldOf("maxExperienceDistanceToBeacon").forGetter(TourismManagerConfig::getMaxExperienceDistanceToBeacon)
     ).apply(instance, TourismManagerConfig::new));
 
     public TourismManagerConfig() {}
+
     public TourismManagerConfig(
             Verbosity verbosityLevel,
             int maxSpawnsPerBeaconPerDay,
             int earliestSpawnTimeTicks,
             int latestSpawnTimeTicks,
             int minSpawnDistanceToBeacon,
-            int maxSpawnDistanceToBeacon
+            int maxSpawnDistanceToBeacon,
+            int maxExperienceDistanceToBeacon
     ) {
         this.verbosityLevel = verbosityLevel;
         this.maxSpawnsPerBeaconPerDay = maxSpawnsPerBeaconPerDay;
@@ -35,6 +39,7 @@ public class TourismManagerConfig {
         this.latestSpawnTimeTicks = latestSpawnTimeTicks;
         this.minSpawnDistanceToBeacon = minSpawnDistanceToBeacon;
         this.maxSpawnDistanceToBeacon = maxSpawnDistanceToBeacon;
+        this.maxExperienceDistanceToBeacon = maxExperienceDistanceToBeacon;
     }
 
     public Verbosity getVerbosityLevel() {
@@ -59,5 +64,9 @@ public class TourismManagerConfig {
 
     public int getMaxSpawnDistanceToBeacon() {
         return this.maxSpawnDistanceToBeacon;
+    }
+
+    public int getMaxExperienceDistanceToBeacon() {
+        return this.maxExperienceDistanceToBeacon;
     }
 }

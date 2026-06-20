@@ -2,6 +2,7 @@ package org.bensam.touristry;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerBlockEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
@@ -13,7 +14,7 @@ import org.bensam.touristry.command.TourCommand;
 import org.bensam.touristry.config.ModServerConfigManager;
 import org.bensam.touristry.config.ModServerConfigSync;
 import org.bensam.touristry.config.SyncedClientConfig;
-import org.bensam.touristry.item.BeaconKeyItem;
+import org.bensam.touristry.item.ExperienceKeyItem;
 import org.bensam.touristry.tourism.TourismManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,16 +84,12 @@ public class Touristry implements ModInitializer {
 		UseBlockCallback.EVENT.register((player, level, hand, hitResult) -> {
 			ItemStack itemStack = player.getItemInHand(hand);
 
-			if (!(itemStack.getItem() instanceof BeaconKeyItem beaconKeyItem)) {
+			if (!(itemStack.getItem() instanceof ExperienceKeyItem experienceKeyItem)) {
 				return InteractionResult.PASS;
 			}
 
-			if (!(level.getBlockEntity(hitResult.getBlockPos()) instanceof LecternBlockEntity lectern)) {
-				return InteractionResult.PASS;
-			}
-
-			if (!level.isClientSide()) {
-				return beaconKeyItem.useOnLectern((ServerLevel) level, player, itemStack, lectern);
+			if (!level.isClientSide() && !player.isSpectator()) {
+				return experienceKeyItem.useOnBlock((ServerLevel) level, player, itemStack, hitResult.getBlockPos(), hitResult.getDirection());
 			}
 
 			return InteractionResult.SUCCESS;

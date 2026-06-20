@@ -21,6 +21,7 @@ import net.minecraft.world.level.storage.ValueOutput;
 import org.bensam.touristry.ModComponents;
 import org.bensam.touristry.ModItems;
 import org.bensam.touristry.block.TouristExperienceBlock;
+import org.bensam.touristry.tourism.TourismManager;
 import org.bensam.touristry.tourism.experience.ExperienceStatistics;
 import org.bensam.touristry.tourism.experience.ExperienceTarget;
 import org.bensam.touristry.tourism.experience.TouristExperience;
@@ -81,15 +82,30 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         this.setItem(this.getExperienceKeySlotIndex(), this.createExperienceKey());
     }
 
-    public void addTarget(BlockPos pos, Direction facing, @Nullable UUID childExperienceUUID, long timeTicks) {
-        this.targets.add(new ExperienceTarget(pos, facing, childExperienceUUID, timeTicks));
-        this.setChanged();
+    public boolean addTarget(ServerLevel serverLevel, BlockPos blockPos, Direction playerFacing, UUID childUUID) {
+        long timeAdded = serverLevel.getDayTime();
+        ExperienceTarget target = new ExperienceTarget(blockPos, playerFacing, childUUID, timeAdded);
+
+        if (this.isTargetValid(serverLevel, target)) {
+            this.targets.add(target);
+            this.setChanged();
+            return true;
+        }
+
+        return false;
     }
 
     @Override
     public void clearContent() {
         super.clearContent();
         this.setChanged();
+    }
+
+    @Override
+    public void clearRemoved() {
+        super.clearRemoved();
+        // Register this block entity for tourism when block entity is attached back into a chunk/world.
+        this.syncTourismRegistration();
     }
 
     public ItemStack createExperienceKey() {
@@ -153,7 +169,13 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         return this.openForBusiness;
     }
 
-    protected abstract boolean isTargetValid(ServerLevel serverLevel, ExperienceTarget target);
+    public boolean isTargetChildExperienceValid(UUID targetUUID) {
+        if (this.uuid.equals(targetUUID)) {
+            return false; // can't link experience block to itself
+        }
+
+        return TourismManager.getTouristExperienceById(targetUUID) != null;
+    }
 
     protected void pruneInvalidTargets(ServerLevel serverLevel) {
         boolean changed = this.targets.removeIf(target -> !isTargetValid(serverLevel, target));
@@ -162,7 +184,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         }
     }
 
-    public void removeTarget(BlockPos pos) {
+    public void removeTarget(ServerLevel serverLevel, BlockPos pos) {
         this.targets.removeIf(target -> target.pos().equals(pos));
         this.setChanged();
     }
@@ -194,6 +216,22 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
     public void setParent(@Nullable UUID parentUUID) {
         this.parentExperienceUUID = parentUUID;
         this.setChanged();
+    }
+
+    @Override
+    public void setRemoved() {
+        TourismManager.unregisterTouristExperience(this);
+        super.setRemoved();
+    }
+
+    private void syncTourismRegistration() {
+        if (this.level instanceof ServerLevel) {
+            if (!this.isRemoved()) {
+                TourismManager.registerTouristExperience(this);
+            } else {
+                TourismManager.unregisterTouristExperience(this);
+            }
+        }
     }
 
     public boolean tryDepositItem(ItemStack itemStack) {
@@ -283,6 +321,8 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
                 ModComponents.TOURIST_EXPERIENCE_STATISTICS,
                 new ExperienceStatistics()
         );
+
+        this.syncTourismRegistration();
     }
 
     @Override

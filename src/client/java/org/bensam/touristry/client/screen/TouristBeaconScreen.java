@@ -21,32 +21,6 @@ public class TouristBeaconScreen extends AbstractContainerScreen<TouristBeaconMe
     private static final int ON_OFF_SLIDER_X = 152;
     private static final int ON_OFF_SLIDER_Y = 70;
 
-    private enum ReputationColor {
-        POSITIVE(0xFF80FF20), // light green
-        NEUTRAL(0xFF404040), // gray
-        NEGATIVE(0xFFFF6060); // light red
-
-        private final int color;
-
-        ReputationColor(int color) {
-            this.color = color;
-        }
-
-        public static int getColor(double reputation) {
-            if (reputation < 0.0) {
-                return NEGATIVE.value();
-            } else if (reputation > 0.0) {
-                return POSITIVE.value();
-            } else {
-                return NEUTRAL.color;
-            }
-        }
-
-        public int value() {
-            return this.color;
-        }
-    }
-
     public TouristBeaconScreen(TouristBeaconMenu container, Inventory inventory, Component title) {
         super(container, inventory, title);
     }
@@ -54,7 +28,7 @@ public class TouristBeaconScreen extends AbstractContainerScreen<TouristBeaconMe
     @Override
     protected void init() {
         super.init();
-        this.addRenderableWidget(new BeaconToggleButton(
+        this.addRenderableWidget(new TourismStatusToggleButton(
                 this.leftPos + ON_OFF_SLIDER_X,
                 this.topPos + ON_OFF_SLIDER_Y,
                 this.menu, ON_OFF_SLIDER_TEXTURE)
@@ -90,7 +64,7 @@ public class TouristBeaconScreen extends AbstractContainerScreen<TouristBeaconMe
         super.renderLabels(guiGraphics, i, j);
 
         Component reputationLabel = Component.translatable(
-                "screen." + Touristry.MOD_ID + ".tourist_beacon.reputation",
+                "screen." + Touristry.MOD_ID + ".tourism_status.reputation",
                 String.format("%.2f", this.menu.getReputation())
         );
 
@@ -103,7 +77,7 @@ public class TouristBeaconScreen extends AbstractContainerScreen<TouristBeaconMe
                 false
         );
 
-        Component statusLabel = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_beacon.status");
+        Component statusLabel = Component.translatable("screen." + Touristry.MOD_ID + ".tourism_status.status_label");
 
         guiGraphics.drawString(
                 this.font,
