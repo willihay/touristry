@@ -16,7 +16,7 @@ import org.bensam.touristry.config.ModServerConfigManager;
 import org.bensam.touristry.config.Verbosity;
 import org.bensam.touristry.tourism.TourismManager;
 import org.bensam.touristry.tourism.VisitResult;
-import org.bensam.touristry.tourism.experience.SightseeingExperience;
+import org.bensam.touristry.tourism.experience.TouristExperience;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -97,9 +97,9 @@ public final class TouristMind {
                 return beaconBlockEntity.getPlainTextName();
             }
         } else if (this.state == TouristState.TRAVELING_TO_EXPERIENCE) {
-            SightseeingExperience experience = TourismManager.getTouristExperience(this.experienceTarget);
+            TouristExperience experience = TourismManager.getTouristExperienceByPos(this.experienceTarget);
             if (experience != null) {
-                return TourismManager.getTouristExperienceDisplayName(this.tourist.level(), experience).getString();
+                return experience.getDisplayName().getString();
             }
         }
         return "";
@@ -399,7 +399,7 @@ public final class TouristMind {
     }
 
     private void arriveAtExperienceTarget(ServerLevel serverLevel) {
-        SightseeingExperience experience = TourismManager.getTouristExperience(this.experienceTarget);
+        TouristExperience experience = TourismManager.getTouristExperienceByPos(this.experienceTarget);
         if (experience == null) {
             // No experience block found at experienceTarget!
             this.updateMood(VisitResult.LOST);
@@ -410,7 +410,7 @@ public final class TouristMind {
         }
 
         Component experienceMessage = Component.literal("arrived at ")
-                .append(TourismManager.getTouristExperienceDisplayName(serverLevel, experience));
+                .append(experience.getDisplayName());
         this.recordExperience(serverLevel, VisitResult.ARRIVED, false, false, experienceMessage, true, false);
         this.transitionTo(TouristState.ENJOYING_EXPERIENCE);
     }
@@ -428,7 +428,7 @@ public final class TouristMind {
     }
 
     private void chooseActivityAtBeacon(ServerLevel serverLevel, TouristBeaconBlockEntity beaconBlockEntity) {
-        List<SightseeingExperience> experiences = TourismManager.getTouristExperiencesForBeacon(serverLevel, beaconBlockEntity.getUUID());
+        List<TouristExperience> experiences = TourismManager.getTouristExperiencesNearBeacon(beaconBlockEntity);
 
         if (experiences.isEmpty()) {
             this.transitionTo(TouristState.WANDERING_AT_BEACON);
@@ -436,8 +436,8 @@ public final class TouristMind {
         }
 
         int index = this.random().nextInt(experiences.size());
-        SightseeingExperience experience = experiences.get(index);
-        this.experienceTarget = experience.getTargetPos().immutable();
+        TouristExperience experience = experiences.get(index);
+        this.experienceTarget = experience.getBlockPos().immutable();
         this.transitionTo(TouristState.TRAVELING_TO_EXPERIENCE);
     }
 
@@ -464,16 +464,16 @@ public final class TouristMind {
         this.updateMood(VisitResult.LOST);
 
         if (this.state == TouristState.TRAVELING_TO_EXPERIENCE) {
-            SightseeingExperience experience = TourismManager.getTouristExperience(this.experienceTarget);
+            TouristExperience experience = TourismManager.getTouristExperienceByPos(this.experienceTarget);
             Component experienceMessage;
             if (experience == null) {
                 experienceMessage = Component.literal("got lost travelling to experience at " + this.experienceTarget.toShortString());
             } else {
                 experienceMessage = Component.literal("got lost travelling to ")
-                        .append(TourismManager.getTouristExperienceDisplayName(serverLevel, experience));
+                        .append(experience.getDisplayName());
             }
             this.recordExperience(serverLevel, VisitResult.LOST, true, true, experienceMessage, true, false);
-            this.transitionTo(TouristState.PLANNING_NEXT_MOVE); // TODO: Choose a different experience at beacon, if available.
+            this.transitionTo(TouristState.PLANNING_NEXT_MOVE); // TODO: Choose a different experience near beacon, if available.
         } else {
             Component experienceMessage = Component.literal("got lost travelling to");
             this.recordExperience(serverLevel, VisitResult.LOST, true, true, experienceMessage, true, true);

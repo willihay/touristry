@@ -10,6 +10,7 @@ import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import org.bensam.touristry.block.entity.AbstractExperienceBlockEntity;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
 import org.bensam.touristry.tourism.TourismManager;
 
@@ -19,6 +20,11 @@ public final class TourCommand {
     @FunctionalInterface
     public interface BeaconResolver {
         TouristBeaconBlockEntity resolve(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException;
+    }
+
+    @FunctionalInterface
+    public interface ExperienceResolver {
+        AbstractExperienceBlockEntity resolve(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException;
     }
 
     public static void register(
@@ -58,5 +64,30 @@ public final class TourCommand {
         }
 
         return beaconBlockEntity;
+    }
+
+    public static AbstractExperienceBlockEntity requireExperience(CommandSourceStack source, BlockPos blockPos) {
+        if (source.getServer().overworld().getBlockEntity(blockPos) instanceof AbstractExperienceBlockEntity experienceBlockEntity) {
+            return experienceBlockEntity;
+        }
+
+        source.sendFailure(Component.literal("No experience block found @ " + blockPos.toShortString()));
+        return null;
+    }
+
+    public static AbstractExperienceBlockEntity requireNearestExperience(CommandSourceStack source) {
+        ServerPlayer serverPlayer = source.getPlayer();
+        if (serverPlayer == null) {
+            source.sendFailure(Component.literal("No player position available"));
+            return null;
+        }
+
+        AbstractExperienceBlockEntity experienceBlockEntity = TourismManager.findClosestExperienceEntity(serverPlayer.blockPosition());
+        if (experienceBlockEntity == null) {
+            source.sendFailure(Component.literal("No experience block found in dimension"));
+            return null;
+        }
+
+        return experienceBlockEntity;
     }
 }

@@ -4,6 +4,7 @@
   "advancement.touristry.tourist_beacon.title": "Take Me To Your Leader",
   "advancement.touristry.tourist_beacon.description": "Crafted a Tourist Beacon",
 
+  "block.touristry.sightseeing_experience": "Sightseeing Experience",
   "block.touristry.tourist_beacon": "Tourist Beacon",
 
   "entity.touristry.tourist": "Tourist",
@@ -12,11 +13,11 @@
 
   "itemGroup.touristry": "Touristry",
 
-  "message.touristry.tourist_beacon.open_for_business": "OPEN for business",
-  "message.touristry.tourist_beacon.closed_for_business": "CLOSED for business",
+  "message.touristry.tourism_status.open_for_business": "OPEN for business",
+  "message.touristry.tourism_status.closed_for_business": "CLOSED for business",
 
-  "screen.touristry.tourist_beacon.reputation": "Reputation: %1$s",
-  "screen.touristry.tourist_beacon.status": "Status:",
-  "screen.touristry.tourist_beacon.open_for_business": "Open for business",
-  "screen.touristry.tourist_beacon.closed_for_business": "Closed for business"
+  "screen.touristry.tourism_status.reputation": "Reputation: %1$s",
+  "screen.touristry.tourism_status.status_label": "Status:",
+  "screen.touristry.tourism_status.open_for_business": "Open for business",
+  "screen.touristry.tourism_status.closed_for_business": "Closed for business"
 }

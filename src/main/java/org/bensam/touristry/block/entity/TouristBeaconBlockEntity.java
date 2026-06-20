@@ -1,53 +1,48 @@
 package org.bensam.touristry.block.entity;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.NonNullList;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
-import net.minecraft.world.ContainerHelper;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.Nameable;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.ContainerLevelAccess;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.entity.BaseContainerBlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import org.bensam.touristry.ModBlockEntities;
 import org.bensam.touristry.ModComponents;
-import org.bensam.touristry.ModItems;
 import org.bensam.touristry.Touristry;
 import org.bensam.touristry.block.TouristBeaconBlock;
-import org.bensam.touristry.item.BeaconKeyItem;
 import org.bensam.touristry.menu.TouristBeaconMenu;
 import org.bensam.touristry.tourism.TourismManager;
 import org.bensam.touristry.tourism.TouristBeaconExperience;
 import org.bensam.touristry.tourism.TouristBeaconStats;
 import org.bensam.touristry.tourism.VisitResult;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.util.UUID;
 
-public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
-    public static final int TOTAL_INVENTORY_SIZE = 10;
-    public static final int PAYMENT_SLOT_SIZE = 9;
-    public static final int BEACON_KEY_SLOT_INDEX = PAYMENT_SLOT_SIZE;
+public class TouristBeaconBlockEntity extends BlockEntity implements MenuProvider, Nameable {
     private static final double MIN_REPUTATION = -100.0;
     private static final double MAX_REPUTATION = 100.0;
     public static final int DATA_REPUTATION = 0;
     public static final int DATA_OPEN_FOR_BUSINESS = 1;
     public static final int DATA_COUNT = 2;
 
+    @Nullable private Component name;
     private UUID uuid = UUID.randomUUID();
-
-    private NonNullList<ItemStack> beaconItems = NonNullList.withSize(TOTAL_INVENTORY_SIZE, ItemStack.EMPTY);
 
     // stats
     private boolean openForBusiness;
@@ -85,7 +80,6 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
 
     public TouristBeaconBlockEntity(BlockPos blockPos, BlockState blockState) {
         super(ModBlockEntities.TOURIST_BEACON.get(), blockPos, blockState);
-        this.setItem(BEACON_KEY_SLOT_INDEX, this.getBeaconKey());
         this.openForBusiness = false;
         this.successfulVisits = 0;
         this.closedEarly = 0;
@@ -97,76 +91,8 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
     }
 
     @Override
-    public void clearContent() {
-        super.clearContent();
-        this.setChanged();
-    }
-
-    @Override
-    protected @NonNull AbstractContainerMenu createMenu(int i, @NonNull Inventory inventory) {
-        return new TouristBeaconMenu(i, inventory, this, this.data, ContainerLevelAccess.create(this.level, this.getBlockPos()));
-    }
-
-    @Override
-    public int getContainerSize() {
-        return this.beaconItems.size();
-    }
-
-    public int getPaymentSlotSize() {
-        return PAYMENT_SLOT_SIZE;
-    }
-
-    @Override
-    protected @NonNull Component getDefaultName() {
-        return Component.translatable("block." + Touristry.MOD_ID + ".tourist_beacon");
-    }
-
-    @Override
-    protected @NonNull NonNullList<ItemStack> getItems() {
-        return this.beaconItems;
-    }
-
-    @Override
-    protected void setItems(@NonNull NonNullList<ItemStack> nonNullList) {
-        this.beaconItems = nonNullList;
-    }
-
-    public boolean tryDepositItem(ItemStack itemStack) {
-        if (!this.isOpenForBusiness()) {
-            return false;
-        }
-
-        if (itemStack.isEmpty()) {
-            return true;
-        }
-
-        ItemStack depositStack = itemStack.copy();
-
-        for (int i = 0; i < PAYMENT_SLOT_SIZE; i++) {
-            ItemStack slotStack = this.getItem(i);
-            if (!slotStack.isEmpty() && (!ItemStack.isSameItemSameComponents(slotStack, depositStack)
-                    || slotStack.getCount() >= slotStack.getMaxStackSize())) {
-                continue;
-            }
-
-            if (slotStack.isEmpty()) {
-                this.setItem(i, depositStack);
-                return true;
-            } else {
-                int depositCount = depositStack.getCount();
-                int slotCount = slotStack.getCount();
-                int totalCount = slotCount + depositCount;
-                int overMax = totalCount > slotStack.getMaxStackSize() ? totalCount - slotStack.getMaxStackSize() : 0;
-                if (overMax == 0) {
-                    slotStack.setCount(totalCount);
-                    return true;
-                }
-                slotStack.setCount(getMaxStackSize());
-                depositStack.setCount(overMax);
-            }
-        }
-
-        return false;
+    public @Nullable AbstractContainerMenu createMenu(int i, Inventory inventory, Player player) {
+        return new TouristBeaconMenu(i, inventory, this.data, ContainerLevelAccess.create(this.level, this.getBlockPos()));
     }
 
     public TouristBeaconExperience getBeaconExperience() {
@@ -184,21 +110,23 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
                 this.reputation);
     }
 
-    public ItemStack getBeaconKey() {
-        ItemStack key = new ItemStack(ModItems.BEACON_KEY.get());
+    @Override
+    public @Nullable Component getCustomName() {
+        return this.name;
+    }
 
-        // Give key a custom name using the beacon's name.
-        MutableComponent keyName = Component.literal("Key for ").append(this.getName().copy());
-        if (!this.hasCustomName()) {
-            keyName.append(" " + this.uuid.toString().substring(0, 8));
-        }
-        key.set(DataComponents.ITEM_NAME, keyName);
+    protected @NonNull Component getDefaultName() {
+        return Component.translatable("block." + Touristry.MOD_ID + ".tourist_beacon");
+    }
 
-        // Associate the key with this beacon's UUID.
-        if (key.getItem() instanceof BeaconKeyItem beaconKeyItem) {
-            beaconKeyItem.setBeaconUUID(key, this.uuid);
-        }
-        return key;
+    @Override
+    public @NonNull Component getDisplayName() {
+        return this.getName();
+    }
+
+    @Override
+    public @NonNull Component getName() {
+        return this.name != null ? this.name : this.getDefaultName();
     }
 
     public UUID getUUID() {
@@ -272,16 +200,6 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
         this.syncTourismRegistration();
     }
 
-//    @Override
-//    public void setChanged() {
-//        super.setChanged();
-//
-//        if (this.level != null) {
-//            // Send update to neighbors AND clients (bitmask = 3) since this block's light level can change.
-//            this.level.sendBlockUpdated(this.getBlockPos(), this.getBlockState(), this.getBlockState(), 3);
-//        }
-//    }
-
     @Override
     public void setRemoved() {
         // Unregister this block entity from tourism when block entity is being removed, replaced, or unloaded from active use.
@@ -290,10 +208,12 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
     }
 
     private void syncTourismRegistration() {
-        if (this.level instanceof ServerLevel && !this.isRemoved()) {
-            TourismManager.registerTouristBeacon(this);
-        } else {
-            TourismManager.unregisterTouristBeacon(this);
+        if (this.level instanceof ServerLevel) {
+            if (!this.isRemoved()) {
+                TourismManager.registerTouristBeacon(this);
+            } else {
+                TourismManager.unregisterTouristBeacon(this);
+            }
         }
     }
 
@@ -301,10 +221,8 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
     @Override
     protected void loadAdditional(@NonNull ValueInput valueInput) {
         super.loadAdditional(valueInput);
+        this.name = parseCustomNameSafe(valueInput, "CustomName");
         valueInput.read("UUID", UUIDUtil.CODEC).ifPresent(UUID -> { this.uuid = UUID; });
-        this.beaconItems = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
-        ContainerHelper.loadAllItems(valueInput, this.beaconItems);
-        this.setItem(BEACON_KEY_SLOT_INDEX, this.getBeaconKey());
 
         TouristBeaconExperience experience = valueInput.read("BeaconExperience", TouristBeaconExperience.CODEC)
                 .orElse(TouristBeaconExperience.EMPTY);
@@ -322,8 +240,8 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
     @Override
     protected void saveAdditional(@NonNull ValueOutput valueOutput) {
         super.saveAdditional(valueOutput);
+        valueOutput.storeNullable("CustomName", ComponentSerialization.CODEC, this.name);
         valueOutput.store("UUID", UUIDUtil.CODEC, this.getUUID());
-        ContainerHelper.saveAllItems(valueOutput, this.beaconItems);
         valueOutput.store("BeaconExperience", TouristBeaconExperience.CODEC, this.getBeaconExperience());
         valueOutput.putInt("SuccessfulVisits", this.successfulVisits);
         valueOutput.putInt("ClosedEarly", this.closedEarly);
@@ -339,6 +257,8 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
         super.applyImplicitComponents(dataComponentGetter);
 
         // Restore additional components when BlockItem is placed as a Block/Block Entity.
+        this.name = dataComponentGetter.get(DataComponents.CUSTOM_NAME);
+
         this.uuid = dataComponentGetter.getOrDefault(
                 ModComponents.TOURIST_BEACON_UUID,
                 this.getUUID()
@@ -362,7 +282,6 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
         this.touristsKilled = stats.touristsKilled();
         this.reputation = stats.reputation();
 
-        this.setItem(BEACON_KEY_SLOT_INDEX, this.getBeaconKey());
         this.syncTourismRegistration();
     }
 
@@ -371,6 +290,7 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
         super.collectImplicitComponents(builder);
 
         // Collect additional components to save in components container in BlockItem when block breaks.
+        builder.set(DataComponents.CUSTOM_NAME, this.name);
         builder.set(ModComponents.TOURIST_BEACON_UUID, this.getUUID());
         builder.set(ModComponents.TOURIST_BEACON_EXPERIENCE, this.getBeaconExperience());
         builder.set(ModComponents.TOURIST_BEACON_STATS, this.getBeaconStats());
@@ -381,6 +301,7 @@ public class TouristBeaconBlockEntity extends BaseContainerBlockEntity {
         super.removeComponentsFromTag(valueOutput);
 
         // Remove raw tag entries for data that is carried by custom components in the block item form.
+        valueOutput.discard("CustomName");
         valueOutput.discard("UUID");
         valueOutput.discard("BeaconExperience");
         valueOutput.discard("SuccessfulVisits");

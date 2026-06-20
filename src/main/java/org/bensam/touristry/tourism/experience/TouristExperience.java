@@ -1,6 +1,8 @@
 package org.bensam.touristry.tourism.experience;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ai.goal.Goal;
 import org.bensam.touristry.entity.TouristEntity;
@@ -12,10 +14,16 @@ import java.util.UUID;
 public interface TouristExperience {
     UUID getUUID();
     BlockPos getBlockPos();
+    Component getDisplayName();
 
     @Nullable UUID getParentExperienceUUID();
     List<UUID> getChildExperienceUUIDs();
+
+    boolean addTarget(ServerLevel serverLevel, BlockPos blockPos, Direction playerFacing, UUID childUUID);
+    int getMaxDistanceToTarget();
     List<ExperienceTarget> getTargets(ServerLevel serverLevel);
+    boolean isTargetValid(ServerLevel serverLevel, ExperienceTarget target);
+    void removeTarget(ServerLevel serverLevel, BlockPos pos);
 
     ExperienceStatistics getStatistics();
 

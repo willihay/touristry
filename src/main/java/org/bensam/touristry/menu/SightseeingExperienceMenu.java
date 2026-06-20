@@ -11,7 +11,7 @@ import org.bensam.touristry.ModMenus;
 import org.bensam.touristry.block.entity.SightseeingExperienceBlockEntity;
 import org.jspecify.annotations.NonNull;
 
-public class SightseeingExperienceMenu extends AbstractContainerMenu {
+public class SightseeingExperienceMenu extends AbstractContainerMenu implements TourismStatusMenu {
     public static final int BUTTON_TOGGLE_OPEN_FOR_BUSINESS = 0;
 
     // Slot layout
@@ -81,6 +81,10 @@ public class SightseeingExperienceMenu extends AbstractContainerMenu {
                 this.addSlot(new Slot(container, slotIndex, firstSlotX + col * SLOT_SIDE_LENGTH, firstSlotY + row * SLOT_SIDE_LENGTH));
             }
         }
+    }
+
+    public int getContainerId() {
+        return this.containerId;
     }
 
     public double getReputation() {

@@ -12,7 +12,8 @@ public final class ModServerConfigDefaults {
                         2000,
                         9000,
                         35,
-                        70
+                        70,
+                        150
                 ),
                 new TouristEntityConfig(
                         Verbosity.LEVEL_2_DIAGNOSTICS,
