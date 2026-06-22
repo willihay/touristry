@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "touristry:item/beacon_key"
+    "model": "touristry:item/key_blank"
   }
 }

@@ -1,7 +1,7 @@
 {
   "parent": "minecraft:item/handheld",
   "textures": {
-    "layer0": "touristry:item/beacon_key"
+    "layer0": "touristry:item/experience_key"
   },
   "display": {
     "firstperson_righthand": {

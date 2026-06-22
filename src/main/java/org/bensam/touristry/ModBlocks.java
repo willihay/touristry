@@ -47,6 +47,7 @@ public class ModBlocks {
                 "sightseeing_experience",
                 SightseeingExperienceBlock::new,
                 BlockBehaviour.Properties.of()
+                        .sound(SoundType.WOOD)
                         .strength(5.0f, 1200.0f)
         );
     }

@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "open_for_business=false": {
+      "model": "touristry:block/sightseeing_experience"
+    },
+    "open_for_business=true": {
+      "model": "touristry:block/sightseeing_experience"
+    }
+  }
+}

@@ -6,21 +6,24 @@
       "entries": [
         {
           "type": "minecraft:item",
-          "name": "touristry:tourist_beacon",
+          "name": "touristry:sightseeing_experience",
           "functions": [
             {
               "function": "minecraft:copy_components",
               "source": "block_entity",
               "include": [
+                "minecraft:container",
                 "minecraft:custom_name",
-                "touristry:tourist_beacon_uuid",
-                "touristry:tourist_beacon_experience",
-                "touristry:tourist_beacon_stats"
+                "touristry:tourist_experience_block_uuid",
+                "touristry:tourist_experience_parent_uuid",
+                "touristry:tourist_experience_status",
+                "touristry:tourist_experience_targets",
+                "touristry:tourist_experience_statistics"
               ]
             },
             {
               "function": "minecraft:copy_state",
-              "block": "touristry:tourist_beacon",
+              "block": "touristry:sightseeing_experience",
               "properties": [
                 "open_for_business"
               ]

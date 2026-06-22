@@ -9,7 +9,8 @@
 
   "entity.touristry.tourist": "Tourist",
 
-  "item.touristry.beacon_key": "Beacon Key",
+  "item.touristry.experience_key": "Tourist Experience Key",
+  "item.touristry.key_blank": "Tourist Experience Key Blank",
 
   "itemGroup.touristry": "Touristry",
 
