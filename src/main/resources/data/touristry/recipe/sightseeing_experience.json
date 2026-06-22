@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "PCP",
+    "#K#",
+    "###"
+  ],
+  "key": {
+    "P": "minecraft:paper",
+    "C": "minecraft:chest",
+    "K": "touristry:key_blank",
+    "#": "minecraft:planks"
+  },
+  "result": {
+    "id": "touristry:sightseeing_experience"
+  }
+}

@@ -18,12 +18,21 @@ public final class ModItems {
     private static ExperienceKeyItem experienceKeyItem;
     public static final Supplier<ExperienceKeyItem> EXPERIENCE_KEY = () -> experienceKeyItem;
 
+    private static Item keyBlankItem;
+    public static final Supplier<Item> KEY_BLANK = () -> keyBlankItem;
+
     public static void initialize() {
         ModServerConfig defaults = ModServerConfig.defaults();
 
         experienceKeyItem = register(
                 "experience_key",
                 ExperienceKeyItem::new,
+                new Item.Properties()
+        );
+
+        keyBlankItem = register(
+                "key_blank",
+                Item::new,
                 new Item.Properties()
         );
     }
