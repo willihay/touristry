@@ -296,6 +296,7 @@ public class TouristBeaconBlockEntity extends BlockEntity implements MenuProvide
         builder.set(ModComponents.TOURIST_BEACON_STATS, this.getBeaconStats());
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public void removeComponentsFromTag(@NonNull ValueOutput valueOutput) {
         super.removeComponentsFromTag(valueOutput);
