@@ -22,7 +22,7 @@ import org.bensam.touristry.tourism.experience.ExperienceTarget;
 import org.jspecify.annotations.Nullable;
 
 public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEntity {
-    public static final int MAX_DISTANCE_TO_TARGET = 50;
+    public static final int MAX_DISTANCE_TO_TARGET = 100;
     public static final int PAYMENT_SLOT_SIZE = 9;
     public static final int TOTAL_INVENTORY_SIZE = PAYMENT_SLOT_SIZE + 1;
 
@@ -107,7 +107,7 @@ public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEnt
     }
 
     private boolean isSightseeingTarget(BlockState blockState) {
-        // TODO: support paintings and item frames (which are entities, not blocks).
+        // TODO: Support paintings and item frames (which are entities, not blocks).
         return blockState.is(Blocks.LECTERN);
     }
 
@@ -115,6 +115,7 @@ public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEnt
         if (target.isChildExperience()) {
             return this.isTargetChildExperienceValid(target.childExperienceUUID());
         }
+        // TODO: Check for circular dependencies - call a method in the abstract class.
 
         // Check if block still exists and is valid for sightseeing.
         BlockState blockState = serverLevel.getBlockState(target.pos());

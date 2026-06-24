@@ -43,7 +43,6 @@ public class TourismManager {
     private static final Map<UUID, TouristBeaconBlockEntity> loadedTouristBeacons = new LinkedHashMap<>();
     private static final Map<UUID, TouristExperience> loadedExperiences = new LinkedHashMap<>();
     private static final Map<BlockPos, UUID> loadedExperiencesByPos = new HashMap<>();
-    private static final Map<UUID, Set<BlockPos>> loadedTouristExperiencesByBeaconId = new LinkedHashMap<>();
     private static final Map<Integer, TouristEntity> loadedTourists = new LinkedHashMap<>();
 
     private static boolean despawnAllTourists = false;

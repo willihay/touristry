@@ -322,6 +322,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
                 new ExperienceStatistics()
         );
 
+        this.setItem(this.getExperienceKeySlotIndex(), this.createExperienceKey());
         this.syncTourismRegistration();
     }
 

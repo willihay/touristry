@@ -219,6 +219,7 @@ public final class TouristMind {
             // EXPERIENCING_TARGET might be a good candidate for moving to a substate.
             //     In this state, you'd advance ticksAtCurrentTarget, among other things.
             // TODO: Determine which class is responsible for persisting ticksAtCurrentTarget.
+            this.transitionTo(TouristState.PLANNING_NEXT_MOVE);
         } else if (!this.isTravelingToTarget() && !this.isPlanningActivity()) {
             if (this.nextChooseActivityTicks > 0) {
                 this.nextChooseActivityTicks--;
@@ -316,6 +317,7 @@ public final class TouristMind {
         this.consecutiveFailedProgressChecks = 0;
     }
 
+    //region State Transition Methods
     private void transitionTo(TouristState newState) {
         if (this.state == newState) {
             TouristEntity.logActivity(Verbosity.LEVEL_1_DIAGNOSTICS, "[TouristMind] Transition called for same state ({}) - no transition performed", newState);
@@ -352,7 +354,6 @@ public final class TouristMind {
         }
     }
 
-    //region State Transition Methods
     public void arriveAtTarget() {
         if (!this.isTravelingToTarget()) {
             return;
