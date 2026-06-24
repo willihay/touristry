@@ -19,7 +19,9 @@ public interface TouristExperience {
     @Nullable UUID getParentExperienceUUID();
     List<UUID> getChildExperienceUUIDs();
 
-    boolean addTarget(ServerLevel serverLevel, BlockPos blockPos, Direction playerFacing, UUID childUUID);
+    boolean addBlockTarget(ServerLevel serverLevel, BlockPos blockPos, Direction playerFacing);
+    boolean addChildExperienceTarget(ServerLevel serverLevel, BlockPos blockPos, Direction playerFacing, UUID childUUID);
+    boolean addEntityTarget(ServerLevel serverLevel, BlockPos entityPos, Direction playerFacing, UUID entityUUID);
     int getMaxDistanceToTarget();
     List<ExperienceTarget> getTargets(ServerLevel serverLevel);
     boolean isTargetValid(ServerLevel serverLevel, ExperienceTarget target);

@@ -3,7 +3,11 @@ package org.bensam.touristry.block.entity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.decoration.GlowItemFrame;
+import net.minecraft.world.entity.decoration.ItemFrame;
+import net.minecraft.world.entity.decoration.painting.Painting;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
@@ -97,6 +101,7 @@ public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEnt
         return PAYMENT_SLOT_SIZE;
     }
 
+    @Override
     public int getMaxDistanceToTarget() {
         return MAX_DISTANCE_TO_TARGET;
     }
@@ -106,19 +111,31 @@ public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEnt
         return PAYMENT_SLOT_SIZE;
     }
 
-    private boolean isSightseeingTarget(BlockState blockState) {
-        // TODO: Support paintings and item frames (which are entities, not blocks).
+    private boolean isSightseeingBlock(BlockState blockState) {
         return blockState.is(Blocks.LECTERN);
     }
 
+    private boolean isSightseeingEntity(Entity entity) {
+        return entity instanceof Painting ||
+                entity instanceof ItemFrame ||
+                entity instanceof GlowItemFrame;
+    }
+
+    @Override
     public boolean isTargetValid(ServerLevel serverLevel, ExperienceTarget target) {
+        // Check child experiences.
         if (target.isChildExperience()) {
             return this.isTargetChildExperienceValid(target.childExperienceUUID());
         }
-        // TODO: Check for circular dependencies - call a method in the abstract class.
+
+        // Check entity targets (paintings, item frames).
+        if (target.isEntity()) {
+            Entity entity = serverLevel.getEntity(target.entityUUID());
+            return entity != null && this.isSightseeingEntity(entity);
+        }
 
         // Check if block still exists and is valid for sightseeing.
         BlockState blockState = serverLevel.getBlockState(target.pos());
-        return !blockState.isAir() && this.isSightseeingTarget(blockState);
+        return !blockState.isAir() && this.isSightseeingBlock(blockState);
     }
 }

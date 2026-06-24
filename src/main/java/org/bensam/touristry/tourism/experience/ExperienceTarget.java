@@ -6,8 +6,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import org.bensam.touristry.tourism.TourismManager;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Optional;
@@ -17,14 +21,17 @@ public record ExperienceTarget(
         BlockPos pos,
         Direction playerFacing,
         @Nullable UUID childExperienceUUID,
+        @Nullable UUID entityUUID,
         long registeredAtTicks
 ) {
     public static final Codec<ExperienceTarget> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             BlockPos.CODEC.fieldOf("pos").forGetter(ExperienceTarget::pos),
             Direction.CODEC.fieldOf("player_facing").forGetter(ExperienceTarget::playerFacing),
             UUIDUtil.CODEC.optionalFieldOf("child_experience_uuid").forGetter(target -> Optional.ofNullable(target.childExperienceUUID())),
+            UUIDUtil.CODEC.optionalFieldOf("entity_uuid").forGetter(target -> Optional.ofNullable(target.entityUUID())),
             Codec.LONG.fieldOf("registered_at_ticks").forGetter(ExperienceTarget::registeredAtTicks)
-    ).apply(instance, (pos, facing, childUUID, time) -> new ExperienceTarget(pos, facing, childUUID.orElse(null), time))
+    ).apply(instance, (pos, facing, childUUID, entityUUID, time) ->
+            new ExperienceTarget(pos, facing, childUUID.orElse(null), entityUUID.orElse(null), time))
     );
 
     public static final StreamCodec<RegistryFriendlyByteBuf, ExperienceTarget> STREAM_CODEC = StreamCodec.composite(
@@ -34,13 +41,41 @@ public record ExperienceTarget(
             ExperienceTarget::playerFacing,
             ByteBufCodecs.optional(UUIDUtil.STREAM_CODEC),
             target -> Optional.ofNullable(target.childExperienceUUID()),
+            ByteBufCodecs.optional(UUIDUtil.STREAM_CODEC),
+            target -> Optional.ofNullable(target.entityUUID()),
             ByteBufCodecs.VAR_LONG,
             ExperienceTarget::registeredAtTicks,
-            (pos, facing, childUUID, time) ->
-                    new ExperienceTarget(pos, facing, childUUID.orElse(null), time)
+            (pos, facing, childUUID, entityUUID, time) ->
+                    new ExperienceTarget(pos, facing, childUUID.orElse(null), entityUUID.orElse(null), time)
     );
 
+    public Component getDisplayName(ServerLevel serverLevel) {
+        if (this.isEntity()) {
+            return serverLevel.getEntity(this.entityUUID).getDisplayName();
+        } else if (this.isChildExperience()) {
+            TouristExperience experience = TourismManager.getTouristExperienceById(this.childExperienceUUID);
+            if (experience != null) {
+                return experience.getDisplayName();
+            }
+        }
+
+        BlockEntity blockEntity = serverLevel.getBlockEntity(this.pos);
+        if (blockEntity != null) {
+            return blockEntity.getBlockState().getBlock().getName();
+        }
+
+        return Component.literal("Unknown block");
+    }
+
+    public boolean isBlock() {
+        return this.childExperienceUUID == null && this.entityUUID == null;
+    }
+
     public boolean isChildExperience() {
-        return childExperienceUUID != null;
+        return this.childExperienceUUID != null;
+    }
+
+    public boolean isEntity() {
+        return this.entityUUID != null;
     }
 }

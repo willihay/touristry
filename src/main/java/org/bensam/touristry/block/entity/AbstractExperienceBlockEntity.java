@@ -82,17 +82,34 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         this.setItem(this.getExperienceKeySlotIndex(), this.createExperienceKey());
     }
 
-    public boolean addTarget(ServerLevel serverLevel, BlockPos blockPos, Direction playerFacing, UUID childUUID) {
-        long timeAdded = serverLevel.getDayTime();
-        ExperienceTarget target = new ExperienceTarget(blockPos, playerFacing, childUUID, timeAdded);
-
+    public boolean addTarget(ServerLevel serverLevel, ExperienceTarget target) {
         if (this.isTargetValid(serverLevel, target)) {
             this.targets.add(target);
             this.setChanged();
             return true;
         }
-
         return false;
+    }
+
+    @Override
+    public boolean addBlockTarget(ServerLevel serverLevel, BlockPos blockPos, Direction playerFacing) {
+        long timeAdded = serverLevel.getDayTime();
+        ExperienceTarget target = new ExperienceTarget(blockPos, playerFacing, null, null, timeAdded);
+        return this.addTarget(serverLevel, target);
+    }
+
+    @Override
+    public boolean addChildExperienceTarget(ServerLevel serverLevel, BlockPos blockPos, Direction playerFacing, UUID childUUID) {
+        long timeAdded = serverLevel.getDayTime();
+        ExperienceTarget target = new ExperienceTarget(blockPos, playerFacing, childUUID, null, timeAdded);
+        return this.addTarget(serverLevel, target);
+    }
+
+    @Override
+    public boolean addEntityTarget(ServerLevel serverLevel, BlockPos entityPos, Direction playerFacing, UUID entityUUID) {
+        long timeAdded = serverLevel.getDayTime();
+        ExperienceTarget target = new ExperienceTarget(entityPos, playerFacing, null, entityUUID, timeAdded);
+        return this.addTarget(serverLevel, target);
     }
 
     @Override
@@ -174,6 +191,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
             return false; // can't link experience block to itself
         }
 
+        // TODO: Check for circular dependencies - call a method in the abstract class.
         return TourismManager.getTouristExperienceById(targetUUID) != null;
     }
 
@@ -184,6 +202,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         }
     }
 
+    @Override
     public void removeTarget(ServerLevel serverLevel, BlockPos pos) {
         this.targets.removeIf(target -> target.pos().equals(pos));
         this.setChanged();

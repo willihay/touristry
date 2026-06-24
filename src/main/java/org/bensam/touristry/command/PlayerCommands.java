@@ -16,6 +16,8 @@ import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
 import org.bensam.touristry.tourism.TourismManager;
 import org.bensam.touristry.tourism.TouristBeaconExperience;
 import org.bensam.touristry.tourism.TouristBeaconStats;
+import org.bensam.touristry.tourism.experience.ExperienceStatistics;
+import org.bensam.touristry.tourism.experience.ExperienceTarget;
 import org.bensam.touristry.tourism.experience.TouristExperience;
 
 import java.util.LinkedHashMap;
@@ -161,10 +163,35 @@ public final class PlayerCommands {
         // business status
         source.sendSuccess(() -> Component.literal(" - status: " + (experienceBlockEntity.isOpenForBusiness() ? "open for business" : "closed for business")), false);
 
-        // TODO: list targets, stats
         // targets
+        List<ExperienceTarget> targets = experienceBlockEntity.getTargets(source.getLevel());
+        if (targets.isEmpty()) {
+            source.sendSuccess(() -> Component.literal(" - targets: none"), false);
+        } else {
+            source.sendSuccess(() -> Component.literal(" - targets:"), false);
+            for (ExperienceTarget target : targets) {
+                Component targetMessage = Component.literal("   - ")
+                        .append(target.getDisplayName(source.getLevel()))
+                        .append(Component.literal(" @ " + target.pos().toShortString()));
+                source.sendSuccess(() -> targetMessage, false);
+            }
+        }
 
         // stats
+        ExperienceStatistics stats = experienceBlockEntity.getStatistics();
+        source.sendSuccess(() -> Component.literal(
+                        " - reputation: " + String.format("%.2f", stats.getReputationScore())
+                                + "; total visits: " + stats.getTotalVisits()),
+                false);
+        source.sendSuccess(() -> Component.literal(
+                        " - completed visits: " + stats.getCompletedVisits()
+                                + "; abandoned visits: " + stats.getAbandonedVisits()),
+                false);
+        long lastVisitTicks = stats.getLastVisitTime();
+        String lastVisit = lastVisitTicks == 0 ? "never" : TourismManager.getFriendlyTimeOfDay(lastVisitTicks);
+        source.sendSuccess(() -> Component.literal(
+                        " - last visit: " + lastVisit),
+                false);
 
         // inventory
         MutableComponent inventoryMessage = Component.literal(" - inventory: ");
