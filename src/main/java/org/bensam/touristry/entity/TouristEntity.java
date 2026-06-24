@@ -66,9 +66,9 @@ public class TouristEntity extends AbstractVillager {
         this.goalSelector.addGoal(1, new MoveToTargetGoal(this)); // MOVE
         this.goalSelector.addGoal(2, new OpenDoorGoal(this, true));
         this.goalSelector.addGoal(3, new TouristRandomStrollGoal(this, 0.6)); // MOVE
-        this.goalSelector.addGoal(3, new TouristLookAtPlayerGoal(this, Player.class, 12.0f, 0.02f)); // LOOK
-        this.goalSelector.addGoal(5, new TouristLookAtPlayerGoal(this, AbstractVillager.class, 8.0f, 0.02f)); // LOOK
-        this.goalSelector.addGoal(6, new TouristLookAtPlayerGoal(this, Animal.class, 8.0f, 0.01f)); // LOOK
+        this.goalSelector.addGoal(3, new TouristLookAtEntityGoal(this, Player.class, 12.0f, 0.02f)); // LOOK
+        this.goalSelector.addGoal(5, new TouristLookAtEntityGoal(this, AbstractVillager.class, 8.0f, 0.02f)); // LOOK
+        this.goalSelector.addGoal(6, new TouristLookAtEntityGoal(this, Animal.class, 8.0f, 0.01f)); // LOOK
         this.goalSelector.addGoal(7, new TouristRandomLookAroundGoal(this)); // LOOK
     }
 

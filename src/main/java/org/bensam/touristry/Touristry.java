@@ -2,14 +2,13 @@ package org.bensam.touristry;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerBlockEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
+import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.entity.LecternBlockEntity;
 import org.bensam.touristry.command.TourCommand;
 import org.bensam.touristry.config.ModServerConfigManager;
 import org.bensam.touristry.config.ModServerConfigSync;
@@ -89,7 +88,21 @@ public class Touristry implements ModInitializer {
 			}
 
 			if (!level.isClientSide() && !player.isSpectator()) {
-				return experienceKeyItem.useOnBlock((ServerLevel) level, player, itemStack, hitResult.getBlockPos(), hitResult.getDirection());
+				return experienceKeyItem.useOnBlock((ServerLevel) level, player, itemStack, hitResult);
+			}
+
+			return InteractionResult.SUCCESS;
+		});
+
+		UseEntityCallback.EVENT.register((player, level, hand, entity, hitResult) -> {
+			ItemStack itemStack = player.getItemInHand(hand);
+
+			if (!(itemStack.getItem() instanceof ExperienceKeyItem experienceKeyItem)) {
+				return InteractionResult.PASS;
+			}
+
+			if (!level.isClientSide() && !player.isSpectator()) {
+				return experienceKeyItem.useOnEntity((ServerLevel) level, player, itemStack, entity, hitResult);
 			}
 
 			return InteractionResult.SUCCESS;
