@@ -134,7 +134,7 @@ public class ExperienceKeyItem extends Item {
 
         if (player.isShiftKeyDown()) {
             // Remove target from experience.
-            experience.removeTarget(serverLevel, entityPos);
+            experience.removeEntityTargetById(serverLevel, entity.getUUID());
             player.displayClientMessage(
                     Component.literal("Unlinked from ")
                             .append(experience.getDisplayName()),

@@ -26,6 +26,7 @@ public interface TouristExperience {
     List<ExperienceTarget> getTargets(ServerLevel serverLevel);
     boolean isTargetValid(ServerLevel serverLevel, ExperienceTarget target);
     void removeTarget(ServerLevel serverLevel, BlockPos pos);
+    void removeEntityTargetById(ServerLevel serverLevel, UUID entityUUID);
 
     ExperienceStatistics getStatistics();
 
