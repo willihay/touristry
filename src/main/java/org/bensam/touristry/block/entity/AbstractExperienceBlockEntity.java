@@ -237,6 +237,18 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
 
     @Override
     public void removeTarget(ServerLevel serverLevel, BlockPos pos) {
+        // Clear parent relationship if removing a child experience.
+        for (ExperienceTarget target : this.targets) {
+            if (target.pos().equals(pos) && target.isChildExperience()) {
+                TouristExperience childExperience = TourismManager.getTouristExperienceById(target.childExperienceUUID());
+                if (childExperience instanceof AbstractExperienceBlockEntity childBE && 
+                    this.uuid.equals(childBE.getParentExperienceUUID())) {
+                    childBE.setParent(null);
+                }
+                break;
+            }
+        }
+        
         this.targets.removeIf(target -> target.pos().equals(pos));
         this.setChanged();
     }
