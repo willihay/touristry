@@ -92,16 +92,19 @@ public final class PlayerCommands {
 
         // nearby experiences
         List<TouristExperience> experiences = TourismManager.getTouristExperiencesNearBeacon(beaconBlockEntity);
-        source.sendSuccess(() -> Component.literal(
-                        " - nearby experiences: " + experiences.size()),
-                false);
+        source.sendSuccess(() -> Component.literal(" - nearby experiences: " + experiences.size()), false);
         if (!experiences.isEmpty()) {
             for (TouristExperience experience : experiences) {
-                Component experienceMessage = Component.literal("   - ")
-                        .append(experience.getDisplayName())
-                        .append(Component.literal(" ("))
-                        .append(experience.getDisplayName())
-                        .append(Component.literal(") @ " + experience.getBlockPos().toShortString()));
+                MutableComponent experienceMessage = Component.literal("   - ")
+                        .append(experience.getDisplayName());
+                if (experience instanceof AbstractExperienceBlockEntity experienceBlockEntity) {
+                    if (experienceBlockEntity.hasCustomName()) {
+                        experienceMessage.append(Component.literal(" ("))
+                                .append(experienceBlockEntity.getBlockState().getBlock().getName())
+                                .append(Component.literal(")"));
+                    }
+                }
+                experienceMessage.append(Component.literal(" @ " + experience.getBlockPos().toShortString()));
                 source.sendSuccess(() -> experienceMessage, false);
             }
         }
@@ -165,16 +168,12 @@ public final class PlayerCommands {
 
         // targets
         List<ExperienceTarget> targets = experienceBlockEntity.getTargets(source.getLevel());
-        if (targets.isEmpty()) {
-            source.sendSuccess(() -> Component.literal(" - targets: none"), false);
-        } else {
-            source.sendSuccess(() -> Component.literal(" - targets:"), false);
-            for (ExperienceTarget target : targets) {
-                Component targetMessage = Component.literal("   - ")
-                        .append(target.getDisplayName(source.getLevel()))
-                        .append(Component.literal(" @ " + target.pos().toShortString()));
-                source.sendSuccess(() -> targetMessage, false);
-            }
+        source.sendSuccess(() -> Component.literal(" - targets: " + targets.size()), false);
+        for (ExperienceTarget target : targets) {
+            Component targetMessage = Component.literal("   - ")
+                    .append(target.getDisplayName(source.getLevel()))
+                    .append(Component.literal(" @ " + target.pos().toShortString()));
+            source.sendSuccess(() -> targetMessage, false);
         }
 
         // stats
