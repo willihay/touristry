@@ -10,6 +10,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.bensam.touristry.tourism.TourismManager;
 import org.jspecify.annotations.Nullable;
@@ -51,7 +52,8 @@ public record ExperienceTarget(
 
     public Component getDisplayName(ServerLevel serverLevel) {
         if (this.isEntity()) {
-            return serverLevel.getEntity(this.entityUUID).getDisplayName();
+            Entity entity = serverLevel.getEntity(this.entityUUID);
+            return entity != null ? entity.getDisplayName() : Component.literal("Unknown target");
         } else if (this.isChildExperience()) {
             TouristExperience experience = TourismManager.getTouristExperienceById(this.childExperienceUUID);
             if (experience != null) {

@@ -28,10 +28,7 @@ import org.bensam.touristry.tourism.experience.TouristExperience;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEntity implements TouristExperience {
     private static final double MIN_REPUTATION = -100.0;
@@ -100,9 +97,26 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
 
     @Override
     public boolean addChildExperienceTarget(ServerLevel serverLevel, BlockPos blockPos, Direction playerFacing, UUID childUUID) {
+        // Check if child experience already has a different parent.
+        TouristExperience childExperience = TourismManager.getTouristExperienceById(childUUID);
+        if (childExperience != null) {
+            UUID existingParent = childExperience.getParentExperienceUUID();
+            if (existingParent != null && !existingParent.equals(this.uuid)) {
+                return false; // already has a different parent
+            }
+        }
+
         long timeAdded = serverLevel.getDayTime();
         ExperienceTarget target = new ExperienceTarget(blockPos, playerFacing, childUUID, null, timeAdded);
-        return this.addTarget(serverLevel, target);
+
+        if (this.addTarget(serverLevel, target)) {
+            // Set this experience as child's parent.
+            if (childExperience instanceof AbstractExperienceBlockEntity childExperienceBlockEntity) {
+                childExperienceBlockEntity.setParent(this.uuid);
+            }
+            return true;
+        }
+        return false;
     }
 
     @Override
@@ -191,8 +205,27 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
             return false; // can't link experience block to itself
         }
 
-        // TODO: Check for circular dependencies - call a method in the abstract class.
-        return TourismManager.getTouristExperienceById(targetUUID) != null;
+        // Check if adding target as child would create circular dependency.
+        Set<UUID> visited = new HashSet<>();
+        UUID current = targetUUID;
+        UUID parent = this.uuid;
+
+        while (current != null) {
+            if (visited.contains(current)) {
+                return false; // found a cycle
+            }
+
+            if (current.equals(parent)) {
+                return false; // would create a direct cycle
+            }
+
+            visited.add(current);
+
+            TouristExperience experience = TourismManager.getTouristExperienceById(current);
+            current = experience != null ? experience.getParentExperienceUUID() : null;
+        }
+
+        return true;
     }
 
     protected void pruneInvalidTargets(ServerLevel serverLevel) {
@@ -205,6 +238,12 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
     @Override
     public void removeTarget(ServerLevel serverLevel, BlockPos pos) {
         this.targets.removeIf(target -> target.pos().equals(pos));
+        this.setChanged();
+    }
+
+    @Override
+    public void removeEntityTargetById(ServerLevel serverLevel, UUID entityUUID) {
+        this.targets.removeIf(target -> entityUUID.equals(target.entityUUID()));
         this.setChanged();
     }
 
