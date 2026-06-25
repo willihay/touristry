@@ -226,7 +226,7 @@ public class TouristBeaconBlockEntity extends BlockEntity implements MenuProvide
 
         TouristBeaconExperience experience = valueInput.read("BeaconExperience", TouristBeaconExperience.CODEC)
                 .orElse(TouristBeaconExperience.EMPTY);
-        this.openForBusiness = experience.beaconOpenForBusiness();
+        this.setOpenForBusiness(experience.beaconOpenForBusiness());
 
         this.successfulVisits = valueInput.getIntOr("SuccessfulVisits", 0);
         this.closedEarly = valueInput.getIntOr("ClosedEarly", 0);
@@ -268,7 +268,7 @@ public class TouristBeaconBlockEntity extends BlockEntity implements MenuProvide
                 ModComponents.TOURIST_BEACON_EXPERIENCE,
                 TouristBeaconExperience.EMPTY
         );
-        this.openForBusiness = experience.beaconOpenForBusiness();
+        this.setOpenForBusiness(experience.beaconOpenForBusiness());
 
         TouristBeaconStats stats = dataComponentGetter.getOrDefault(
                 ModComponents.TOURIST_BEACON_STATS,

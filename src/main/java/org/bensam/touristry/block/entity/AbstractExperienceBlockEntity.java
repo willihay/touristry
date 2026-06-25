@@ -336,7 +336,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         super.loadAdditional(valueInput);
         valueInput.read("UUID", UUIDUtil.CODEC).ifPresent(UUID -> { this.uuid = UUID; });
         valueInput.read("ParentExperienceUUID", UUIDUtil.CODEC).ifPresent(UUID -> { this.parentExperienceUUID = UUID; });
-        this.openForBusiness = valueInput.getBooleanOr("OpenForBusiness", false);
+        this.setOpenForBusiness(valueInput.getBooleanOr("OpenForBusiness", false));
         this.targets = new ArrayList<>(valueInput.read("Targets", ExperienceTarget.CODEC.listOf()).orElse(List.of()));
         valueInput.read("Statistics", ExperienceStatistics.CODEC).ifPresent(statistics -> { this.statistics = statistics; });
         this.inventory = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
@@ -367,10 +367,10 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
                 this.getUUID()
         );
         this.parentExperienceUUID = dataComponentGetter.get(ModComponents.TOURIST_EXPERIENCE_PARENT_UUID);
-        this.openForBusiness = dataComponentGetter.getOrDefault(
+        this.setOpenForBusiness(dataComponentGetter.getOrDefault(
                 ModComponents.TOURIST_EXPERIENCE_STATUS,
                 false
-        );
+        ));
         this.targets = new ArrayList<>(dataComponentGetter.getOrDefault(
                 ModComponents.TOURIST_EXPERIENCE_TARGETS,
                 List.of()
