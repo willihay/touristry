@@ -4,6 +4,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -41,26 +42,23 @@ public final class TourCommand {
         dispatcher.register(root);
     }
 
-    public static TouristBeaconBlockEntity requireBeacon(CommandSourceStack source, BlockPos blockPos) {
+    public static TouristBeaconBlockEntity requireBeacon(CommandSourceStack source, BlockPos blockPos) throws CommandSyntaxException {
         if (source.getServer().overworld().getBlockEntity(blockPos) instanceof TouristBeaconBlockEntity beaconBlockEntity) {
             return beaconBlockEntity;
         }
 
-        source.sendFailure(Component.literal("No beacon found @ " + blockPos.toShortString()));
-        return null;
+        throw new SimpleCommandExceptionType(Component.literal("No beacon found @ " + blockPos.toShortString())).create();
     }
 
-    public static TouristBeaconBlockEntity requireNearestBeacon(CommandSourceStack source) {
+    public static TouristBeaconBlockEntity requireNearestBeacon(CommandSourceStack source) throws CommandSyntaxException {
         ServerPlayer serverPlayer = source.getPlayer();
         if (serverPlayer == null) {
-            source.sendFailure(Component.literal("No player position available"));
-            return null;
+            throw new SimpleCommandExceptionType(Component.literal("No player position available")).create();
         }
 
         TouristBeaconBlockEntity beaconBlockEntity = TourismManager.findClosestBeaconEntity(serverPlayer.blockPosition());
         if (beaconBlockEntity == null) {
-            source.sendFailure(Component.literal("No beacon found in this dimension"));
-            return null;
+            throw new SimpleCommandExceptionType(Component.literal("No beacon found in this dimension")).create();
         }
 
         return beaconBlockEntity;
