@@ -17,9 +17,9 @@ public class SightseeingExperienceScreen extends AbstractContainerScreen<Sightse
     private static final int REPUTATION_LABEL_X = 8;
     private static final int REPUTATION_LABEL_Y = 17;
     private static final int STATUS_LABEL_X = 116;
-    private static final int STATUS_LABEL_Y = 70;
+    private static final int STATUS_LABEL_Y = 72;
     private static final int ON_OFF_SLIDER_X = 152;
-    private static final int ON_OFF_SLIDER_Y = 70;
+    private static final int ON_OFF_SLIDER_Y = 72;
 
     public SightseeingExperienceScreen(SightseeingExperienceMenu container, Inventory inventory, Component title) {
         super(container, inventory, title);

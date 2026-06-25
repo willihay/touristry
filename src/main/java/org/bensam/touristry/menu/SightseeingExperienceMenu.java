@@ -18,10 +18,10 @@ public class SightseeingExperienceMenu extends AbstractContainerMenu implements 
     private static final int EXPERIENCE_PAYMENT_SLOT_COUNT = SightseeingExperienceBlockEntity.PAYMENT_SLOT_SIZE;
     private static final int EXPERIENCE_SLOT_COUNT = SightseeingExperienceBlockEntity.TOTAL_INVENTORY_SIZE;
     private static final int EXPERIENCE_PAYMENT_SLOT_START_X = 116;
-    private static final int EXPERIENCE_PAYMENT_SLOT_START_Y = 14;
+    private static final int EXPERIENCE_PAYMENT_SLOT_START_Y = 16;
     private static final int EXPERIENCE_KEY_SLOT = SightseeingExperienceBlockEntity.PAYMENT_SLOT_SIZE;
     private static final int EXPERIENCE_KEY_SLOT_X = 80;
-    private static final int EXPERIENCE_KEY_SLOT_Y = 32;
+    private static final int EXPERIENCE_KEY_SLOT_Y = 34;
     private static final int SLOT_SIDE_LENGTH = 18;
 
     // Player inventory layout
