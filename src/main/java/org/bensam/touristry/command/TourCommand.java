@@ -64,26 +64,23 @@ public final class TourCommand {
         return beaconBlockEntity;
     }
 
-    public static AbstractExperienceBlockEntity requireExperience(CommandSourceStack source, BlockPos blockPos) {
+    public static AbstractExperienceBlockEntity requireExperience(CommandSourceStack source, BlockPos blockPos) throws CommandSyntaxException {
         if (source.getServer().overworld().getBlockEntity(blockPos) instanceof AbstractExperienceBlockEntity experienceBlockEntity) {
             return experienceBlockEntity;
         }
 
-        source.sendFailure(Component.literal("No experience block found @ " + blockPos.toShortString()));
-        return null;
+        throw new SimpleCommandExceptionType(Component.literal("No experience block found @ " + blockPos.toShortString())).create();
     }
 
-    public static AbstractExperienceBlockEntity requireNearestExperience(CommandSourceStack source) {
+    public static AbstractExperienceBlockEntity requireNearestExperience(CommandSourceStack source) throws CommandSyntaxException {
         ServerPlayer serverPlayer = source.getPlayer();
         if (serverPlayer == null) {
-            source.sendFailure(Component.literal("No player position available"));
-            return null;
+            throw new SimpleCommandExceptionType(Component.literal("No player position available")).create();
         }
 
         AbstractExperienceBlockEntity experienceBlockEntity = TourismManager.findClosestExperienceEntity(serverPlayer.blockPosition());
         if (experienceBlockEntity == null) {
-            source.sendFailure(Component.literal("No experience block found in dimension"));
-            return null;
+            throw new SimpleCommandExceptionType(Component.literal("No experience block found in dimension")).create();
         }
 
         return experienceBlockEntity;
