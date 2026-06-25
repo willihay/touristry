@@ -203,6 +203,12 @@ public class TourismManager {
     }
 
     public static void registerTouristExperience(TouristExperience experience) {
+        if (experience instanceof BlockEntity blockEntity && blockEntity.getLevel() instanceof ServerLevel serverLevel) {
+            if (serverLevel != serverLevel.getServer().overworld()) {
+                return;
+            }
+        }
+
         loadedExperiences.put(experience.getUUID(), experience);
         loadedExperiencesByPos.put(experience.getBlockPos(), experience.getUUID());
     }
