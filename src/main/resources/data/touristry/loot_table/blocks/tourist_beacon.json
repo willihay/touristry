@@ -14,8 +14,8 @@
               "include": [
                 "minecraft:custom_name",
                 "touristry:tourist_beacon_uuid",
-                "touristry:tourist_beacon_experience",
-                "touristry:tourist_beacon_stats"
+                "touristry:tourist_beacon_statistics",
+                "touristry:tourist_beacon_status"
               ]
             },
             {

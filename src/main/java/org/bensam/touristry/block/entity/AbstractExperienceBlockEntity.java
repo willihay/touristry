@@ -375,7 +375,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
 
         // Restore additional components when BlockItem is placed as a Block/Block Entity.
         this.uuid = dataComponentGetter.getOrDefault(
-                ModComponents.TOURIST_EXPERIENCE_BLOCK_UUID,
+                ModComponents.TOURIST_EXPERIENCE_UUID,
                 this.getUUID()
         );
         this.parentExperienceUUID = dataComponentGetter.get(ModComponents.TOURIST_EXPERIENCE_PARENT_UUID);
@@ -401,7 +401,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         super.collectImplicitComponents(builder);
 
         // Collect additional components to save in components container in BlockItem when block breaks.
-        builder.set(ModComponents.TOURIST_EXPERIENCE_BLOCK_UUID, this.uuid);
+        builder.set(ModComponents.TOURIST_EXPERIENCE_UUID, this.uuid);
         if (this.parentExperienceUUID != null) {
             builder.set(ModComponents.TOURIST_EXPERIENCE_PARENT_UUID, this.parentExperienceUUID);
         }

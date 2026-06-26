@@ -14,7 +14,6 @@ import org.bensam.touristry.Touristry;
 import org.bensam.touristry.block.entity.AbstractExperienceBlockEntity;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
 import org.bensam.touristry.tourism.TourismManager;
-import org.bensam.touristry.tourism.TouristBeaconExperience;
 import org.bensam.touristry.tourism.TouristBeaconStats;
 import org.bensam.touristry.tourism.experience.ExperienceStatistics;
 import org.bensam.touristry.tourism.experience.ExperienceTarget;
@@ -87,8 +86,7 @@ public final class PlayerCommands {
         source.sendSuccess(() -> message, false);
 
         // business status
-        TouristBeaconExperience beaconExperience = beaconBlockEntity.getBeaconExperience();
-        source.sendSuccess(() -> Component.literal(" - status: " + (beaconExperience.beaconOpenForBusiness() ? "open for business" : "closed for business")), false);
+        source.sendSuccess(() -> Component.literal(" - status: " + (beaconBlockEntity.isOpenForBusiness() ? "open for business" : "closed for business")), false);
 
         // nearby experiences
         List<TouristExperience> experiences = TourismManager.getTouristExperiencesNearBeacon(beaconBlockEntity);

@@ -7,7 +7,6 @@ import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.resources.Identifier;
-import org.bensam.touristry.tourism.TouristBeaconExperience;
 import org.bensam.touristry.tourism.TouristBeaconStats;
 import org.bensam.touristry.tourism.experience.ExperienceStatistics;
 import org.bensam.touristry.tourism.experience.ExperienceTarget;
@@ -26,20 +25,20 @@ public final class ModComponents {
                     .build()
     );
 
-    public static final DataComponentType<TouristBeaconExperience> TOURIST_BEACON_EXPERIENCE = Registry.register(
-            BuiltInRegistries.DATA_COMPONENT_TYPE,
-            Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tourist_beacon_experience"),
-            DataComponentType.<TouristBeaconExperience>builder()
-                    .persistent(TouristBeaconExperience.CODEC)
-                    .build()
-    );
-
-    public static final DataComponentType<TouristBeaconStats> TOURIST_BEACON_STATS = Registry.register(
+    public static final DataComponentType<TouristBeaconStats> TOURIST_BEACON_STATISTICS = Registry.register(
         BuiltInRegistries.DATA_COMPONENT_TYPE,
-        Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tourist_beacon_stats"),
+        Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tourist_beacon_statistics"),
         DataComponentType.<TouristBeaconStats>builder()
                 .persistent(TouristBeaconStats.CODEC)
                 .build()
+    );
+
+    public static final DataComponentType<Boolean> TOURIST_BEACON_STATUS = Registry.register(
+            BuiltInRegistries.DATA_COMPONENT_TYPE,
+            Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tourist_beacon_status"),
+            DataComponentType.<Boolean>builder()
+                    .persistent(Codec.BOOL)
+                    .build()
     );
 
     public static final DataComponentType<UUID> TOURIST_EXPERIENCE_KEY_UUID = Registry.register(
@@ -50,9 +49,9 @@ public final class ModComponents {
                     .build()
     );
 
-    public static final DataComponentType<UUID> TOURIST_EXPERIENCE_BLOCK_UUID = Registry.register(
+    public static final DataComponentType<UUID> TOURIST_EXPERIENCE_UUID = Registry.register(
             BuiltInRegistries.DATA_COMPONENT_TYPE,
-            Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tourist_experience_block_uuid"),
+            Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tourist_experience_uuid"),
             DataComponentType.<UUID>builder()
                     .persistent(UUIDUtil.CODEC)
                     .build()
@@ -66,19 +65,19 @@ public final class ModComponents {
                     .build()
     );
 
-    public static final DataComponentType<Boolean> TOURIST_EXPERIENCE_STATUS = Registry.register(
-            BuiltInRegistries.DATA_COMPONENT_TYPE,
-            Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tourist_experience_status"),
-            DataComponentType.<Boolean>builder()
-                    .persistent(Codec.BOOL)
-                    .build()
-    );
-
     public static final DataComponentType<ExperienceStatistics> TOURIST_EXPERIENCE_STATISTICS = Registry.register(
             BuiltInRegistries.DATA_COMPONENT_TYPE,
             Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tourist_experience_statistics"),
             DataComponentType.<ExperienceStatistics>builder()
                     .persistent(ExperienceStatistics.CODEC)
+                    .build()
+    );
+
+    public static final DataComponentType<Boolean> TOURIST_EXPERIENCE_STATUS = Registry.register(
+            BuiltInRegistries.DATA_COMPONENT_TYPE,
+            Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tourist_experience_status"),
+            DataComponentType.<Boolean>builder()
+                    .persistent(Codec.BOOL)
                     .build()
     );
 

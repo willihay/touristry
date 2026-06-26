@@ -26,7 +26,6 @@ import org.bensam.touristry.Touristry;
 import org.bensam.touristry.block.TouristBeaconBlock;
 import org.bensam.touristry.menu.TouristBeaconMenu;
 import org.bensam.touristry.tourism.TourismManager;
-import org.bensam.touristry.tourism.TouristBeaconExperience;
 import org.bensam.touristry.tourism.TouristBeaconStats;
 import org.bensam.touristry.tourism.VisitResult;
 import org.jspecify.annotations.NonNull;
@@ -93,10 +92,6 @@ public class TouristBeaconBlockEntity extends BlockEntity implements MenuProvide
     @Override
     public @Nullable AbstractContainerMenu createMenu(int i, Inventory inventory, Player player) {
         return new TouristBeaconMenu(i, inventory, this.data, ContainerLevelAccess.create(this.level, this.getBlockPos()));
-    }
-
-    public TouristBeaconExperience getBeaconExperience() {
-        return new TouristBeaconExperience(this.openForBusiness);
     }
 
     public TouristBeaconStats getBeaconStats() {
@@ -223,11 +218,7 @@ public class TouristBeaconBlockEntity extends BlockEntity implements MenuProvide
         super.loadAdditional(valueInput);
         this.name = parseCustomNameSafe(valueInput, "CustomName");
         valueInput.read("UUID", UUIDUtil.CODEC).ifPresent(UUID -> { this.uuid = UUID; });
-
-        TouristBeaconExperience experience = valueInput.read("BeaconExperience", TouristBeaconExperience.CODEC)
-                .orElse(TouristBeaconExperience.EMPTY);
-        this.setOpenForBusiness(experience.beaconOpenForBusiness());
-
+        this.setOpenForBusiness(valueInput.getBooleanOr("OpenForBusiness", false));
         this.successfulVisits = valueInput.getIntOr("SuccessfulVisits", 0);
         this.closedEarly = valueInput.getIntOr("ClosedEarly", 0);
         this.failedSpawns = valueInput.getIntOr("FailedSpawns", 0);
@@ -242,7 +233,7 @@ public class TouristBeaconBlockEntity extends BlockEntity implements MenuProvide
         super.saveAdditional(valueOutput);
         valueOutput.storeNullable("CustomName", ComponentSerialization.CODEC, this.name);
         valueOutput.store("UUID", UUIDUtil.CODEC, this.getUUID());
-        valueOutput.store("BeaconExperience", TouristBeaconExperience.CODEC, this.getBeaconExperience());
+        valueOutput.putBoolean("OpenForBusiness", this.openForBusiness);
         valueOutput.putInt("SuccessfulVisits", this.successfulVisits);
         valueOutput.putInt("ClosedEarly", this.closedEarly);
         valueOutput.putInt("FailedSpawns", this.failedSpawns);
@@ -264,14 +255,13 @@ public class TouristBeaconBlockEntity extends BlockEntity implements MenuProvide
                 this.getUUID()
         );
 
-        TouristBeaconExperience experience = dataComponentGetter.getOrDefault(
-                ModComponents.TOURIST_BEACON_EXPERIENCE,
-                TouristBeaconExperience.EMPTY
-        );
-        this.setOpenForBusiness(experience.beaconOpenForBusiness());
+        this.setOpenForBusiness(dataComponentGetter.getOrDefault(
+                ModComponents.TOURIST_BEACON_STATUS,
+                false
+        ));
 
         TouristBeaconStats stats = dataComponentGetter.getOrDefault(
-                ModComponents.TOURIST_BEACON_STATS,
+                ModComponents.TOURIST_BEACON_STATISTICS,
                 TouristBeaconStats.EMPTY
         );
         this.successfulVisits = stats.successfulVisits();
@@ -291,9 +281,9 @@ public class TouristBeaconBlockEntity extends BlockEntity implements MenuProvide
 
         // Collect additional components to save in components container in BlockItem when block breaks.
         builder.set(DataComponents.CUSTOM_NAME, this.name);
-        builder.set(ModComponents.TOURIST_BEACON_UUID, this.getUUID());
-        builder.set(ModComponents.TOURIST_BEACON_EXPERIENCE, this.getBeaconExperience());
-        builder.set(ModComponents.TOURIST_BEACON_STATS, this.getBeaconStats());
+        builder.set(ModComponents.TOURIST_BEACON_UUID, this.uuid);
+        builder.set(ModComponents.TOURIST_BEACON_STATUS, this.openForBusiness);
+        builder.set(ModComponents.TOURIST_BEACON_STATISTICS, this.getBeaconStats());
     }
 
     @SuppressWarnings("deprecation")
@@ -304,7 +294,7 @@ public class TouristBeaconBlockEntity extends BlockEntity implements MenuProvide
         // Remove raw tag entries for data that is carried by custom components in the block item form.
         valueOutput.discard("CustomName");
         valueOutput.discard("UUID");
-        valueOutput.discard("BeaconExperience");
+        valueOutput.discard("OpenForBusiness");
         valueOutput.discard("SuccessfulVisits");
         valueOutput.discard("ClosedEarly");
         valueOutput.discard("FailedSpawns");

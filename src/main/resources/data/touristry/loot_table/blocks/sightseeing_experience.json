@@ -14,11 +14,11 @@
               "include": [
                 "minecraft:container",
                 "minecraft:custom_name",
-                "touristry:tourist_experience_block_uuid",
+                "touristry:tourist_experience_uuid",
                 "touristry:tourist_experience_parent_uuid",
+                "touristry:tourist_experience_statistics",
                 "touristry:tourist_experience_status",
-                "touristry:tourist_experience_targets",
-                "touristry:tourist_experience_statistics"
+                "touristry:tourist_experience_targets"
               ]
             },
             {
