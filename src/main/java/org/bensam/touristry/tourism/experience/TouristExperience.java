@@ -6,6 +6,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ai.goal.Goal;
 import org.bensam.touristry.entity.TouristEntity;
+import org.bensam.touristry.tourism.VisitResult;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
@@ -29,6 +30,7 @@ public interface TouristExperience {
     void removeEntityTargetById(ServerLevel serverLevel, UUID entityUUID);
 
     ExperienceStatistics getStatistics();
+    void rateVisit(VisitResult result);
 
     // Lifecycle
     void onTouristArrival(TouristEntity tourist, ServerLevel serverLevel);

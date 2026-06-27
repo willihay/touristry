@@ -22,6 +22,7 @@ import org.bensam.touristry.ModComponents;
 import org.bensam.touristry.ModItems;
 import org.bensam.touristry.block.TouristExperienceBlock;
 import org.bensam.touristry.tourism.TourismManager;
+import org.bensam.touristry.tourism.VisitResult;
 import org.bensam.touristry.tourism.experience.ExperienceStatistics;
 import org.bensam.touristry.tourism.experience.ExperienceTarget;
 import org.bensam.touristry.tourism.experience.TouristExperience;
@@ -233,6 +234,11 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         if (changed) {
             this.setChanged();
         }
+    }
+
+    @Override
+    public void rateVisit(VisitResult result) {
+        // TODO
     }
 
     @Override
