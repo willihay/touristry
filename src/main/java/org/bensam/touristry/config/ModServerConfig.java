@@ -12,8 +12,8 @@ public class ModServerConfig {
 
     public static final Codec<ModServerConfig> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.INT.fieldOf("version").forGetter(ModServerConfig::version),
-            TourismManagerConfig.CODEC.fieldOf("tourismManagerConfig").forGetter(ModServerConfig::tourismManager),
-            TouristEntityConfig.CODEC.fieldOf("touristEntityConfig").forGetter(ModServerConfig::touristEntity)
+            TourismManagerConfig.CODEC.fieldOf("tourismManagerConfig").forGetter(ModServerConfig::tourismManagerConfig),
+            TouristEntityConfig.CODEC.fieldOf("touristEntityConfig").forGetter(ModServerConfig::touristEntityConfig)
     ).apply(instance, ModServerConfig::new));
 
     public ModServerConfig() {}
@@ -36,7 +36,7 @@ public class ModServerConfig {
         return this.version;
     }
 
-    public TourismManagerConfig tourismManager() {
+    public TourismManagerConfig tourismManagerConfig() {
         return this.tourismManagerConfig;
     }
 
@@ -44,7 +44,7 @@ public class ModServerConfig {
         this.tourismManagerConfig = tourismManagerConfig;
     }
 
-    public TouristEntityConfig touristEntity() {
+    public TouristEntityConfig touristEntityConfig() {
         return this.touristEntityConfig;
     }
 }

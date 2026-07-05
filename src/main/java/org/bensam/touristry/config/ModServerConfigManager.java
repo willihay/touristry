@@ -130,8 +130,8 @@ public final class ModServerConfigManager {
     private static void normalizeConfig(ModServerConfig loaded) {
         ModServerConfig defaults = ModServerConfig.defaults();
 
-        if (loaded.tourismManager() == null) {
-            loaded.setTourismManagerConfig(defaults.tourismManager());
+        if (loaded.tourismManagerConfig() == null) {
+            loaded.setTourismManagerConfig(defaults.tourismManagerConfig());
         }
     }
 }

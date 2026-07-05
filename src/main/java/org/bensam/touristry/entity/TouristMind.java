@@ -54,6 +54,7 @@ public final class TouristMind {
 
     public TouristMind(TouristEntity tourist) {
         this.tourist = tourist;
+        this.currentLocation = TouristLocation.WORLD;
         this.state = TouristState.IDLE;
         this.beaconTarget = null;
         this.experienceTarget = null;
@@ -367,10 +368,10 @@ public final class TouristMind {
         // Validate prerequisites before transition.
         if (newState.requiresBeacon() && beaconBlockEntity == null) {
             TouristEntity.logActivity(Verbosity.GAMEPLAY_WARNINGS, "[TouristMind] Cannot transition to {} - beacon not available", newState);
-            this.transitionTo(TouristState.WANDERING_WORLD); // fallback
+            this.state = TouristState.WANDERING_WORLD; // fallback
+        } else {
+            this.state = newState;
         }
-
-        this.state = newState;
 
         // Call state transition handlers, if applicable.
         TouristEntity.logActivity(Verbosity.MAJOR_EVENTS, "Transitioning state to " + newState);
@@ -495,7 +496,7 @@ public final class TouristMind {
     }
 
     private void chooseActivityAtBeacon(ServerLevel serverLevel, TouristBeaconBlockEntity beaconBlockEntity) {
-        List<TouristExperience> experiences = TourismManager.getTouristExperiencesNearBeacon(beaconBlockEntity);
+        List<TouristExperience> experiences = TourismManager.getTouristExperiencesNearBeacon(serverLevel, beaconBlockEntity);
 
         if (experiences.isEmpty()) {
             this.transitionTo(TouristState.WANDERING_AT_BEACON);
@@ -596,7 +597,7 @@ public final class TouristMind {
     private void planNextTarget(ServerLevel serverLevel) {
         List<TouristBeaconBlockEntity> closestBeacons;
 
-        double maxTravelDistanceToNextBeacon = ModServerConfigManager.getConfig().touristEntity().getMaxTravelDistanceToNextBeacon();
+        double maxTravelDistanceToNextBeacon = ModServerConfigManager.getConfig().touristEntityConfig().getMaxTravelDistanceToNextBeacon();
         double maxTravelDistanceToNextBeaconSqr = maxTravelDistanceToNextBeacon * maxTravelDistanceToNextBeacon;
         if (this.beaconTarget == null) {
             closestBeacons = TourismManager.getTouristBeaconsByDistance(
@@ -641,6 +642,7 @@ public final class TouristMind {
     //endregion
 
     public void addAdditionalSaveData(ValueOutput valueOutput) {
+        valueOutput.store("CurrentLocation", TouristLocation.CODEC, this.currentLocation);
         valueOutput.store("State", TouristState.CODEC, this.state);
         if (this.beaconTarget != null) {
             valueOutput.store("BeaconTarget", BlockPos.CODEC, this.beaconTarget);
@@ -660,6 +662,7 @@ public final class TouristMind {
     }
 
     public void readAdditionalSaveData(ValueInput valueInput) {
+        this.currentLocation = valueInput.read("CurrentLocation", TouristLocation.CODEC).orElse(TouristLocation.WORLD);
         this.beaconTarget = valueInput.read("BeaconTarget", BlockPos.CODEC).orElse(null);
         this.state = valueInput.read("State", TouristState.CODEC).orElse(
                 (this.beaconTarget != null ? TouristState.TRAVELING_TO_BEACON : TouristState.IDLE));

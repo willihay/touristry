@@ -117,7 +117,7 @@ public final class PlayerCommands {
         source.sendSuccess(() -> Component.literal(" - status: " + (beaconBlockEntity.isOpenForBusiness() ? "open for business" : "closed for business")), false);
 
         // nearby experiences
-        List<TouristExperience> experiences = TourismManager.getTouristExperiencesNearBeacon(beaconBlockEntity);
+        List<TouristExperience> experiences = TourismManager.getTouristExperiencesNearBeacon(source.getLevel(), beaconBlockEntity);
         source.sendSuccess(() -> Component.literal(" - nearby experiences: " + experiences.size()), false);
         if (!experiences.isEmpty()) {
             for (TouristExperience experience : experiences) {

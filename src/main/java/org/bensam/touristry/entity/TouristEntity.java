@@ -79,7 +79,7 @@ public class TouristEntity extends AbstractVillager {
     }
 
     public static void logActivity(Verbosity verbosityLevel, String message) {
-        Verbosity verbosityConfig = ModServerConfigManager.getConfig().touristEntity().getVerbosityLevel();
+        Verbosity verbosityConfig = ModServerConfigManager.getConfig().touristEntityConfig().getVerbosityLevel();
         if (verbosityLevel == Verbosity.ERRORS) {
             Touristry.LOGGER.error("[TouristEntity] {}", message);
         } else if (verbosityLevel.ordinal() <= verbosityConfig.ordinal()) {
@@ -90,7 +90,7 @@ public class TouristEntity extends AbstractVillager {
     }
 
     public static void logActivity(Verbosity verbosityLevel, String message, Object... args) {
-        Verbosity verbosityConfig = ModServerConfigManager.getConfig().touristEntity().getVerbosityLevel();
+        Verbosity verbosityConfig = ModServerConfigManager.getConfig().touristEntityConfig().getVerbosityLevel();
         if (verbosityLevel == Verbosity.ERRORS) {
             Touristry.LOGGER.error("[TouristEntity] " + message, args);
         } else if (verbosityLevel.ordinal() <= verbosityConfig.ordinal()) {

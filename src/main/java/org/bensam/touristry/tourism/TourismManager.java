@@ -82,7 +82,7 @@ public class TourismManager {
     }
 
     protected static void logActivity(Verbosity verbosityLevel, String message) {
-        Verbosity verbosityConfig = ModServerConfigManager.getConfig().tourismManager().getVerbosityLevel();
+        Verbosity verbosityConfig = ModServerConfigManager.getConfig().tourismManagerConfig().getVerbosityLevel();
         if (verbosityLevel == Verbosity.ERRORS) {
             Touristry.LOGGER.error("[TourismManager] {}", message);
         } else if (verbosityLevel.ordinal() <= verbosityConfig.ordinal()) {
@@ -93,7 +93,7 @@ public class TourismManager {
     }
 
     protected static void logActivity(Verbosity verbosityLevel, String message, Object... args) {
-        Verbosity verbosityConfig = ModServerConfigManager.getConfig().tourismManager().getVerbosityLevel();
+        Verbosity verbosityConfig = ModServerConfigManager.getConfig().tourismManagerConfig().getVerbosityLevel();
         if (verbosityLevel == Verbosity.ERRORS) {
             Touristry.LOGGER.error("[TourismManager] " + message, args);
         } else if (verbosityLevel.ordinal() <= verbosityConfig.ordinal()) {
@@ -174,10 +174,12 @@ public class TourismManager {
         return List.copyOf(loadedExperiences.values());
     }
 
-    public static List<TouristExperience> getTouristExperiencesNearBeacon(TouristBeaconBlockEntity beaconBlockEntity) {
+    public static List<TouristExperience> getTouristExperiencesNearBeacon(ServerLevel serverLevel, TouristBeaconBlockEntity beaconBlockEntity) {
         BlockPos beaconPos = beaconBlockEntity.getBlockPos();
-        double radius = ModServerConfigManager.getConfig().tourismManager().getMaxExperienceDistanceToBeacon();
+        double radius = ModServerConfigManager.getConfig().tourismManagerConfig().getMaxExperienceDistanceToBeacon();
         double radiusSq = radius * radius;
+
+        pruneInvalidTouristExperiences(serverLevel);
 
         return loadedExperiences.values().stream()
                 .filter(exp -> exp.getParentExperienceUUID() == null)
@@ -405,19 +407,19 @@ public class TourismManager {
     private static void prepareSpawnTimes(ServerLevel serverLevel, int currentTickTime) {
         pendingSpawns.clear();
         RandomSource random = serverLevel.getRandom();
-        int latestSpawnTimeExclusive = Math.max(1, ModServerConfigManager.getConfig().tourismManager().getLatestSpawnTimeTicks() + 1) % 24000;
+        int latestSpawnTimeExclusive = Math.max(1, ModServerConfigManager.getConfig().tourismManagerConfig().getLatestSpawnTimeTicks() + 1) % 24000;
 
         if (currentTickTime >= latestSpawnTimeExclusive) {
             logActivity(Verbosity.GAMEPLAY_WARNINGS, "Too late in the day to add spawn times");
             return;
         }
 
-        int earliestSpawnTime = Math.max(0, ModServerConfigManager.getConfig().tourismManager().getEarliestSpawnTimeTicks()) % 24000;
+        int earliestSpawnTime = Math.max(0, ModServerConfigManager.getConfig().tourismManagerConfig().getEarliestSpawnTimeTicks()) % 24000;
         int effectiveStartTime = Math.max(currentTickTime, earliestSpawnTime);
         int windowLength = Math.max(1, latestSpawnTimeExclusive - earliestSpawnTime);
         int remainingWindow = Math.max(0, latestSpawnTimeExclusive - effectiveStartTime);
         double remainingFraction = (double) remainingWindow / windowLength;
-        int spawnCount = Math.max(1, (int) Math.ceil(ModServerConfigManager.getConfig().tourismManager().getMaxSpawnsPerBeaconPerDay() * remainingFraction));
+        int spawnCount = Math.max(1, (int) Math.ceil(ModServerConfigManager.getConfig().tourismManagerConfig().getMaxSpawnsPerBeaconPerDay() * remainingFraction));
 
         for (TouristBeaconBlockEntity beaconBlockEntity : getTouristBeacons(serverLevel)) {
             if (!beaconBlockEntity.isOpenForBusiness()) {
@@ -535,8 +537,8 @@ public class TourismManager {
 
     public static @Nullable BlockPos getSpawnPoint(ServerLevel serverLevel, BlockPos beaconPos, Entity touristEntity) {
         RandomSource random = serverLevel.getRandom();
-        int minSpawnDistanceToBeacon = Math.max(0, ModServerConfigManager.getConfig().tourismManager().getMinSpawnDistanceToBeacon());
-        int spawnDistanceRangeDelta = Math.max(0, ModServerConfigManager.getConfig().tourismManager().getMaxSpawnDistanceToBeacon() - minSpawnDistanceToBeacon);
+        int minSpawnDistanceToBeacon = Math.max(0, ModServerConfigManager.getConfig().tourismManagerConfig().getMinSpawnDistanceToBeacon());
+        int spawnDistanceRangeDelta = Math.max(0, ModServerConfigManager.getConfig().tourismManagerConfig().getMaxSpawnDistanceToBeacon() - minSpawnDistanceToBeacon);
 
         for (int attempt = 0; attempt < SPAWN_ATTEMPTS_PER_BEACON; attempt++) {
             double distance = minSpawnDistanceToBeacon + (random.nextDouble() * spawnDistanceRangeDelta);
