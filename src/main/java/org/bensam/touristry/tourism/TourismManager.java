@@ -23,7 +23,6 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 public class TourismManager {
     public record ScheduledTouristSpawn(int timeOfDay, UUID beaconUUID) {}
@@ -464,7 +463,7 @@ public class TourismManager {
         BlockPos beaconPos = beaconBlockEntity.getBlockPos();
 
         if (!beaconBlockEntity.isOpenForBusiness()) {
-            beaconBlockEntity.rateVisit(VisitResult.CLOSED_ON_SPAWN);
+            beaconBlockEntity.rateVisit(VisitResult.CLOSED_EARLY);
             return;
         }
 

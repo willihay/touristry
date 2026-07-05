@@ -7,9 +7,8 @@ import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.resources.Identifier;
-import org.bensam.touristry.tourism.TouristBeaconStats;
-import org.bensam.touristry.tourism.experience.ExperienceStatistics;
 import org.bensam.touristry.tourism.experience.ExperienceTarget;
+import org.bensam.touristry.tourism.experience.TouristLocationStats;
 
 import java.util.List;
 import java.util.UUID;
@@ -25,11 +24,11 @@ public final class ModComponents {
                     .build()
     );
 
-    public static final DataComponentType<TouristBeaconStats> TOURIST_BEACON_STATISTICS = Registry.register(
+    public static final DataComponentType<TouristLocationStats> TOURIST_BEACON_STATISTICS = Registry.register(
         BuiltInRegistries.DATA_COMPONENT_TYPE,
         Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tourist_beacon_statistics"),
-        DataComponentType.<TouristBeaconStats>builder()
-                .persistent(TouristBeaconStats.CODEC)
+        DataComponentType.<TouristLocationStats>builder()
+                .persistent(TouristLocationStats.CODEC)
                 .build()
     );
 
@@ -65,11 +64,11 @@ public final class ModComponents {
                     .build()
     );
 
-    public static final DataComponentType<ExperienceStatistics> TOURIST_EXPERIENCE_STATISTICS = Registry.register(
+    public static final DataComponentType<TouristLocationStats> TOURIST_EXPERIENCE_STATISTICS = Registry.register(
             BuiltInRegistries.DATA_COMPONENT_TYPE,
             Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tourist_experience_statistics"),
-            DataComponentType.<ExperienceStatistics>builder()
-                    .persistent(ExperienceStatistics.CODEC)
+            DataComponentType.<TouristLocationStats>builder()
+                    .persistent(TouristLocationStats.CODEC)
                     .build()
     );
 

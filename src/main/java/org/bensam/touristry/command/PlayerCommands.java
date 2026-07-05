@@ -14,10 +14,9 @@ import org.bensam.touristry.Touristry;
 import org.bensam.touristry.block.entity.AbstractExperienceBlockEntity;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
 import org.bensam.touristry.tourism.TourismManager;
-import org.bensam.touristry.tourism.TouristBeaconStats;
-import org.bensam.touristry.tourism.experience.ExperienceStatistics;
 import org.bensam.touristry.tourism.experience.ExperienceTarget;
 import org.bensam.touristry.tourism.experience.TouristExperience;
+import org.bensam.touristry.tourism.experience.TouristLocationStats;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -64,6 +63,35 @@ public final class PlayerCommands {
         );
     }
 
+    private static void showStats(CommandSourceStack source, TouristLocationStats stats, boolean showFailedSpawns) {
+        source.sendSuccess(() -> Component.literal(
+                        " - reputation: " + String.format("%.2f", stats.getReputation())
+                                + "; total visits: " + stats.getTotalVisits()),
+                false);
+        source.sendSuccess(() -> Component.literal(
+                        " - completed visits: " + stats.getCompletedVisits()
+                                + "; abandoned visits: " + stats.getAbandonedVisits()),
+                false);
+        if (showFailedSpawns) {
+            source.sendSuccess(() -> Component.literal(
+                    " - failed spawns: " + stats.getFailedSpawns()),
+                    false);
+        }
+        source.sendSuccess(() -> Component.literal(
+                        " - navigation failures: " + stats.getNavFailures()
+                                + "; closed early: " + stats.getClosedEarly()),
+                false);
+        source.sendSuccess(() -> Component.literal(
+                        " - tourists hurt: " + stats.getTouristsHurt()
+                                + "; tourists killed: " + stats.getTouristsKilled()),
+                false);
+        long lastVisitTicks = stats.getLastVisitTime();
+        String lastVisit = lastVisitTicks == 0 ? "never" : TourismManager.getFriendlyTimeOfDay(lastVisitTicks);
+        source.sendSuccess(() -> Component.literal(
+                        " - last visit: " + lastVisit),
+                false);
+    }
+
     private static <T extends ArgumentBuilder<CommandSourceStack, T>> T addBeaconActions(
             T parent,
             TourCommand.BeaconResolver resolver
@@ -108,20 +136,8 @@ public final class PlayerCommands {
         }
 
         // stats
-        TouristBeaconStats stats = beaconBlockEntity.getBeaconStats();
-        source.sendSuccess(() -> Component.literal(
-                " - reputation: " + String.format("%.2f", stats.reputation())
-                        + "; successful visits: " + stats.successfulVisits()),
-                false);
-        source.sendSuccess(() -> Component.literal(
-                " - failed spawns: " + stats.failedSpawns()
-                        + "; navigation failures: " + stats.navFailures()
-                        + "; closed early: " + stats.closedEarly()),
-                false);
-        source.sendSuccess(() -> Component.literal(
-                " - tourists hurt: " + stats.touristsHurt()
-                        + "; tourists killed: " + stats.touristsKilled()),
-                false);
+        TouristLocationStats stats = beaconBlockEntity.getStatistics();
+        showStats(source, stats, true);
 
         // uuid
         source.sendSuccess(() -> Component.literal(" - uuid: " + beaconBlockEntity.getUUID().toString()), false);
@@ -175,20 +191,8 @@ public final class PlayerCommands {
         }
 
         // stats
-        ExperienceStatistics stats = experienceBlockEntity.getStatistics();
-        source.sendSuccess(() -> Component.literal(
-                        " - reputation: " + String.format("%.2f", stats.getReputationScore())
-                                + "; total visits: " + stats.getTotalVisits()),
-                false);
-        source.sendSuccess(() -> Component.literal(
-                        " - completed visits: " + stats.getCompletedVisits()
-                                + "; abandoned visits: " + stats.getAbandonedVisits()),
-                false);
-        long lastVisitTicks = stats.getLastVisitTime();
-        String lastVisit = lastVisitTicks == 0 ? "never" : TourismManager.getFriendlyTimeOfDay(lastVisitTicks);
-        source.sendSuccess(() -> Component.literal(
-                        " - last visit: " + lastVisit),
-                false);
+        TouristLocationStats stats = experienceBlockEntity.getStatistics();
+        showStats(source, stats, false);
 
         // inventory
         MutableComponent inventoryMessage = Component.literal(" - inventory: ");

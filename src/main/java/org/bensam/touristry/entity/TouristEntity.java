@@ -119,7 +119,7 @@ public class TouristEntity extends AbstractVillager {
 
             if (review.applyRatingToTarget()) {
                 if (beaconBlockEntity != null) {
-                    beaconBlockEntity.rateVisit(review.result());
+                    beaconBlockEntity.rateVisit(review.result(), serverLevel.getDayTime());
                 } else {
                     // TODO: Leave a pending VisitResult rating with the TourismManager for if/when the beacon returns.
                 }
@@ -136,7 +136,7 @@ public class TouristEntity extends AbstractVillager {
 
             if (review.applyRatingToTarget()) {
                 if (experience != null) {
-                    experience.rateVisit(review.result());
+                    experience.rateVisit(review.result(), serverLevel.getDayTime());
                 } else {
                     // TODO: Leave a pending VisitResult rating with the TourismManager for if/when the experience returns.
                 }

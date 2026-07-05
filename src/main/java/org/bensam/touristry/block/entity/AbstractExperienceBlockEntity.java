@@ -22,8 +22,9 @@ import org.bensam.touristry.ModComponents;
 import org.bensam.touristry.ModItems;
 import org.bensam.touristry.block.TouristExperienceBlock;
 import org.bensam.touristry.tourism.TourismManager;
+import org.bensam.touristry.tourism.TouristReview;
 import org.bensam.touristry.tourism.VisitResult;
-import org.bensam.touristry.tourism.experience.ExperienceStatistics;
+import org.bensam.touristry.tourism.experience.TouristLocationStats;
 import org.bensam.touristry.tourism.experience.ExperienceTarget;
 import org.bensam.touristry.tourism.experience.TouristExperience;
 import org.jspecify.annotations.NonNull;
@@ -32,8 +33,6 @@ import org.jspecify.annotations.Nullable;
 import java.util.*;
 
 public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEntity implements TouristExperience {
-    private static final double MIN_REPUTATION = -100.0;
-    private static final double MAX_REPUTATION = 100.0;
     public static final int DATA_REPUTATION = 0;
     public static final int DATA_OPEN_FOR_BUSINESS = 1;
     public static final int DATA_COUNT = 2;
@@ -42,14 +41,14 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
     protected @Nullable UUID parentExperienceUUID;
     private boolean openForBusiness;
     protected List<ExperienceTarget> targets;
-    protected ExperienceStatistics statistics;
+    protected TouristLocationStats statistics;
     protected NonNullList<ItemStack> inventory;
 
     protected final ContainerData data = new ContainerData() {
         @Override
         public int get(int i) {
             return switch (i) {
-                case DATA_REPUTATION -> (int) Math.round(AbstractExperienceBlockEntity.this.statistics.getReputationScore() * 100.0);
+                case DATA_REPUTATION -> (int) Math.round(AbstractExperienceBlockEntity.this.statistics.getReputation() * 100.0);
                 case DATA_OPEN_FOR_BUSINESS -> AbstractExperienceBlockEntity.this.openForBusiness ? 1 : 0;
                 default -> throw new IndexOutOfBoundsException("Invalid container data index: " + i);
             };
@@ -75,7 +74,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         this.uuid = UUID.randomUUID();
         this.openForBusiness = false;
         this.targets = new ArrayList<>();
-        this.statistics = new ExperienceStatistics();
+        this.statistics = new TouristLocationStats();
         this.inventory = NonNullList.withSize(inventorySize, ItemStack.EMPTY);
         this.setItem(this.getExperienceKeySlotIndex(), this.createExperienceKey());
     }
@@ -182,7 +181,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
     public abstract int getPaymentSlotSize();
 
     @Override
-    public ExperienceStatistics getStatistics() {
+    public TouristLocationStats getStatistics() {
         return this.statistics;
     }
 
@@ -236,9 +235,24 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         }
     }
 
+    // VisitResult::ARRIVED requires current time in ticks
     @Override
-    public void rateVisit(VisitResult result) {
-        // TODO
+    public void rateVisit(VisitResult result, long currentTimeTicks) {
+        this.statistics.setReputation(TouristReview.calculateNewReputation(this.statistics.getReputation(), result));
+
+        // Use a Runnable to make compiler catch forgotten updates when new VisitResult enums are added.
+        Runnable update = switch (result) {
+            case ARRIVED -> () -> this.statistics.recordVisit(currentTimeTicks);
+            case GOOD, GREAT, UNFAVORABLE -> this.statistics::recordCompletedVisit;
+            case LOST -> this.statistics::recordNavFailure;
+            case CLOSED_EARLY -> this.statistics::recordClosedEarly;
+            case HURT_EN_ROUTE, HURT_ON_PREMISES -> this.statistics::recordTouristHurt;
+            case KILLED_EN_ROUTE, KILLED_ON_PREMISES -> this.statistics::recordTouristKilled;
+            case FAILED_SPAWN -> () -> {};
+        };
+        update.run();
+
+        this.setChanged();
     }
 
     @Override
@@ -356,7 +370,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         valueInput.read("ParentExperienceUUID", UUIDUtil.CODEC).ifPresent(UUID -> { this.parentExperienceUUID = UUID; });
         this.setOpenForBusiness(valueInput.getBooleanOr("OpenForBusiness", false));
         this.targets = new ArrayList<>(valueInput.read("Targets", ExperienceTarget.CODEC.listOf()).orElse(List.of()));
-        valueInput.read("Statistics", ExperienceStatistics.CODEC).ifPresent(statistics -> { this.statistics = statistics; });
+        valueInput.read("Statistics", TouristLocationStats.CODEC).ifPresent(statistics -> { this.statistics = statistics; });
         this.inventory = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
         ContainerHelper.loadAllItems(valueInput, this.inventory);
         this.setItem(this.getExperienceKeySlotIndex(), this.createExperienceKey());
@@ -371,7 +385,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         }
         valueOutput.putBoolean("OpenForBusiness", this.openForBusiness);
         valueOutput.store("Targets", ExperienceTarget.CODEC.listOf(), this.targets);
-        valueOutput.store("Statistics", ExperienceStatistics.CODEC, this.statistics);
+        valueOutput.store("Statistics", TouristLocationStats.CODEC, this.statistics);
         ContainerHelper.saveAllItems(valueOutput, this.inventory);
     }
 
@@ -395,7 +409,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         ));
         this.statistics = dataComponentGetter.getOrDefault(
                 ModComponents.TOURIST_EXPERIENCE_STATISTICS,
-                new ExperienceStatistics()
+                new TouristLocationStats()
         );
 
         this.setItem(this.getExperienceKeySlotIndex(), this.createExperienceKey());

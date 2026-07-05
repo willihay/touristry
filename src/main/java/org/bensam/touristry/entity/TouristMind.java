@@ -157,7 +157,7 @@ public final class TouristMind {
 
         switch (review.result()) {
             case ARRIVED, GOOD, GREAT -> soundEvent = SoundEvents.VILLAGER_CELEBRATE;
-            case LOST, CLOSED_ON_ARRIVAL, UNFAVORABLE -> soundEvent = SoundEvents.VILLAGER_NO;
+            case LOST, CLOSED_EARLY, UNFAVORABLE -> soundEvent = SoundEvents.VILLAGER_NO;
             case HURT_EN_ROUTE -> this.reportedHurtEnRoute = true;
             case HURT_ON_PREMISES -> this.reportedHurtOnPremises = true;
         }
@@ -180,7 +180,7 @@ public final class TouristMind {
                 VisitResult modifiedResult = this.goodExperiencesToday % 3 == 0 ? VisitResult.GREAT : result;
                 yield modifiedResult.moodDelta() * (1.0 - positiveNormalized) * (1.0 + 0.5 * negativeNormalized);
             }
-            case UNFAVORABLE, FAILED_SPAWN, LOST, CLOSED_ON_SPAWN, CLOSED_ON_ARRIVAL, HURT_EN_ROUTE, HURT_ON_PREMISES, KILLED_EN_ROUTE, KILLED_ON_PREMISES ->
+            case UNFAVORABLE, FAILED_SPAWN, LOST, CLOSED_EARLY, HURT_EN_ROUTE, HURT_ON_PREMISES, KILLED_EN_ROUTE, KILLED_ON_PREMISES ->
                     result.moodDelta() * (0.75 + 0.5 * positiveNormalized);
         };
 
@@ -437,11 +437,11 @@ public final class TouristMind {
                     true));
             this.transitionTo(TouristState.CHOOSING_EXPERIENCE);
         } else {
-            this.updateMood(VisitResult.CLOSED_ON_ARRIVAL);
+            this.updateMood(VisitResult.CLOSED_EARLY);
             Component experienceMessage = Component.literal("found beacon closed at");
             this.recordExperience(serverLevel, new TouristReview(
                     this.getCurrentLocation(),
-                    VisitResult.CLOSED_ON_ARRIVAL,
+                    VisitResult.CLOSED_EARLY,
                     true,
                     true,
                     experienceMessage,

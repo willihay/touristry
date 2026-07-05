@@ -8,7 +8,6 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.util.Mth;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.Nameable;
 import net.minecraft.world.entity.player.Inventory;
@@ -26,38 +25,29 @@ import org.bensam.touristry.Touristry;
 import org.bensam.touristry.block.TouristBeaconBlock;
 import org.bensam.touristry.menu.TouristBeaconMenu;
 import org.bensam.touristry.tourism.TourismManager;
-import org.bensam.touristry.tourism.TouristBeaconStats;
+import org.bensam.touristry.tourism.TouristReview;
 import org.bensam.touristry.tourism.VisitResult;
+import org.bensam.touristry.tourism.experience.TouristLocationStats;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import java.util.UUID;
 
 public class TouristBeaconBlockEntity extends BlockEntity implements MenuProvider, Nameable {
-    private static final double MIN_REPUTATION = -100.0;
-    private static final double MAX_REPUTATION = 100.0;
     public static final int DATA_REPUTATION = 0;
     public static final int DATA_OPEN_FOR_BUSINESS = 1;
     public static final int DATA_COUNT = 2;
 
     @Nullable private Component name;
     private UUID uuid = UUID.randomUUID();
-
-    // stats
     private boolean openForBusiness;
-    private int successfulVisits;
-    private int closedEarly;
-    private int failedSpawns;
-    private int navFailures;
-    private int touristsHurt;
-    private int touristsKilled;
-    private double reputation;
+    private TouristLocationStats statistics;
 
     protected final ContainerData data = new ContainerData() {
         @Override
         public int get(int i) {
             return switch (i) {
-                case DATA_REPUTATION -> (int) Math.round(TouristBeaconBlockEntity.this.reputation * 100.0);
+                case DATA_REPUTATION -> (int) Math.round(TouristBeaconBlockEntity.this.statistics.getReputation() * 100.0);
                 case DATA_OPEN_FOR_BUSINESS -> TouristBeaconBlockEntity.this.openForBusiness ? 1 : 0;
                 default -> throw new IndexOutOfBoundsException("Invalid container data index: " + i);
             };
@@ -80,29 +70,19 @@ public class TouristBeaconBlockEntity extends BlockEntity implements MenuProvide
     public TouristBeaconBlockEntity(BlockPos blockPos, BlockState blockState) {
         super(ModBlockEntities.TOURIST_BEACON.get(), blockPos, blockState);
         this.openForBusiness = false;
-        this.successfulVisits = 0;
-        this.closedEarly = 0;
-        this.failedSpawns = 0;
-        this.navFailures = 0;
-        this.touristsHurt = 0;
-        this.touristsKilled = 0;
-        this.reputation = 0.0d;
+        this.statistics = new TouristLocationStats();
+    }
+
+    @Override
+    public void clearRemoved() {
+        super.clearRemoved();
+        // Register this block entity for tourism when block entity is attached back into a chunk/world.
+        this.syncTourismRegistration();
     }
 
     @Override
     public @Nullable AbstractContainerMenu createMenu(int i, Inventory inventory, Player player) {
         return new TouristBeaconMenu(i, inventory, this.data, ContainerLevelAccess.create(this.level, this.getBlockPos()));
-    }
-
-    public TouristBeaconStats getBeaconStats() {
-        return new TouristBeaconStats(
-                this.successfulVisits,
-                this.closedEarly,
-                this.failedSpawns,
-                this.navFailures,
-                this.touristsHurt,
-                this.touristsKilled,
-                this.reputation);
     }
 
     @Override
@@ -124,12 +104,49 @@ public class TouristBeaconBlockEntity extends BlockEntity implements MenuProvide
         return this.name != null ? this.name : this.getDefaultName();
     }
 
+    public TouristLocationStats getStatistics() {
+        return this.statistics;
+    }
+
     public UUID getUUID() {
         return this.uuid;
     }
 
     public boolean isOpenForBusiness() {
         return this.openForBusiness;
+    }
+
+    public void rateVisit(VisitResult result) {
+        this.rateVisit(result, 0);
+    }
+
+    // VisitResult::ARRIVED requires current time in ticks
+    public void rateVisit(VisitResult result, long currentTimeTicks) {
+        this.statistics.setReputation(TouristReview.calculateNewReputation(this.statistics.getReputation(), result));
+
+        // Use a Runnable to make compiler catch forgotten updates when new VisitResult enums are added.
+        Runnable update = switch (result) {
+            case ARRIVED -> () -> this.statistics.recordVisit(currentTimeTicks);
+            case GOOD, GREAT, UNFAVORABLE -> this.statistics::recordCompletedVisit;
+            case FAILED_SPAWN -> this.statistics::recordFailedSpawn;
+            case LOST -> this.statistics::recordNavFailure;
+            case CLOSED_EARLY -> this.statistics::recordClosedEarly;
+            case HURT_EN_ROUTE, HURT_ON_PREMISES -> this.statistics::recordTouristHurt;
+            case KILLED_EN_ROUTE, KILLED_ON_PREMISES -> this.statistics::recordTouristKilled;
+        };
+        update.run();
+
+        this.setChanged();
+    }
+
+    public void resetAllStats() {
+        this.statistics.resetAll();
+        this.setChanged();
+    }
+
+    public void resetReputation() {
+        this.statistics.resetReputation();
+        this.setChanged();
     }
 
     public void setOpenForBusiness(boolean openForBusiness) {
@@ -139,60 +156,6 @@ public class TouristBeaconBlockEntity extends BlockEntity implements MenuProvide
             this.level.setBlockAndUpdate(this.getBlockPos(), blockState.setValue(TouristBeaconBlock.OPEN_FOR_BUSINESS, openForBusiness));
         }
         this.setChanged();
-    }
-
-    public void resetReputation() {
-        this.reputation = 0.0d;
-        this.setChanged();
-    }
-
-    public void resetAllStats() {
-        this.successfulVisits = 0;
-        this.closedEarly = 0;
-        this.failedSpawns = 0;
-        this.navFailures = 0;
-        this.touristsHurt = 0;
-        this.touristsKilled = 0;
-        this.reputation = 0.0d;
-        this.setChanged();
-    }
-
-    public void rateVisit(VisitResult result) {
-        this.reputation = applyRating(this.reputation, result);
-
-        // Use a Runnable to make compiler catch forgotten updates when new VisitResult enums are added.
-        Runnable update = switch (result) {
-            case GOOD, GREAT -> () -> this.successfulVisits++;
-            case CLOSED_ON_SPAWN, CLOSED_ON_ARRIVAL -> () -> this.closedEarly++;
-            case LOST -> () -> this.navFailures++;
-            case HURT_EN_ROUTE, HURT_ON_PREMISES -> () -> this.touristsHurt++;
-            case KILLED_EN_ROUTE, KILLED_ON_PREMISES -> () -> this.touristsKilled++;
-            case FAILED_SPAWN -> () -> this.failedSpawns++;
-            case ARRIVED, UNFAVORABLE -> () -> {};
-        };
-        update.run();
-
-        this.setChanged();
-    }
-
-    private double applyRating(double reputation, VisitResult result) {
-        double positiveNormalized = Math.max(0.0, reputation) / MAX_REPUTATION;
-        double negativeNormalized = Math.max(0.0, -reputation) / MAX_REPUTATION;
-        double change = switch (result) {
-            case ARRIVED, GOOD, GREAT ->
-                    result.baseReputationDelta() * (1.0 - positiveNormalized) * (1.0 + 0.5 * negativeNormalized);
-            case UNFAVORABLE, FAILED_SPAWN, LOST, CLOSED_ON_SPAWN, CLOSED_ON_ARRIVAL, HURT_EN_ROUTE, HURT_ON_PREMISES, KILLED_EN_ROUTE, KILLED_ON_PREMISES ->
-                    result.baseReputationDelta() * (0.75 + 0.5 * positiveNormalized);
-        };
-
-        return Mth.clamp(reputation + change, MIN_REPUTATION, MAX_REPUTATION);
-    }
-
-    @Override
-    public void clearRemoved() {
-        super.clearRemoved();
-        // Register this block entity for tourism when block entity is attached back into a chunk/world.
-        this.syncTourismRegistration();
     }
 
     @Override
@@ -219,13 +182,7 @@ public class TouristBeaconBlockEntity extends BlockEntity implements MenuProvide
         this.name = parseCustomNameSafe(valueInput, "CustomName");
         valueInput.read("UUID", UUIDUtil.CODEC).ifPresent(UUID -> { this.uuid = UUID; });
         this.setOpenForBusiness(valueInput.getBooleanOr("OpenForBusiness", false));
-        this.successfulVisits = valueInput.getIntOr("SuccessfulVisits", 0);
-        this.closedEarly = valueInput.getIntOr("ClosedEarly", 0);
-        this.failedSpawns = valueInput.getIntOr("FailedSpawns", 0);
-        this.navFailures = valueInput.getIntOr("NavFailures", 0);
-        this.touristsHurt = valueInput.getIntOr("TouristsHurt", 0);
-        this.touristsKilled = valueInput.getIntOr("TouristsKilled", 0);
-        this.reputation = valueInput.getDoubleOr("Reputation", 0d);
+        valueInput.read("Statistics", TouristLocationStats.CODEC).ifPresent(statistics -> { this.statistics = statistics; });
     }
 
     @Override
@@ -234,13 +191,7 @@ public class TouristBeaconBlockEntity extends BlockEntity implements MenuProvide
         valueOutput.storeNullable("CustomName", ComponentSerialization.CODEC, this.name);
         valueOutput.store("UUID", UUIDUtil.CODEC, this.getUUID());
         valueOutput.putBoolean("OpenForBusiness", this.openForBusiness);
-        valueOutput.putInt("SuccessfulVisits", this.successfulVisits);
-        valueOutput.putInt("ClosedEarly", this.closedEarly);
-        valueOutput.putInt("FailedSpawns", this.failedSpawns);
-        valueOutput.putInt("NavFailures", this.navFailures);
-        valueOutput.putInt("TouristsHurt", this.touristsHurt);
-        valueOutput.putInt("TouristsKilled", this.touristsKilled);
-        valueOutput.putDouble("Reputation", this.reputation);
+        valueOutput.store("Statistics", TouristLocationStats.CODEC, this.statistics);
     }
 
     @Override
@@ -260,17 +211,10 @@ public class TouristBeaconBlockEntity extends BlockEntity implements MenuProvide
                 false
         ));
 
-        TouristBeaconStats stats = dataComponentGetter.getOrDefault(
+        this.statistics = dataComponentGetter.getOrDefault(
                 ModComponents.TOURIST_BEACON_STATISTICS,
-                TouristBeaconStats.EMPTY
+                new TouristLocationStats()
         );
-        this.successfulVisits = stats.successfulVisits();
-        this.closedEarly = stats.closedEarly();
-        this.failedSpawns = stats.failedSpawns();
-        this.navFailures = stats.navFailures();
-        this.touristsHurt = stats.touristsHurt();
-        this.touristsKilled = stats.touristsKilled();
-        this.reputation = stats.reputation();
 
         this.syncTourismRegistration();
     }
@@ -283,7 +227,7 @@ public class TouristBeaconBlockEntity extends BlockEntity implements MenuProvide
         builder.set(DataComponents.CUSTOM_NAME, this.name);
         builder.set(ModComponents.TOURIST_BEACON_UUID, this.uuid);
         builder.set(ModComponents.TOURIST_BEACON_STATUS, this.openForBusiness);
-        builder.set(ModComponents.TOURIST_BEACON_STATISTICS, this.getBeaconStats());
+        builder.set(ModComponents.TOURIST_BEACON_STATISTICS, this.getStatistics());
     }
 
     @SuppressWarnings("deprecation")
@@ -295,13 +239,7 @@ public class TouristBeaconBlockEntity extends BlockEntity implements MenuProvide
         valueOutput.discard("CustomName");
         valueOutput.discard("UUID");
         valueOutput.discard("OpenForBusiness");
-        valueOutput.discard("SuccessfulVisits");
-        valueOutput.discard("ClosedEarly");
-        valueOutput.discard("FailedSpawns");
-        valueOutput.discard("NavFailures");
-        valueOutput.discard("TouristsHurt");
-        valueOutput.discard("TouristsKilled");
-        valueOutput.discard("Reputation");
+        valueOutput.discard("Statistics");
     }
 
     @Override

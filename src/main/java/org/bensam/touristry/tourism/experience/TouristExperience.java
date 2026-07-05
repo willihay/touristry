@@ -29,8 +29,8 @@ public interface TouristExperience {
     void removeTarget(ServerLevel serverLevel, BlockPos pos);
     void removeEntityTargetById(ServerLevel serverLevel, UUID entityUUID);
 
-    ExperienceStatistics getStatistics();
-    void rateVisit(VisitResult result);
+    TouristLocationStats getStatistics();
+    void rateVisit(VisitResult result, long currentTimeTicks);
 
     // Lifecycle
     void onTouristArrival(TouristEntity tourist, ServerLevel serverLevel);
