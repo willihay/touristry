@@ -127,7 +127,8 @@ public class TouristBeaconBlockEntity extends BlockEntity implements MenuProvide
         // Use a Runnable to make compiler catch forgotten updates when new VisitResult enums are added.
         Runnable update = switch (result) {
             case ARRIVED -> () -> this.statistics.recordVisit(currentTimeTicks);
-            case GOOD, GREAT, UNFAVORABLE -> this.statistics::recordCompletedVisit;
+            case GOOD, GREAT -> this.statistics::recordCompletedVisit;
+            case UNFAVORABLE -> this.statistics::recordAbandonedVisit;
             case FAILED_SPAWN -> this.statistics::recordFailedSpawn;
             case LOST -> this.statistics::recordNavFailure;
             case CLOSED_EARLY -> this.statistics::recordClosedEarly;
