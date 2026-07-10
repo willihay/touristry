@@ -2,32 +2,35 @@ package org.bensam.touristry.entity;
 
 import com.mojang.serialization.Codec;
 import net.minecraft.util.StringRepresentable;
+import org.bensam.touristry.tourism.ReviewTarget;
 
 import java.util.Locale;
 
 public enum TouristState implements StringRepresentable {
-    IDLE(false),
-    PLANNING_NEXT_MOVE(false),
-    TRAVELING_TO_BEACON(true),
-    CHOOSING_EXPERIENCE(true),
-    TRAVELING_TO_EXPERIENCE(false),
-    CHOOSING_EXPERIENCE_ACTIVITY(false),
-    TRAVELING_TO_EXPERIENCE_TARGET(false),
-    EXPERIENCING_TARGET(false),
-    ENJOYING_EXPERIENCE(false),
-    WANDERING_AT_BEACON(true),
-    WANDERING_WORLD(false),
-    SLEEPING(true),
-    DESPAWNING(false),
-    LOST(false),
-    FINISHED(false);
+    IDLE(false, ReviewTarget.NONE),
+    PLANNING_NEXT_MOVE(false, ReviewTarget.NONE),
+    TRAVELING_TO_BEACON(true, ReviewTarget.BEACON),
+    CHOOSING_EXPERIENCE(true, ReviewTarget.BEACON),
+    TRAVELING_TO_EXPERIENCE(false, ReviewTarget.EXPERIENCE),
+    CHOOSING_EXPERIENCE_ACTIVITY(false, ReviewTarget.EXPERIENCE),
+    TRAVELING_TO_EXPERIENCE_TARGET(false, ReviewTarget.EXPERIENCE),
+    EXPERIENCING_TARGET(false, ReviewTarget.EXPERIENCE),
+    ENJOYING_EXPERIENCE(false, ReviewTarget.EXPERIENCE),
+    WANDERING_AT_BEACON(true, ReviewTarget.BEACON),
+    WANDERING_WORLD(false, ReviewTarget.NONE),
+    SLEEPING(true, ReviewTarget.EXPERIENCE),
+    DESPAWNING(false, ReviewTarget.NONE),
+    LOST(false, ReviewTarget.NONE),
+    FINISHED(false, ReviewTarget.NONE);
 
     private final boolean requiresBeacon;
+    private final ReviewTarget reviewTarget;
 
     public static final Codec<TouristState> CODEC = StringRepresentable.fromEnum(TouristState::values);
 
-    TouristState(boolean requiresBeacon) {
+    TouristState(boolean requiresBeacon, ReviewTarget reviewTarget) {
         this.requiresBeacon = requiresBeacon;
+        this.reviewTarget = reviewTarget;
     }
 
     @Override
@@ -37,5 +40,9 @@ public enum TouristState implements StringRepresentable {
 
     public boolean requiresBeacon() {
         return this.requiresBeacon;
+    }
+
+    public ReviewTarget reviewTarget() {
+        return this.reviewTarget;
     }
 }

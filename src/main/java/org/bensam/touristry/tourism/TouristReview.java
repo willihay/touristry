@@ -4,7 +4,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 
 public record TouristReview(
-        TouristLocation targetLocation,
+        ReviewTarget reviewTarget,
         VisitResult result,
         boolean applyRatingToTarget,
         boolean announceToNearbyPlayers,

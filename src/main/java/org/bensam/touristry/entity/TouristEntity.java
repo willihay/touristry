@@ -31,10 +31,7 @@ import org.bensam.touristry.entity.goal.MoveToTargetGoal;
 import org.bensam.touristry.entity.goal.TouristLookAtEntityGoal;
 import org.bensam.touristry.entity.goal.TouristRandomLookAroundGoal;
 import org.bensam.touristry.entity.goal.TouristRandomStrollGoal;
-import org.bensam.touristry.tourism.TourismManager;
-import org.bensam.touristry.tourism.TouristLocation;
-import org.bensam.touristry.tourism.TouristReview;
-import org.bensam.touristry.tourism.VisitResult;
+import org.bensam.touristry.tourism.*;
 import org.bensam.touristry.tourism.experience.TouristExperience;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -107,7 +104,7 @@ public class TouristEntity extends AbstractVillager {
     ) {
         Component targetName = Component.literal("no specific target");
 
-        if (review.targetLocation() == TouristLocation.BEACON) {
+        if (review.reviewTarget() == ReviewTarget.BEACON) {
             BlockPos reviewTargetPos = this.getBeaconTarget();
             TouristBeaconBlockEntity beaconBlockEntity = null;
             if (reviewTargetPos != null) {
@@ -124,7 +121,7 @@ public class TouristEntity extends AbstractVillager {
                     // TODO: Leave a pending VisitResult rating with the TourismManager for if/when the beacon returns.
                 }
             }
-        } else if (review.targetLocation() == TouristLocation.EXPERIENCE) {
+        } else if (review.reviewTarget() == ReviewTarget.EXPERIENCE) {
             BlockPos reviewTargetPos = this.getExperienceTarget();
             TouristExperience experience = null;
             if (reviewTargetPos != null) {
@@ -187,7 +184,7 @@ public class TouristEntity extends AbstractVillager {
 
             if (visitResult != null) {
                 TouristReview review = new TouristReview(
-                        this.mind.getCurrentLocation(),
+                        this.mind.getState().reviewTarget(),
                         visitResult,
                         true,
                         true,
@@ -273,7 +270,7 @@ public class TouristEntity extends AbstractVillager {
 
         if (visitResult != null) {
             TouristReview review = new TouristReview(
-                    this.mind.getCurrentLocation(),
+                    this.mind.getState().reviewTarget(),
                     visitResult,
                     true,
                     true,

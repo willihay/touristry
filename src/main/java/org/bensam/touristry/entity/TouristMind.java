@@ -85,10 +85,6 @@ public final class TouristMind {
         return this.consecutiveFailedProgressChecks;
     }
 
-    public TouristLocation getCurrentLocation() {
-        return this.currentLocation;
-    }
-
     public @Nullable BlockPos getExperienceTarget() {
         return this.experienceTarget;
     }
@@ -115,6 +111,10 @@ public final class TouristMind {
             }
         }
         return "";
+    }
+
+    public TouristState getState() {
+        return this.state;
     }
 
     public int getTicksAtCurrentTarget() {
@@ -219,7 +219,7 @@ public final class TouristMind {
 
                     // Impl note: applyRatingToTarget is false because rating has likely already been applied.
                     TouristReview review = new TouristReview(
-                            this.getCurrentLocation(),
+                            this.state.reviewTarget(),
                             VisitResult.UNFAVORABLE,
                             false,
                             true,
@@ -317,7 +317,7 @@ public final class TouristMind {
         }
 
         TouristReview review = new TouristReview(
-                this.getCurrentLocation(),
+                this.state.reviewTarget(),
                 result,
                 true,
                 false,
@@ -414,7 +414,7 @@ public final class TouristMind {
             this.updateMood(VisitResult.LOST);
             Component experienceMessage = Component.literal("did not find a beacon at " + this.beaconTarget.toShortString());
             this.recordExperience(serverLevel, new TouristReview(
-                    this.getCurrentLocation(),
+                    this.state.reviewTarget(),
                     VisitResult.LOST,
                     true,
                     true,
@@ -429,7 +429,7 @@ public final class TouristMind {
             this.updateMood(VisitResult.ARRIVED);
             Component experienceMessage = Component.literal("arrived at");
             this.recordExperience(serverLevel, new TouristReview(
-                    this.getCurrentLocation(),
+                    this.state.reviewTarget(),
                     VisitResult.ARRIVED,
                     false,
                     false,
@@ -441,7 +441,7 @@ public final class TouristMind {
             this.updateMood(VisitResult.CLOSED_EARLY);
             Component experienceMessage = Component.literal("found beacon closed at");
             this.recordExperience(serverLevel, new TouristReview(
-                    this.getCurrentLocation(),
+                    this.state.reviewTarget(),
                     VisitResult.CLOSED_EARLY,
                     true,
                     true,
@@ -459,7 +459,7 @@ public final class TouristMind {
             this.updateMood(VisitResult.LOST);
             Component experienceMessage = Component.literal("did not find any tourist experience at " + this.experienceTarget.toShortString());
             this.recordExperience(serverLevel, new TouristReview(
-                    this.getCurrentLocation(),
+                    this.state.reviewTarget(),
                     VisitResult.LOST,
                     true,
                     true,
@@ -473,7 +473,7 @@ public final class TouristMind {
         Component experienceMessage = Component.literal("arrived at ")
                 .append(experience.getDisplayName());
         this.recordExperience(serverLevel, new TouristReview(
-                this.getCurrentLocation(),
+                this.state.reviewTarget(),
                 VisitResult.ARRIVED,
                 false,
                 false,
@@ -541,7 +541,7 @@ public final class TouristMind {
                         .append(experience.getDisplayName());
             }
             this.recordExperience(serverLevel, new TouristReview(
-                    this.getCurrentLocation(),
+                    this.state.reviewTarget(),
                     VisitResult.LOST,
                     true,
                     true,
@@ -552,7 +552,7 @@ public final class TouristMind {
         } else {
             Component experienceMessage = Component.literal("got lost travelling to");
             this.recordExperience(serverLevel, new TouristReview(
-                    this.getCurrentLocation(),
+                    this.state.reviewTarget(),
                     VisitResult.LOST,
                     true,
                     true,
@@ -571,7 +571,7 @@ public final class TouristMind {
         if (tickTimeOfDay <= 1000 && !this.reportedHurtOnPremises) {
             Component experienceMessage = Component.literal("woke up in a good mood at"); // resetDailyStats() determines how good of a mood
             this.recordExperience(serverLevel, new TouristReview(
-                    this.getCurrentLocation(),
+                    this.state.reviewTarget(),
                     VisitResult.GOOD,
                     true,
                     false,
@@ -583,7 +583,7 @@ public final class TouristMind {
             this.updateMood(VisitResult.UNFAVORABLE);
             Component experienceMessage = Component.literal("woke up abruptly at");
             this.recordExperience(serverLevel, new TouristReview(
-                    this.getCurrentLocation(),
+                    this.state.reviewTarget(),
                     VisitResult.UNFAVORABLE,
                     true,
                     false,
