@@ -18,10 +18,13 @@ import org.bensam.touristry.tourism.TouristLocation;
 import org.bensam.touristry.tourism.TourismManager;
 import org.bensam.touristry.tourism.TouristReview;
 import org.bensam.touristry.tourism.VisitResult;
+import org.bensam.touristry.tourism.experience.ExperienceVisit;
 import org.bensam.touristry.tourism.experience.TouristExperience;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.List;
 
 public final class TouristMind {
@@ -34,8 +37,9 @@ public final class TouristMind {
     private final TouristEntity tourist;
 
     // persisted data
-    private TouristLocation currentLocation; // TODO: persist this
+    private TouristLocation currentLocation; // TODO: do we still need this?
     private TouristState state;
+    private Deque<ExperienceVisit> experienceStack = new ArrayDeque<>();
     private BlockPos beaconTarget;
     private BlockPos experienceTarget;
     private double closestDistanceToTarget;
@@ -377,7 +381,7 @@ public final class TouristMind {
         TouristEntity.logActivity(Verbosity.MAJOR_EVENTS, "Transitioning state to " + newState);
         switch (newState) {
             case PLANNING_NEXT_MOVE -> this.planNextTarget(serverLevel);
-            case CHOOSING_EXPERIENCE -> this.chooseActivityAtBeacon(serverLevel, beaconBlockEntity);
+            case CHOOSING_EXPERIENCE -> this.chooseExperienceAtBeacon(serverLevel, beaconBlockEntity);
             case TRAVELING_TO_EXPERIENCE -> this.resetExperienceJourneyStats();
             case WANDERING_WORLD -> this.beginWanderingWorld();
             case WANDERING_AT_BEACON -> this.beginWanderingAtBeacon();
@@ -495,7 +499,7 @@ public final class TouristMind {
         this.nextChooseActivityTicks = this.chooseNextChooseActivityTicks();
     }
 
-    private void chooseActivityAtBeacon(ServerLevel serverLevel, TouristBeaconBlockEntity beaconBlockEntity) {
+    private void chooseExperienceAtBeacon(ServerLevel serverLevel, TouristBeaconBlockEntity beaconBlockEntity) {
         List<TouristExperience> experiences = TourismManager.getTouristExperiencesNearBeacon(serverLevel, beaconBlockEntity);
 
         if (experiences.isEmpty()) {
@@ -644,6 +648,13 @@ public final class TouristMind {
     public void addAdditionalSaveData(ValueOutput valueOutput) {
         valueOutput.store("CurrentLocation", TouristLocation.CODEC, this.currentLocation);
         valueOutput.store("State", TouristState.CODEC, this.state);
+        
+        // Serialize experience stack as a list (bottom to top order).
+        if (!this.experienceStack.isEmpty()) {
+            valueOutput.store("ExperienceStack", ExperienceVisit.CODEC.listOf(), 
+                    List.copyOf(this.experienceStack));
+        }
+        
         if (this.beaconTarget != null) {
             valueOutput.store("BeaconTarget", BlockPos.CODEC, this.beaconTarget);
         }
@@ -666,6 +677,12 @@ public final class TouristMind {
         this.beaconTarget = valueInput.read("BeaconTarget", BlockPos.CODEC).orElse(null);
         this.state = valueInput.read("State", TouristState.CODEC).orElse(
                 (this.beaconTarget != null ? TouristState.TRAVELING_TO_BEACON : TouristState.IDLE));
+        
+        // Deserialize experience stack (restore as ArrayDeque).
+        List<ExperienceVisit> stackList = valueInput.read("ExperienceStack", ExperienceVisit.CODEC.listOf())
+                .orElse(List.of());
+        this.experienceStack = new ArrayDeque<>(stackList);
+        
         this.experienceTarget = valueInput.read("ExperienceTarget", BlockPos.CODEC).orElse(null);
         this.closestDistanceToTarget = valueInput.getDoubleOr("ClosestDistanceToBeacon", Double.MAX_VALUE);
         this.consecutiveFailedProgressChecks = valueInput.getIntOr("FailedProgressChecks", 0);
