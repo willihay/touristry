@@ -13,6 +13,7 @@ import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
+import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.OpenDoorGoal;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.npc.villager.AbstractVillager;
@@ -68,11 +69,19 @@ public class TouristEntity extends AbstractVillager {
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(1, new MoveToTargetGoal(this)); // MOVE
         this.goalSelector.addGoal(2, new OpenDoorGoal(this, true));
-        this.goalSelector.addGoal(3, new TouristRandomStrollGoal(this, 0.6)); // MOVE
-        this.goalSelector.addGoal(3, new TouristLookAtEntityGoal(this, Player.class, 12.0f, 0.02f)); // LOOK
+        this.goalSelector.addGoal(4, new TouristRandomStrollGoal(this, 0.6)); // MOVE
+        this.goalSelector.addGoal(4, new TouristLookAtEntityGoal(this, Player.class, 12.0f, 0.02f)); // LOOK
         this.goalSelector.addGoal(5, new TouristLookAtEntityGoal(this, AbstractVillager.class, 8.0f, 0.02f)); // LOOK
         this.goalSelector.addGoal(6, new TouristLookAtEntityGoal(this, Animal.class, 8.0f, 0.01f)); // LOOK
         this.goalSelector.addGoal(7, new TouristRandomLookAroundGoal(this)); // LOOK
+    }
+
+    public void addExperienceGoal(Goal goal) {
+        this.goalSelector.addGoal(3, goal);
+    }
+
+    public void removeExperienceGoal(Goal goal) {
+        this.goalSelector.removeGoal(goal);
     }
 
     public static void logActivity(Verbosity verbosityLevel, String message) {
@@ -400,5 +409,9 @@ public class TouristEntity extends AbstractVillager {
     protected void readAdditionalSaveData(ValueInput valueInput) {
         super.readAdditionalSaveData(valueInput);
         this.mind.readAdditionalSaveData(valueInput);
+
+        if (this.level() instanceof ServerLevel serverLevel) {
+            this.mind.onEntityLoaded(serverLevel);
+        }
     }
 }

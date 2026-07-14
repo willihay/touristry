@@ -1,12 +1,14 @@
 package org.bensam.touristry.entity;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.storage.ValueInput;
@@ -14,18 +16,16 @@ import net.minecraft.world.level.storage.ValueOutput;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
 import org.bensam.touristry.config.ModServerConfigManager;
 import org.bensam.touristry.config.Verbosity;
-import org.bensam.touristry.tourism.TouristLocation;
 import org.bensam.touristry.tourism.TourismManager;
 import org.bensam.touristry.tourism.TouristReview;
 import org.bensam.touristry.tourism.VisitResult;
+import org.bensam.touristry.tourism.experience.ExperienceTarget;
 import org.bensam.touristry.tourism.experience.ExperienceVisit;
 import org.bensam.touristry.tourism.experience.TouristExperience;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.List;
+import java.util.*;
 
 public final class TouristMind {
     private static final double MIN_MOOD = -3.0;
@@ -35,11 +35,14 @@ public final class TouristMind {
     private static final int CHECK_MOOD_INTERVAL_TICKS = 250;
 
     private final TouristEntity tourist;
+    private List<Goal> injectedExperienceGoals = new ArrayList<>();
+    private ExperienceTarget currentExperienceTarget;
 
     // persisted data
-    private TouristLocation currentLocation; // TODO: do we still need this?
     private TouristState state;
-    private Deque<ExperienceVisit> experienceStack = new ArrayDeque<>();
+    private List<UUID> availableExperienceUUIDs = new ArrayList<>(); // experiences at current beacon (cached on arrival)
+    private Set<UUID> visitedExperienceUUIDs = new HashSet<>(); // set of experiences already visited at current beacon
+    private Deque<ExperienceVisit> experienceTracker = new ArrayDeque<>(); // target tracker for current experience
     private BlockPos beaconTarget;
     private BlockPos experienceTarget;
     private double closestDistanceToTarget;
@@ -51,6 +54,8 @@ public final class TouristMind {
     private int eveningDespawnTimeTicks;
     private boolean isHungry;
     private boolean isStayingOvernight;
+    private int currentTargetIndex;
+    private int ticksAtCurrentExperience;
     private int ticksAtCurrentTarget;
 
     private int nextChooseActivityTicks;
@@ -58,7 +63,6 @@ public final class TouristMind {
 
     public TouristMind(TouristEntity tourist) {
         this.tourist = tourist;
-        this.currentLocation = TouristLocation.WORLD;
         this.state = TouristState.IDLE;
         this.beaconTarget = null;
         this.experienceTarget = null;
@@ -70,7 +74,55 @@ public final class TouristMind {
         this.eveningDespawnTimeTicks = this.chooseEveningDespawnTime();
         this.isHungry = false;
         this.isStayingOvernight = false;
+        this.currentTargetIndex = -1;
+        this.ticksAtCurrentExperience = 0;
         this.ticksAtCurrentTarget = 0;
+    }
+
+    /**
+     * Called after entity and mind data have been fully loaded.
+     * Reconstructs runtime state that cannot be serialized (e.g., Goals).
+     *
+     * CRITICAL: Must be called from TouristEntity.readAdditionalSaveData()
+     * after mind.readAdditionalSaveData() completes.
+     */
+    public void onEntityLoaded(ServerLevel serverLevel) {
+       if (this.state == TouristState.EXPERIENCING_TARGET) {
+           this.reconstructExperienceGoals(serverLevel);
+       }
+    }
+
+    private void reconstructExperienceGoals(ServerLevel serverLevel) {
+        if (this.experienceTracker.isEmpty()) {
+            // Inconsistent state - should not be EXPERIENCING_TARGET with empty stack.
+            TouristEntity.logActivity(Verbosity.GAMEPLAY_WARNINGS, "[TouristMind] Load warning: State is EXPERIENCING_TARGET but experience tracker is empty");
+            this.transitionTo(TouristState.PLANNING_NEXT_MOVE);
+            return;
+        }
+
+        if (this.currentExperienceTarget == null) {
+            // Inconsistent state - should have a target.
+            TouristEntity.logActivity(Verbosity.GAMEPLAY_WARNINGS, "[TouristMind] Load warning: State is EXPERIENCING_TARGET but current experience target is null");
+            this.transitionTo(TouristState.CHOOSING_EXPERIENCE_ACTIVITY);
+            return;
+        }
+
+        ExperienceVisit currentVisit = this.experienceTracker.peekFirst();
+        TouristExperience experience = TourismManager.getTouristExperienceById(currentVisit.experienceUUID());
+
+        if (experience == null) {
+            // Experience was unloaded / removed - exit gracefully.
+            TouristEntity.logActivity(Verbosity.GAMEPLAY_WARNINGS, "[TouristMind] Load warning: Experience {} no longer exists", currentVisit.experienceUUID());
+            this.exitCurrentExperience(serverLevel, false);
+            return;
+        }
+
+        // Recreate and inject the goal for the current target.
+        Goal goal = experience.createGoalForTarget(this.tourist, this.currentExperienceTarget);
+        if (goal != null) {
+            this.injectExperienceGoal(goal);
+            TouristEntity.logActivity(Verbosity.LEVEL_1_DIAGNOSTICS, "[TouristMind] Load: Reconstructed experience goal {}", goal.getClass().getSimpleName());
+        }
     }
 
     public boolean avoidWater() {
@@ -277,6 +329,18 @@ public final class TouristMind {
 
     private double chooseStartingMood() {
         return 1.0 + this.random().nextDouble();
+    }
+
+    private void clearInjectedGoals() {
+        for (Goal goal : this.injectedExperienceGoals) {
+            this.tourist.removeExperienceGoal(goal);
+        }
+        this.injectedExperienceGoals.clear();
+    }
+
+    private void injectExperienceGoal(Goal goal) {
+        this.tourist.addExperienceGoal(goal);
+        this.injectedExperienceGoals.add(goal);
     }
 
     private boolean isInMoodToDespawn() {
@@ -518,6 +582,10 @@ public final class TouristMind {
         this.transitionTo(TouristState.FINISHED);
     }
 
+    private void exitCurrentExperience(ServerLevel serverLevel, boolean completed) {
+        // TODO
+    }
+
     public void onForcedDespawn() {
         this.transitionTo(TouristState.DESPAWNING);
     }
@@ -646,13 +714,21 @@ public final class TouristMind {
     //endregion
 
     public void addAdditionalSaveData(ValueOutput valueOutput) {
-        valueOutput.store("CurrentLocation", TouristLocation.CODEC, this.currentLocation);
         valueOutput.store("State", TouristState.CODEC, this.state);
-        
-        // Serialize experience stack as a list (bottom to top order).
-        if (!this.experienceStack.isEmpty()) {
-            valueOutput.store("ExperienceStack", ExperienceVisit.CODEC.listOf(), 
-                    List.copyOf(this.experienceStack));
+
+        if (!this.availableExperienceUUIDs.isEmpty()) {
+            valueOutput.store("AvailableExperiences", UUIDUtil.CODEC.listOf(), this.availableExperienceUUIDs);
+        }
+
+        // Serialize visited experience set of UUIDs as a list.
+        if (!this.visitedExperienceUUIDs.isEmpty()) {
+            valueOutput.store("VisitedExperiences", UUIDUtil.CODEC.listOf(), List.copyOf(this.visitedExperienceUUIDs));
+        }
+
+        // Serialize experience tracker stack as a list (bottom to top order).
+        if (!this.experienceTracker.isEmpty()) {
+            valueOutput.store("ExperienceTracker", ExperienceVisit.CODEC.listOf(),
+                    List.copyOf(this.experienceTracker));
         }
         
         if (this.beaconTarget != null) {
@@ -661,6 +737,7 @@ public final class TouristMind {
         if (this.experienceTarget != null) {
             valueOutput.store("ExperienceTarget", BlockPos.CODEC, this.experienceTarget);
         }
+
         valueOutput.putDouble("ClosestDistanceToBeacon", this.closestDistanceToTarget);
         valueOutput.putInt("FailedProgressChecks", this.consecutiveFailedProgressChecks);
         valueOutput.putBoolean("ReportedHurtEnRoute", this.reportedHurtEnRoute);
@@ -670,18 +747,28 @@ public final class TouristMind {
         valueOutput.putInt("DespawnTimeTicks", this.eveningDespawnTimeTicks);
         valueOutput.putBoolean("IsHungry", this.isHungry);
         valueOutput.putBoolean("IsStayingOvernight", this.isStayingOvernight);
+        valueOutput.putInt("CurrentTargetIndex", this.currentTargetIndex);
+        valueOutput.putInt("TicksAtCurrentExperience", this.ticksAtCurrentExperience);
+        valueOutput.putInt("TicksAtCurrentTarget", this.ticksAtCurrentTarget);
     }
 
     public void readAdditionalSaveData(ValueInput valueInput) {
-        this.currentLocation = valueInput.read("CurrentLocation", TouristLocation.CODEC).orElse(TouristLocation.WORLD);
         this.beaconTarget = valueInput.read("BeaconTarget", BlockPos.CODEC).orElse(null);
         this.state = valueInput.read("State", TouristState.CODEC).orElse(
                 (this.beaconTarget != null ? TouristState.TRAVELING_TO_BEACON : TouristState.IDLE));
-        
-        // Deserialize experience stack (restore as ArrayDeque).
-        List<ExperienceVisit> stackList = valueInput.read("ExperienceStack", ExperienceVisit.CODEC.listOf())
+
+        this.availableExperienceUUIDs = new ArrayList<>(
+                valueInput.read("AvailableExperiences", UUIDUtil.CODEC.listOf()).orElse(List.of())
+        );
+
+        this.visitedExperienceUUIDs = new HashSet<>(
+                valueInput.read("VisitedExperiences", UUIDUtil.CODEC.listOf()).orElse(List.of())
+        );
+
+        // Deserialize experience tracker (restore as ArrayDeque).
+        List<ExperienceVisit> trackerList = valueInput.read("ExperienceTracker", ExperienceVisit.CODEC.listOf())
                 .orElse(List.of());
-        this.experienceStack = new ArrayDeque<>(stackList);
+        this.experienceTracker = new ArrayDeque<>(trackerList);
         
         this.experienceTarget = valueInput.read("ExperienceTarget", BlockPos.CODEC).orElse(null);
         this.closestDistanceToTarget = valueInput.getDoubleOr("ClosestDistanceToBeacon", Double.MAX_VALUE);
@@ -693,5 +780,17 @@ public final class TouristMind {
         this.eveningDespawnTimeTicks = valueInput.getIntOr("DespawnTimeTicks", this.chooseEveningDespawnTime());
         this.isHungry = valueInput.getBooleanOr("IsHungry", false);
         this.isStayingOvernight = valueInput.getBooleanOr("IsStayingOvernight", false);
+        this.currentTargetIndex = valueInput.getIntOr("CurrentTargetIndex", 0);
+        this.ticksAtCurrentExperience = valueInput.getIntOr("TicksAtCurrentExperience", 0);
+        this.ticksAtCurrentTarget = valueInput.getIntOr("TicksAtCurrentTarget", 0);
+
+        // Reconstruct currentExperienceTarget from experienceTracker.
+        if (!this.experienceTracker.isEmpty()) {
+            ExperienceVisit currentVisit = this.experienceTracker.peekFirst();
+            List<ExperienceTarget> remaining = currentVisit.remainingTargets();
+            if (!remaining.isEmpty()) {
+                this.currentExperienceTarget = remaining.getFirst();
+            }
+        }
     }
 }
