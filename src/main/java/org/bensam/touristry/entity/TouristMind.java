@@ -35,7 +35,7 @@ public final class TouristMind {
     private static final int CHECK_MOOD_INTERVAL_TICKS = 250;
 
     private final TouristEntity tourist;
-    private List<Goal> injectedExperienceGoals = new ArrayList<>();
+    private final List<Goal> injectedExperienceGoals = new ArrayList<>();
     private ExperienceTarget currentExperienceTarget;
 
     // persisted data
@@ -43,9 +43,9 @@ public final class TouristMind {
     private List<UUID> availableExperienceUUIDs = new ArrayList<>(); // experiences at current beacon (cached on arrival)
     private Set<UUID> visitedExperienceUUIDs = new HashSet<>(); // set of experiences already visited at current beacon
     private Deque<ExperienceVisit> experienceTracker = new ArrayDeque<>(); // target tracker for current experience
-    private BlockPos beaconTarget;
-    private BlockPos experienceTarget;
-    private double closestDistanceToTarget;
+    private BlockPos beaconPos;
+    private BlockPos experiencePos;
+    private double closestDistanceToDestination;
     private int consecutiveFailedProgressChecks;
     private boolean reportedHurtEnRoute;
     private boolean reportedHurtOnPremises;
@@ -64,8 +64,8 @@ public final class TouristMind {
     public TouristMind(TouristEntity tourist) {
         this.tourist = tourist;
         this.state = TouristState.IDLE;
-        this.beaconTarget = null;
-        this.experienceTarget = null;
+        this.beaconPos = null;
+        this.experiencePos = null;
         this.resetBeaconJourneyStats();
         this.mood = this.chooseStartingMood();
         this.goodExperiencesToday = 0;
@@ -103,7 +103,7 @@ public final class TouristMind {
         if (this.currentExperienceTarget == null) {
             // Inconsistent state - should have a target.
             TouristEntity.logActivity(Verbosity.GAMEPLAY_WARNINGS, "[TouristMind] Load warning: State is EXPERIENCING_TARGET but current experience target is null");
-            this.transitionTo(TouristState.CHOOSING_EXPERIENCE_ACTIVITY);
+            this.transitionTo(TouristState.CHOOSING_EXPERIENCE_TARGET);
             return;
         }
 
@@ -129,39 +129,39 @@ public final class TouristMind {
         return this.state == TouristState.WANDERING_AT_BEACON;
     }
 
-    public @Nullable BlockPos getBeaconTarget() {
-        return this.beaconTarget;
+    public @Nullable BlockPos getBeaconPos() {
+        return this.beaconPos;
     }
 
-    public double getClosestDistanceToTarget() {
-        return this.closestDistanceToTarget;
+    public double getClosestDistanceToDestination() {
+        return this.closestDistanceToDestination;
     }
 
     public int getConsecutiveFailedProgressChecks() {
         return this.consecutiveFailedProgressChecks;
     }
 
-    public @Nullable BlockPos getExperienceTarget() {
-        return this.experienceTarget;
+    public @Nullable BlockPos getExperiencePos() {
+        return this.experiencePos;
     }
 
     public @Nullable BlockPos getMoveToTarget() {
         if (this.state == TouristState.TRAVELING_TO_BEACON) {
-            return this.beaconTarget;
+            return this.beaconPos;
         } else if (this.state == TouristState.TRAVELING_TO_EXPERIENCE) {
-            return this.experienceTarget;
+            return this.experiencePos;
         }
         return null;
     }
 
     public String getMoveToTargetName() {
         if (this.state == TouristState.TRAVELING_TO_BEACON) {
-            TouristBeaconBlockEntity beaconBlockEntity = TourismManager.getBeaconBlockEntity(this.tourist.level(), this.beaconTarget);
+            TouristBeaconBlockEntity beaconBlockEntity = TourismManager.getBeaconBlockEntity(this.tourist.level(), this.beaconPos);
             if (beaconBlockEntity != null) {
                 return beaconBlockEntity.getPlainTextName();
             }
         } else if (this.state == TouristState.TRAVELING_TO_EXPERIENCE) {
-            TouristExperience experience = TourismManager.getTouristExperienceByPos(this.experienceTarget);
+            TouristExperience experience = TourismManager.getTouristExperienceByPos(this.experiencePos);
             if (experience != null) {
                 return experience.getDisplayName().getString();
             }
@@ -191,7 +191,7 @@ public final class TouristMind {
     }
 
     public boolean isCurrentActivityAtExperience() {
-        return this.state == TouristState.CHOOSING_EXPERIENCE_ACTIVITY ||
+        return this.state == TouristState.CHOOSING_EXPERIENCE_TARGET ||
                 this.state == TouristState.TRAVELING_TO_EXPERIENCE_TARGET ||
                 this.state == TouristState.EXPERIENCING_TARGET;
     }
@@ -223,7 +223,7 @@ public final class TouristMind {
     }
 
     public void recordProgressTowardsTarget(double closestDistanceToTarget, int consecutiveFailedProgressChecks) {
-        this.closestDistanceToTarget = closestDistanceToTarget;
+        this.closestDistanceToDestination = closestDistanceToTarget;
         this.consecutiveFailedProgressChecks = consecutiveFailedProgressChecks;
     }
 
@@ -397,7 +397,7 @@ public final class TouristMind {
     }
 
     private void resetBeaconJourneyStats() {
-        this.closestDistanceToTarget = Double.MAX_VALUE;
+        this.closestDistanceToDestination = Double.MAX_VALUE;
         this.consecutiveFailedProgressChecks = 0;
         this.reportedHurtEnRoute = false;
         this.reportedHurtOnPremises = false;
@@ -413,7 +413,7 @@ public final class TouristMind {
     }
 
     private void resetExperienceJourneyStats() {
-        this.closestDistanceToTarget = Double.MAX_VALUE;
+        this.closestDistanceToDestination = Double.MAX_VALUE;
         this.consecutiveFailedProgressChecks = 0;
     }
 
@@ -429,8 +429,8 @@ public final class TouristMind {
             return;
         }
 
-        TouristBeaconBlockEntity beaconBlockEntity = this.beaconTarget != null
-                ? TourismManager.getBeaconBlockEntity(serverLevel, this.beaconTarget)
+        TouristBeaconBlockEntity beaconBlockEntity = this.beaconPos != null
+                ? TourismManager.getBeaconBlockEntity(serverLevel, this.beaconPos)
                 : null;
 
         // Validate prerequisites before transition.
@@ -475,12 +475,12 @@ public final class TouristMind {
     }
 
     private void arriveAtBeacon(ServerLevel serverLevel) {
-        TouristBeaconBlockEntity beaconBlockEntity = TourismManager.getBeaconBlockEntity(tourist.level(), this.beaconTarget);
+        TouristBeaconBlockEntity beaconBlockEntity = TourismManager.getBeaconBlockEntity(tourist.level(), this.beaconPos);
 
         if (beaconBlockEntity == null) {
-            // No beacon found at beaconTarget!
+            // No beacon found at beaconPos!
             this.updateMood(VisitResult.LOST);
-            Component experienceMessage = Component.literal("did not find a beacon at " + this.beaconTarget.toShortString());
+            Component experienceMessage = Component.literal("did not find a beacon at " + this.beaconPos.toShortString());
             this.recordExperience(serverLevel, new TouristReview(
                     this.state.reviewTarget(),
                     VisitResult.LOST,
@@ -521,11 +521,11 @@ public final class TouristMind {
     }
 
     private void arriveAtExperience(ServerLevel serverLevel) {
-        TouristExperience experience = TourismManager.getTouristExperienceByPos(this.experienceTarget);
+        TouristExperience experience = TourismManager.getTouristExperienceByPos(this.experiencePos);
         if (experience == null) {
-            // No experience block found at experienceTarget!
+            // No experience block found at experiencePos!
             this.updateMood(VisitResult.LOST);
-            Component experienceMessage = Component.literal("did not find any tourist experience at " + this.experienceTarget.toShortString());
+            Component experienceMessage = Component.literal("did not find any tourist experience at " + this.experiencePos.toShortString());
             this.recordExperience(serverLevel, new TouristReview(
                     this.state.reviewTarget(),
                     VisitResult.LOST,
@@ -557,7 +557,7 @@ public final class TouristMind {
     }
 
     private void beginWanderingWorld() {
-        this.beaconTarget = null;
+        this.beaconPos = null;
         this.resetBeaconJourneyStats();
         this.tourist.clearHeldItem();
         this.nextChooseActivityTicks = this.chooseNextChooseActivityTicks();
@@ -573,7 +573,7 @@ public final class TouristMind {
 
         int index = this.random().nextInt(experiences.size());
         TouristExperience experience = experiences.get(index);
-        this.experienceTarget = experience.getBlockPos().immutable();
+        this.experiencePos = experience.getBlockPos().immutable();
         this.transitionTo(TouristState.TRAVELING_TO_EXPERIENCE);
     }
 
@@ -604,10 +604,10 @@ public final class TouristMind {
         this.updateMood(VisitResult.LOST);
 
         if (this.state == TouristState.TRAVELING_TO_EXPERIENCE) {
-            TouristExperience experience = TourismManager.getTouristExperienceByPos(this.experienceTarget);
+            TouristExperience experience = TourismManager.getTouristExperienceByPos(this.experiencePos);
             Component experienceMessage;
             if (experience == null) {
-                experienceMessage = Component.literal("got lost travelling to experience at " + this.experienceTarget.toShortString());
+                experienceMessage = Component.literal("got lost travelling to experience at " + this.experiencePos.toShortString());
             } else {
                 experienceMessage = Component.literal("got lost travelling to ")
                         .append(experience.getDisplayName());
@@ -671,7 +671,7 @@ public final class TouristMind {
 
         double maxTravelDistanceToNextBeacon = ModServerConfigManager.getConfig().touristEntityConfig().getMaxTravelDistanceToNextBeacon();
         double maxTravelDistanceToNextBeaconSqr = maxTravelDistanceToNextBeacon * maxTravelDistanceToNextBeacon;
-        if (this.beaconTarget == null) {
+        if (this.beaconPos == null) {
             closestBeacons = TourismManager.getTouristBeaconsByDistance(
                     serverLevel,
                     this.tourist.blockPosition(),
@@ -682,9 +682,9 @@ public final class TouristMind {
         } else {
             closestBeacons = TourismManager.getTouristBeaconsByDistance(
                     serverLevel,
-                    this.beaconTarget,
+                    this.beaconPos,
                     beaconBlockEntity ->
-                            !beaconBlockEntity.getBlockPos().equals(this.beaconTarget)
+                            !beaconBlockEntity.getBlockPos().equals(this.beaconPos)
                                     && beaconBlockEntity.isOpenForBusiness()
                                     && this.tourist.blockPosition().distSqr(beaconBlockEntity.getBlockPos()) <= maxTravelDistanceToNextBeaconSqr
             );
@@ -706,7 +706,7 @@ public final class TouristMind {
     }
 
     public void prepareForJourney(@NonNull BlockPos beaconTarget) {
-        this.beaconTarget = beaconTarget.immutable();
+        this.beaconPos = beaconTarget.immutable();
         this.resetBeaconJourneyStats();
         this.tourist.giveItemToHold(new ItemStack(Items.MAP));
         this.transitionTo(TouristState.TRAVELING_TO_BEACON);
@@ -731,14 +731,14 @@ public final class TouristMind {
                     List.copyOf(this.experienceTracker));
         }
         
-        if (this.beaconTarget != null) {
-            valueOutput.store("BeaconTarget", BlockPos.CODEC, this.beaconTarget);
+        if (this.beaconPos != null) {
+            valueOutput.store("BeaconPos", BlockPos.CODEC, this.beaconPos);
         }
-        if (this.experienceTarget != null) {
-            valueOutput.store("ExperienceTarget", BlockPos.CODEC, this.experienceTarget);
+        if (this.experiencePos != null) {
+            valueOutput.store("ExperiencePos", BlockPos.CODEC, this.experiencePos);
         }
 
-        valueOutput.putDouble("ClosestDistanceToBeacon", this.closestDistanceToTarget);
+        valueOutput.putDouble("ClosestDistanceToDestination", this.closestDistanceToDestination);
         valueOutput.putInt("FailedProgressChecks", this.consecutiveFailedProgressChecks);
         valueOutput.putBoolean("ReportedHurtEnRoute", this.reportedHurtEnRoute);
         valueOutput.putBoolean("ReportedHurtOnPremises", this.reportedHurtOnPremises);
@@ -753,9 +753,9 @@ public final class TouristMind {
     }
 
     public void readAdditionalSaveData(ValueInput valueInput) {
-        this.beaconTarget = valueInput.read("BeaconTarget", BlockPos.CODEC).orElse(null);
+        this.beaconPos = valueInput.read("BeaconPos", BlockPos.CODEC).orElse(null);
         this.state = valueInput.read("State", TouristState.CODEC).orElse(
-                (this.beaconTarget != null ? TouristState.TRAVELING_TO_BEACON : TouristState.IDLE));
+                (this.beaconPos != null ? TouristState.TRAVELING_TO_BEACON : TouristState.IDLE));
 
         this.availableExperienceUUIDs = new ArrayList<>(
                 valueInput.read("AvailableExperiences", UUIDUtil.CODEC.listOf()).orElse(List.of())
@@ -770,8 +770,8 @@ public final class TouristMind {
                 .orElse(List.of());
         this.experienceTracker = new ArrayDeque<>(trackerList);
         
-        this.experienceTarget = valueInput.read("ExperienceTarget", BlockPos.CODEC).orElse(null);
-        this.closestDistanceToTarget = valueInput.getDoubleOr("ClosestDistanceToBeacon", Double.MAX_VALUE);
+        this.experiencePos = valueInput.read("ExperiencePos", BlockPos.CODEC).orElse(null);
+        this.closestDistanceToDestination = valueInput.getDoubleOr("ClosestDistanceToDestination", Double.MAX_VALUE);
         this.consecutiveFailedProgressChecks = valueInput.getIntOr("FailedProgressChecks", 0);
         this.reportedHurtEnRoute = valueInput.getBooleanOr("ReportedHurtEnRoute", false);
         this.reportedHurtOnPremises = valueInput.getBooleanOr("ReportedHurtOnPremises", false);

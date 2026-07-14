@@ -209,7 +209,7 @@ public class TouristEntity extends AbstractVillager {
     }
 
     public @Nullable BlockPos getBeaconTarget() {
-        return this.mind.getBeaconTarget();
+        return this.mind.getBeaconPos();
     }
 
     @Override
@@ -218,7 +218,7 @@ public class TouristEntity extends AbstractVillager {
     }
 
     public double getClosestDistanceToTarget() {
-        return this.mind.getClosestDistanceToTarget();
+        return this.mind.getClosestDistanceToDestination();
     }
 
     public int getConsecutiveFailedProgressChecks() {
@@ -231,7 +231,7 @@ public class TouristEntity extends AbstractVillager {
     }
 
     public @Nullable BlockPos getExperienceTarget() {
-        return this.mind.getExperienceTarget();
+        return this.mind.getExperiencePos();
     }
 
     @Override
