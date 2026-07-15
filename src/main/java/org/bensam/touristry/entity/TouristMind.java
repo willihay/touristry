@@ -186,30 +186,6 @@ public final class TouristMind {
         return this.reportedHurtOnPremises;
     }
 
-    public boolean isCurrentActivityAtBeacon() {
-        return this.state == TouristState.CHOOSING_EXPERIENCE
-                || this.state == TouristState.WANDERING_AT_BEACON;
-    }
-
-    public boolean isCurrentActivityAtExperience() {
-        return this.state == TouristState.CHOOSING_EXPERIENCE_ACTIVITY ||
-                this.state == TouristState.TRAVELING_TO_EXPERIENCE_TARGET ||
-                this.state == TouristState.EXPERIENCING_TARGET;
-    }
-
-    public boolean isPlanningActivity() {
-        return this.state == TouristState.PLANNING_NEXT_MOVE || this.state == TouristState.CHOOSING_EXPERIENCE;
-    }
-
-    public boolean isTravelingToBlock() {
-        return this.state == TouristState.TRAVELING_TO_BEACON ||
-                this.state == TouristState.TRAVELING_TO_EXPERIENCE;
-    }
-
-    public boolean isWandering() {
-        return this.state == TouristState.WANDERING_AT_BEACON || this.state == TouristState.WANDERING_WORLD;
-    }
-
     public void recordExperience(ServerLevel serverLevel, TouristReview review) {
         SoundEvent soundEvent = null;
 
@@ -253,9 +229,6 @@ public final class TouristMind {
         // Time-based despawn check
         if (this.isTimeToDespawn()) {
             this.clearBeaconSession();
-            if (this.isCurrentActivityAtBeacon() && !this.isInMoodToDespawn()) {
-                this.recordGoodExperience(serverLevel);
-            }
             this.transitionTo(TouristState.DESPAWNING);
             return;
         }
@@ -267,7 +240,7 @@ public final class TouristMind {
 
                 Component moodMessage;
                 boolean appendTargetName = true;
-                if (this.isCurrentActivityAtBeacon() || this.isCurrentActivityAtExperience()) {
+                if (this.state.isAtTouristLocation()) {
                     moodMessage = Component.literal("is in a bad mood and is leaving early from");
                 } else {
                     moodMessage = Component.literal("is in a bad mood and is leaving early");
@@ -329,6 +302,21 @@ public final class TouristMind {
         TouristExperience experience = TourismManager.getTouristExperienceById(currentVisit.experienceUUID());
 
         if (experience == null) {
+            this.exitCurrentExperience(serverLevel, false);
+            return;
+        }
+
+        if (!experience.isOpenForBusiness()) {
+            this.updateMood(VisitResult.CLOSED_EARLY);
+            this.recordExperience(serverLevel, new TouristReview(
+                    this.state.reviewTarget(),
+                    VisitResult.CLOSED_EARLY,
+                    true,
+                    true,
+                    Component.literal("left experience that closed early at"),
+                    true,
+                    true
+            ));
             this.exitCurrentExperience(serverLevel, false);
             return;
         }
@@ -484,35 +472,40 @@ public final class TouristMind {
         }
 
         // Call state transition handlers, if applicable.
-        TouristEntity.logActivity(Verbosity.MAJOR_EVENTS, "Transitioning state to " + newState);
+        TouristEntity.logActivity(Verbosity.MAJOR_EVENTS, "[TouristMind] Transitioning state to " + newState);
         switch (newState) {
             case PLANNING_NEXT_MOVE -> this.planNextMove(serverLevel);
             case CHOOSING_EXPERIENCE -> this.chooseExperienceAtBeacon(serverLevel, beaconBlockEntity);
-            case TRAVELING_TO_EXPERIENCE -> this.resetExperienceJourneyStats();
+            case CHOOSING_EXPERIENCE_ACTIVITY -> this.chooseExperienceActivity(serverLevel);
+            case TRAVELING_TO_EXPERIENCE, TRAVELING_TO_EXPERIENCE_TARGET -> this.resetExperienceJourneyStats();
+            case ENTERING_EXPERIENCE -> this.enterExperience(serverLevel);
             case WANDERING_WORLD -> this.beginWanderingWorld();
-            case WANDERING_AT_BEACON -> this.beginWanderingAtBeacon();
+            case WANDERING_AT_BEACON, WANDERING_AT_EXPERIENCE -> this.beginWanderingAtBlock();
             case DESPAWNING, LOST -> this.deSpawn();
             default -> {}
         }
     }
 
-    public void arriveAtBlock() {
-        if (!this.isTravelingToBlock()) {
+    public void arriveAtDestination() {
+        if (!this.state.isTraveling()) {
             return;
         }
-
-        this.tourist.stopNavigation();
 
         if (!(this.tourist.level() instanceof ServerLevel serverLevel)) {
             return;
         }
 
+        // Stop navigation and clear held item.
+        this.tourist.stopNavigation();
         this.tourist.clearHeldItem();
 
-        if (this.state == TouristState.TRAVELING_TO_EXPERIENCE) {
-            this.arriveAtExperience(serverLevel);
-        } else {
-            this.arriveAtBeacon(serverLevel);
+        // Call the appropriate arrival helper.
+        switch (this.state) {
+            case TRAVELING_TO_BEACON -> this.arriveAtBeacon(serverLevel);
+
+            case TRAVELING_TO_EXPERIENCE -> this.arriveAtExperience(serverLevel);
+
+            case TRAVELING_TO_EXPERIENCE_TARGET -> this.arriveAtExperienceTarget(serverLevel);
         }
     }
 
@@ -563,34 +556,20 @@ public final class TouristMind {
     }
 
     private void arriveAtExperience(ServerLevel serverLevel) {
-        TouristExperience experience = TourismManager.getTouristExperienceByPos(this.experiencePos);
-        if (experience == null) {
-            // No experience block found at experiencePos!
-            this.updateMood(VisitResult.LOST);
-            Component experienceMessage = Component.literal("did not find any tourist experience at " + this.experiencePos.toShortString());
-            this.recordExperience(serverLevel, new TouristReview(
-                    this.state.reviewTarget(),
-                    VisitResult.LOST,
-                    true,
-                    true,
-                    experienceMessage,
-                    true,
-                    false));
-            this.transitionTo(TouristState.PLANNING_NEXT_MOVE); // TODO: Choose a different experience at beacon, if available.
-            return;
+        // If already in this experience (stack top matches), skip re-entry.
+        if (!this.experienceTracker.isEmpty()) {
+            ExperienceVisit topVisit = this.experienceTracker.peekFirst();
+            TouristExperience experience = TourismManager.getTouristExperienceByPos(this.experiencePos);
+
+            if (experience != null && experience.getUUID().equals(topVisit.experienceUUID())) {
+                // Just transition to activity selection.
+                this.transitionTo(TouristState.CHOOSING_EXPERIENCE_ACTIVITY);
+                return;
+            }
         }
 
-        Component experienceMessage = Component.literal("arrived at ")
-                .append(experience.getDisplayName());
-        this.recordExperience(serverLevel, new TouristReview(
-                this.state.reviewTarget(),
-                VisitResult.ARRIVED,
-                false,
-                false,
-                experienceMessage,
-                true,
-                false));
-        this.transitionTo(TouristState.ENJOYING_EXPERIENCE);
+        // New experience - enter it.
+        this.transitionTo(TouristState.ENTERING_EXPERIENCE);
     }
 
     private void arriveAtExperienceTarget(ServerLevel serverLevel) {
@@ -607,10 +586,6 @@ public final class TouristMind {
             return;
         }
 
-        // Stop navigation.
-        this.tourist.stopNavigation();
-        this.tourist.clearHeldItem();
-
         // Ask experience to create goal for this specific target.
         Goal experienceGoal = experience.createGoalForTarget(this.tourist, this.currentExperienceTarget);
 
@@ -624,7 +599,7 @@ public final class TouristMind {
         this.transitionTo(TouristState.EXPERIENCING_TARGET);
     }
 
-    private void beginWanderingAtBeacon() {
+    private void beginWanderingAtBlock() {
         this.tourist.clearHeldItem();
         this.nextChooseActivityTicks = this.chooseNextChooseActivityTicks();
     }
@@ -870,7 +845,7 @@ public final class TouristMind {
     }
 
     public void onLost() {
-        if (!this.isTravelingToBlock()) {
+        if (!this.state.isTraveling()) {
             return;
         }
 

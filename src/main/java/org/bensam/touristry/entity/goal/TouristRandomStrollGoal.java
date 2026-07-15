@@ -1,12 +1,11 @@
 package org.bensam.touristry.entity.goal;
 
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.ai.goal.RandomStrollGoal;
 import net.minecraft.world.entity.ai.util.LandRandomPos;
 import net.minecraft.world.phys.Vec3;
-import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
 import org.bensam.touristry.config.Verbosity;
 import org.bensam.touristry.entity.TouristEntity;
-import org.bensam.touristry.tourism.TourismManager;
 import org.jspecify.annotations.Nullable;
 
 public class TouristRandomStrollGoal extends RandomStrollGoal {
@@ -20,12 +19,12 @@ public class TouristRandomStrollGoal extends RandomStrollGoal {
 
     @Override
     public boolean canUse() {
-        return super.canUse() && this.tourist.getMind().isWandering();
+        return super.canUse() && this.tourist.isWandering();
     }
 
     @Override
     public boolean canContinueToUse() {
-        return super.canContinueToUse() && this.tourist.getMind().isWandering();
+        return super.canContinueToUse() && this.tourist.isWandering();
     }
 
     @Override
@@ -34,13 +33,9 @@ public class TouristRandomStrollGoal extends RandomStrollGoal {
 
         if (this.tourist.level().isClientSide()) return;
 
-        if (this.tourist.isCurrentActivityAtBeacon()) {
-            String beaconName = "unknown beacon";
-            TouristBeaconBlockEntity beaconBlockEntity = TourismManager.getBeaconBlockEntity(this.tourist.level(), this.tourist.getBeaconTarget());
-            if (beaconBlockEntity != null) {
-                beaconName = beaconBlockEntity.getPlainTextName();
-            }
-            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "Starting TouristRandomStrollGoal to wander around " + beaconName);
+        if (this.tourist.isAtTouristLocation()) {
+            Component blockName = this.tourist.getCurrentTouristLocationNameOrPos(this.tourist.level());
+            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "Starting TouristRandomStrollGoal to wander around " + blockName.getString());
         } else {
             TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "Starting TouristRandomStrollGoal to wander in the world");
         }

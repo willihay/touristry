@@ -141,6 +141,28 @@ public class TourismManager {
         );
     }
 
+    public static Component getTouristBlockNameOrPos(Level level, TouristLocation locationType, BlockPos blockPos) {
+        switch (locationType) {
+            case BEACON -> {
+                TouristBeaconBlockEntity beaconBlockEntity = getBeaconBlockEntity(level, blockPos);
+                if (beaconBlockEntity != null) {
+                    return beaconBlockEntity.getDisplayName();
+                }
+            }
+
+            case EXPERIENCE -> {
+                TouristExperience experienceBlockEntity = getTouristExperienceByPos(blockPos);
+                if (experienceBlockEntity != null) {
+                    return experienceBlockEntity.getDisplayName();
+                }
+            }
+
+            default -> {} // fallthrough
+        }
+
+        return Component.literal(blockPos.toShortString());
+    }
+
     //region Experience Helpers
     public static @Nullable AbstractExperienceBlockEntity findClosestExperienceEntity(BlockPos pos) {
         TouristExperience closestExperience = null;

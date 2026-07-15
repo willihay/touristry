@@ -26,12 +26,12 @@ public class MoveToTargetGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        return this.tourist.getMoveToTarget() != null && this.tourist.isTravelingToBlock();
+        return this.tourist.getMoveToTarget() != null && this.tourist.isTraveling();
     }
 
     @Override
     public boolean canContinueToUse() {
-        return this.tourist.getMoveToTarget() != null && this.tourist.isTravelingToBlock();
+        return this.tourist.getMoveToTarget() != null && this.tourist.isTraveling();
     }
 
     @Override
@@ -74,7 +74,7 @@ public class MoveToTargetGoal extends Goal {
         }
 
         if (this.isAtTarget(targetPos)) {
-            this.tourist.getMind().arriveAtBlock();
+            this.tourist.getMind().arriveAtDestination();
             return;
         }
 

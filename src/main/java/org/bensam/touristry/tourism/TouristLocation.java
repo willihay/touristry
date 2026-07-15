@@ -1,7 +1,7 @@
 package org.bensam.touristry.tourism;
 
-public enum ReviewTarget {
-    NONE,
+public enum TouristLocation {
+    WORLD,
     BEACON,
     EXPERIENCE
 }

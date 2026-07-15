@@ -2,37 +2,38 @@ package org.bensam.touristry.entity;
 
 import com.mojang.serialization.Codec;
 import net.minecraft.util.StringRepresentable;
-import org.bensam.touristry.tourism.ReviewTarget;
+import org.bensam.touristry.tourism.TouristLocation;
 
 import java.util.Locale;
 
 public enum TouristState implements StringRepresentable {
-    IDLE(false, ReviewTarget.NONE),
-    PLANNING_NEXT_MOVE(false, ReviewTarget.NONE),
-    TRAVELING_TO_BEACON(true, ReviewTarget.BEACON),
-    CHOOSING_EXPERIENCE(true, ReviewTarget.BEACON),
-    TRAVELING_TO_EXPERIENCE(false, ReviewTarget.EXPERIENCE),
-    ENTERING_EXPERIENCE(false, ReviewTarget.EXPERIENCE),
-    CHOOSING_EXPERIENCE_ACTIVITY(false, ReviewTarget.EXPERIENCE),
-    TRAVELING_TO_EXPERIENCE_TARGET(false, ReviewTarget.EXPERIENCE),
-    EXPERIENCING_TARGET(false, ReviewTarget.EXPERIENCE),
-    ENJOYING_EXPERIENCE(false, ReviewTarget.EXPERIENCE), // TODO: remove
-    LEAVING_EXPERIENCE(false, ReviewTarget.EXPERIENCE),
-    WANDERING_AT_BEACON(true, ReviewTarget.BEACON),
-    WANDERING_AT_EXPERIENCE(false, ReviewTarget.EXPERIENCE),
-    WANDERING_WORLD(false, ReviewTarget.NONE),
-    SLEEPING(true, ReviewTarget.EXPERIENCE),
-    DESPAWNING(false, ReviewTarget.NONE),
-    LOST(false, ReviewTarget.NONE),
-    FINISHED(false, ReviewTarget.NONE);
+    IDLE(false, TouristLocation.WORLD, TouristLocation.WORLD),
+    PLANNING_NEXT_MOVE(false, TouristLocation.WORLD, TouristLocation.WORLD),
+    TRAVELING_TO_BEACON(true, TouristLocation.WORLD, TouristLocation.BEACON),
+    CHOOSING_EXPERIENCE(true, TouristLocation.BEACON, TouristLocation.BEACON),
+    TRAVELING_TO_EXPERIENCE(false, TouristLocation.BEACON, TouristLocation.EXPERIENCE),
+    ENTERING_EXPERIENCE(false, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
+    CHOOSING_EXPERIENCE_ACTIVITY(false, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
+    TRAVELING_TO_EXPERIENCE_TARGET(false, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
+    EXPERIENCING_TARGET(false, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
+    LEAVING_EXPERIENCE(false, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
+    WANDERING_AT_BEACON(true, TouristLocation.BEACON, TouristLocation.BEACON),
+    WANDERING_AT_EXPERIENCE(false, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
+    WANDERING_WORLD(false, TouristLocation.WORLD, TouristLocation.WORLD),
+    SLEEPING(true, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
+    DESPAWNING(false, TouristLocation.WORLD, TouristLocation.WORLD),
+    LOST(false, TouristLocation.WORLD, TouristLocation.WORLD),
+    FINISHED(false, TouristLocation.WORLD, TouristLocation.WORLD);
 
     private final boolean requiresBeacon;
-    private final ReviewTarget reviewTarget;
+    private final TouristLocation touristLocation;
+    private final TouristLocation reviewTarget;
 
     public static final Codec<TouristState> CODEC = StringRepresentable.fromEnum(TouristState::values);
 
-    TouristState(boolean requiresBeacon, ReviewTarget reviewTarget) {
+    TouristState(boolean requiresBeacon, TouristLocation touristLocation, TouristLocation reviewTarget) {
         this.requiresBeacon = requiresBeacon;
+        this.touristLocation = touristLocation;
         this.reviewTarget = reviewTarget;
     }
 
@@ -41,11 +42,35 @@ public enum TouristState implements StringRepresentable {
         return name().toLowerCase(Locale.ROOT);
     }
 
+    public boolean isAtBeacon() {
+        return this.touristLocation == TouristLocation.BEACON;
+    }
+
+    public boolean isAtExperience() {
+        return this.touristLocation == TouristLocation.EXPERIENCE;
+    }
+
+    public boolean isAtTouristLocation() {
+        return this.touristLocation != TouristLocation.WORLD;
+    }
+
+    public boolean isTraveling() {
+        return this == TRAVELING_TO_BEACON || this == TRAVELING_TO_EXPERIENCE || this == TRAVELING_TO_EXPERIENCE_TARGET;
+    }
+
+    public boolean isWandering() {
+        return this == WANDERING_WORLD || this == WANDERING_AT_BEACON || this == WANDERING_AT_EXPERIENCE;
+    }
+
     public boolean requiresBeacon() {
         return this.requiresBeacon;
     }
 
-    public ReviewTarget reviewTarget() {
+    public TouristLocation reviewTarget() {
         return this.reviewTarget;
+    }
+
+    public TouristLocation touristLocation() {
+        return this.touristLocation;
     }
 }

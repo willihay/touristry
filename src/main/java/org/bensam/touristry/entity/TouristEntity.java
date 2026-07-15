@@ -111,44 +111,35 @@ public class TouristEntity extends AbstractVillager {
             TouristReview review,
             @Nullable SoundEvent soundEvent
     ) {
+        BlockPos reviewTargetPos = null;
         Component targetName = Component.literal("no specific target");
 
-        if (review.reviewTarget() == ReviewTarget.BEACON) {
-            BlockPos reviewTargetPos = this.getBeaconTarget();
-            TouristBeaconBlockEntity beaconBlockEntity = null;
-            if (reviewTargetPos != null) {
-                beaconBlockEntity = TourismManager.getBeaconBlockEntity(serverLevel, reviewTargetPos);
-                if (beaconBlockEntity != null) {
-                    targetName = beaconBlockEntity.getDisplayName();
-                }
-            }
+        if (review.reviewTarget() == TouristLocation.BEACON) {
+            reviewTargetPos = this.getBeaconTarget();
 
             if (review.applyRatingToTarget()) {
+                TouristBeaconBlockEntity beaconBlockEntity = TourismManager.getBeaconBlockEntity(serverLevel, reviewTargetPos);
                 if (beaconBlockEntity != null) {
                     beaconBlockEntity.rateVisit(review.result(), serverLevel.getDayTime());
                 } else {
                     // TODO: Leave a pending VisitResult rating with the TourismManager for if/when the beacon returns.
                 }
             }
-        } else if (review.reviewTarget() == ReviewTarget.EXPERIENCE) {
-            BlockPos reviewTargetPos = this.getExperienceTarget();
-            TouristExperience experience = null;
-            if (reviewTargetPos != null) {
-                experience = TourismManager.getTouristExperienceByPos(reviewTargetPos);
-                if (experience != null) {
-                    targetName = experience.getDisplayName();
-                } else {
-                    targetName = Component.literal(reviewTargetPos.toShortString());
-                }
-            }
+        } else if (review.reviewTarget() == TouristLocation.EXPERIENCE) {
+            reviewTargetPos = this.getExperienceTarget();
 
             if (review.applyRatingToTarget()) {
+                TouristExperience experience = TourismManager.getTouristExperienceByPos(reviewTargetPos);
                 if (experience != null) {
                     experience.rateVisit(review.result(), serverLevel.getDayTime());
                 } else {
                     // TODO: Leave a pending VisitResult rating with the TourismManager for if/when the experience returns.
                 }
             }
+        }
+
+        if (reviewTargetPos != null) {
+            targetName = TourismManager.getTouristBlockNameOrPos(serverLevel, review.reviewTarget(), reviewTargetPos);
         }
 
         MutableComponent message = review.prependTouristName() ? this.getDisplayName().copy().append(" ") : Component.empty();
@@ -185,10 +176,10 @@ public class TouristEntity extends AbstractVillager {
             MutableComponent experienceMessage = damageSource.getLocalizedDeathMessage(this).copy();
             VisitResult visitResult = null;
 
-            if (this.isTravelingToBlock()) {
+            if (this.isTraveling()) {
                 experienceMessage.append(Component.literal(" while travelling to"));
                 visitResult = VisitResult.KILLED_EN_ROUTE;
-            } else if (this.isCurrentActivityAtBeacon() || this.isCurrentActivityAtExperience()) {
+            } else if (this.isAtTouristLocation()) {
                 experienceMessage.append(Component.literal(" while at"));
                 visitResult = VisitResult.KILLED_ON_PREMISES;
             }
@@ -225,6 +216,23 @@ public class TouristEntity extends AbstractVillager {
 
     public int getConsecutiveFailedProgressChecks() {
         return this.mind.getConsecutiveFailedProgressChecks();
+    }
+
+    public Component getCurrentTouristLocationNameOrPos(Level level) {
+        TouristLocation currentLocation = this.mind.getState().touristLocation();
+        switch (currentLocation) {
+            case BEACON -> {
+                return TourismManager.getTouristBlockNameOrPos(level, currentLocation, this.mind.getBeaconPos());
+            }
+
+            case EXPERIENCE -> {
+                return TourismManager.getTouristBlockNameOrPos(level, currentLocation, this.mind.getExperiencePos());
+            }
+
+            default -> {
+                return Component.literal("unknown location");
+            }
+        }
     }
 
     @Override
@@ -266,13 +274,13 @@ public class TouristEntity extends AbstractVillager {
         MutableComponent experienceMessage = getHurtMessage(damageSource);
         VisitResult visitResult = null;
 
-        if (this.isTravelingToBlock()) {
+        if (this.isTraveling()) {
             if (!this.mind.hasReportedHurtEnRoute()) {
                 visitResult = VisitResult.HURT_EN_ROUTE;
                 this.mind.updateMood(visitResult);
                 experienceMessage.append(Component.literal(" while travelling to"));
             }
-        } else if (this.isCurrentActivityAtBeacon() || this.isCurrentActivityAtExperience()) {
+        } else if (this.isAtTouristLocation()) {
             if (!this.mind.hasReportedHurtOnPremises()) {
                 this.mind.updateMood(VisitResult.HURT_ON_PREMISES);
                 experienceMessage.append(Component.literal(" while at"));
@@ -295,16 +303,16 @@ public class TouristEntity extends AbstractVillager {
         return super.hurtServer(serverLevel, damageSource, f);
     }
 
-    public boolean isCurrentActivityAtBeacon() {
-        return this.mind.isCurrentActivityAtBeacon();
+    public boolean isAtTouristLocation() {
+        return this.mind.getState().isAtTouristLocation();
     }
 
-    public boolean isCurrentActivityAtExperience() {
-        return this.mind.isCurrentActivityAtExperience();
+    public boolean isTraveling() {
+        return this.mind.getState().isTraveling();
     }
 
-    public boolean isTravelingToBlock() {
-        return this.mind.isTravelingToBlock();
+    public boolean isWandering() {
+        return this.mind.getState().isWandering();
     }
 
     public void onDespawn() {
