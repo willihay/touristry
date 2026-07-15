@@ -26,6 +26,7 @@ import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public final class TouristMind {
     private static final double MIN_MOOD = -3.0;
@@ -38,7 +39,7 @@ public final class TouristMind {
     private final List<Goal> injectedExperienceGoals = new ArrayList<>();
     private ExperienceTarget currentExperienceTarget;
 
-    // persisted data
+    // persisted fields
     private TouristState state;
     private List<UUID> availableExperienceUUIDs = new ArrayList<>(); // experiences at current beacon (cached on arrival)
     private Set<UUID> visitedExperienceUUIDs = new HashSet<>(); // set of experiences already visited at current beacon
@@ -314,7 +315,11 @@ public final class TouristMind {
                     this.recordGoodExperience(serverLevel);
                 }
 
-                this.transitionTo(TouristState.PLANNING_NEXT_MOVE);
+                if (this.state == TouristState.WANDERING_AT_EXPERIENCE) {
+                    this.transitionTo(TouristState.CHOOSING_EXPERIENCE);
+                } else {
+                    this.transitionTo(TouristState.PLANNING_NEXT_MOVE);
+                }
             }
         }
     }
@@ -444,7 +449,7 @@ public final class TouristMind {
         // Call state transition handlers, if applicable.
         TouristEntity.logActivity(Verbosity.MAJOR_EVENTS, "Transitioning state to " + newState);
         switch (newState) {
-            case PLANNING_NEXT_MOVE -> this.planNextTarget(serverLevel);
+            case PLANNING_NEXT_MOVE -> this.planNextMove(serverLevel);
             case CHOOSING_EXPERIENCE -> this.chooseExperienceAtBeacon(serverLevel, beaconBlockEntity);
             case TRAVELING_TO_EXPERIENCE -> this.resetExperienceJourneyStats();
             case WANDERING_WORLD -> this.beginWanderingWorld();
@@ -480,7 +485,7 @@ public final class TouristMind {
         if (beaconBlockEntity == null) {
             // No beacon found at beaconPos!
             this.updateMood(VisitResult.LOST);
-            Component experienceMessage = Component.literal("did not find a beacon at " + this.beaconPos.toShortString());
+            Component experienceMessage = Component.literal("did not find a beacon at");
             this.recordExperience(serverLevel, new TouristReview(
                     this.state.reviewTarget(),
                     VisitResult.LOST,
@@ -488,7 +493,7 @@ public final class TouristMind {
                     true,
                     experienceMessage,
                     true,
-                    false));
+                    true));
             this.transitionTo(TouristState.PLANNING_NEXT_MOVE);
             return;
         }
@@ -564,15 +569,39 @@ public final class TouristMind {
     }
 
     private void chooseExperienceAtBeacon(ServerLevel serverLevel, TouristBeaconBlockEntity beaconBlockEntity) {
-        List<TouristExperience> experiences = TourismManager.getTouristExperiencesNearBeacon(serverLevel, beaconBlockEntity);
+        if (this.availableExperienceUUIDs.isEmpty()) {
+            List<TouristExperience> experiences = TourismManager.getTouristExperiencesNearBeacon(serverLevel, beaconBlockEntity);
 
-        if (experiences.isEmpty()) {
-            this.transitionTo(TouristState.WANDERING_AT_BEACON);
+            // Filter by open-for-business and not already visited.
+            this.availableExperienceUUIDs = experiences.stream()
+                    .filter(TouristExperience::isOpenForBusiness)
+                    .map(TouristExperience::getUUID)
+                    .collect(Collectors.toList());
+
+            // Shuffle for random order.
+            Collections.shuffle(this.availableExperienceUUIDs);
+        }
+
+        // Remove already-visited experiences from available list.
+        this.availableExperienceUUIDs.removeAll(this.visitedExperienceUUIDs);
+
+        if (this.availableExperienceUUIDs.isEmpty()) {
+            // No more experiences to visit at this beacon.
+            this.transitionTo(TouristState.PLANNING_NEXT_MOVE);
             return;
         }
 
-        int index = this.random().nextInt(experiences.size());
-        TouristExperience experience = experiences.get(index);
+        // Choose first available experience.
+        UUID nextExperienceUUID = this.availableExperienceUUIDs.getFirst();
+        TouristExperience experience = TourismManager.getTouristExperienceById(nextExperienceUUID);
+
+        if (experience == null) {
+            // Experience was unloaded/removed - remove from list and try again.
+            this.availableExperienceUUIDs.removeFirst();
+            this.transitionTo(TouristState.CHOOSING_EXPERIENCE);
+            return;
+        }
+
         this.experiencePos = experience.getBlockPos().immutable();
         this.transitionTo(TouristState.TRAVELING_TO_EXPERIENCE);
     }
@@ -580,6 +609,72 @@ public final class TouristMind {
     private void deSpawn() {
         this.tourist.onDespawn();
         this.transitionTo(TouristState.FINISHED);
+    }
+
+    private void enterExperience(ServerLevel serverLevel) {
+        TouristExperience experience = TourismManager.getTouristExperienceByPos(this.experiencePos);
+
+        if (experience == null || !experience.isOpenForBusiness()) {
+            // Experience closed or removed.
+            this.updateMood(VisitResult.CLOSED_EARLY);
+            Component experienceMessage;
+            if (experience == null) {
+                experienceMessage = Component.literal("did not find any tourist experience at");
+            } else {
+                experienceMessage = Component.literal("found experience closed at");
+            }
+            this.recordExperience(serverLevel, new TouristReview(
+                    this.state.reviewTarget(),
+                    VisitResult.CLOSED_EARLY,
+                    true,
+                    true,
+                    experienceMessage,
+                    true,
+                    true
+            ));
+            this.transitionTo(TouristState.CHOOSING_EXPERIENCE); // Try next experience.
+            return;
+        }
+
+        // Get experience targets.
+        List<ExperienceTarget> targets = experience.getTargets(serverLevel);
+
+        if (targets.isEmpty()) {
+            // Experience has no targets. Just wander here briefly.
+            this.transitionTo(TouristState.WANDERING_AT_EXPERIENCE);
+            return;
+        }
+
+        // Call experience lifecycle method.
+        experience.onTouristArrival(this.tourist, serverLevel);
+
+        // Create ExperienceVisit and push onto stack.
+        ExperienceVisit visit = new ExperienceVisit(
+                experience.getUUID(),
+                new ArrayList<>(targets),
+                0
+        );
+        this.experienceTracker.push(visit);
+
+        // Mark as visited.
+        this.visitedExperienceUUIDs.add(experience.getUUID());
+
+        // Reset experience-specific tracking.
+        this.ticksAtCurrentExperience = 0;
+        this.currentTargetIndex = 0;
+
+        // Record arrival.
+        this.updateMood(VisitResult.ARRIVED);
+        this.recordExperience(serverLevel, new TouristReview(
+                this.state.reviewTarget(),
+                VisitResult.ARRIVED,
+                false,
+                false,
+                Component.literal("arrived at"),
+                true,
+                true));
+
+        this.transitionTo(TouristState.CHOOSING_EXPERIENCE_TARGET);
     }
 
     private void exitCurrentExperience(ServerLevel serverLevel, boolean completed) {
@@ -666,7 +761,7 @@ public final class TouristMind {
         }
     }
 
-    private void planNextTarget(ServerLevel serverLevel) {
+    private void planNextMove(ServerLevel serverLevel) {
         List<TouristBeaconBlockEntity> closestBeacons;
 
         double maxTravelDistanceToNextBeacon = ModServerConfigManager.getConfig().touristEntityConfig().getMaxTravelDistanceToNextBeacon();

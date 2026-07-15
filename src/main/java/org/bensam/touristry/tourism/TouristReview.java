@@ -10,7 +10,7 @@ public record TouristReview(
         boolean announceToNearbyPlayers,
         Component reviewMessage,
         boolean prependTouristName,
-        boolean appendTargetName
+        boolean appendTargetNameOrPos
 ) {
     private static final double MIN_REPUTATION = -100.0;
     private static final double MAX_REPUTATION = 100.0;

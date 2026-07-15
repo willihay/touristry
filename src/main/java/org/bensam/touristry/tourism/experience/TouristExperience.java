@@ -25,6 +25,7 @@ public interface TouristExperience {
     boolean addEntityTarget(ServerLevel serverLevel, BlockPos entityPos, Direction playerFacing, UUID entityUUID);
     int getMaxDistanceToTarget();
     List<ExperienceTarget> getTargets(ServerLevel serverLevel);
+    boolean isOpenForBusiness();
     boolean isTargetValid(ServerLevel serverLevel, ExperienceTarget target);
     void removeTarget(ServerLevel serverLevel, BlockPos pos);
     void removeEntityTargetById(ServerLevel serverLevel, UUID entityUUID);

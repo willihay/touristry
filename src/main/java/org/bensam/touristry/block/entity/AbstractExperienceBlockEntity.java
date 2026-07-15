@@ -37,6 +37,9 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
     public static final int DATA_OPEN_FOR_BUSINESS = 1;
     public static final int DATA_COUNT = 2;
 
+    protected Set<UUID> currentGuests = new HashSet<>(); // for capacity tracking at experiences that need it
+
+    // persisted fields
     protected UUID uuid;
     protected @Nullable UUID parentExperienceUUID;
     private boolean openForBusiness;
@@ -166,11 +169,19 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         return this.inventory.size();
     }
 
+    public int getCurrentCapacity() {
+        return this.currentGuests.size();
+    }
+
     protected abstract int getExperienceKeySlotIndex();
 
     @Override
     protected @NonNull NonNullList<ItemStack> getItems() {
         return this.inventory;
+    }
+
+    public int getMaxCapacity() {
+        return 10; // override in subclasses
     }
 
     @Override
@@ -196,6 +207,11 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         return this.uuid;
     }
 
+    public boolean hasCapacity() {
+        return this.getCurrentCapacity() < this.getMaxCapacity();
+    }
+
+    @Override
     public boolean isOpenForBusiness() {
         return this.openForBusiness;
     }
@@ -325,7 +341,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         }
     }
 
-    public boolean tryDepositItem(ItemStack itemStack) {
+    public boolean tryDepositPayment(ItemStack itemStack) {
         if (!this.isOpenForBusiness()) {
             return false;
         }

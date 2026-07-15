@@ -137,6 +137,8 @@ public class TouristEntity extends AbstractVillager {
                 experience = TourismManager.getTouristExperienceByPos(reviewTargetPos);
                 if (experience != null) {
                     targetName = experience.getDisplayName();
+                } else {
+                    targetName = Component.literal(reviewTargetPos.toShortString());
                 }
             }
 
@@ -152,12 +154,12 @@ public class TouristEntity extends AbstractVillager {
         MutableComponent message = review.prependTouristName() ? this.getDisplayName().copy().append(" ") : Component.empty();
         if (review.reviewMessage() != null) {
             message.append(review.reviewMessage());
-            if (review.appendTargetName()) {
+            if (review.appendTargetNameOrPos()) {
                 message.append(Component.literal(" ")).append(targetName);
             }
         } else {
             message.append(Component.literal("logged a " + review.result().name() + " experience from " + this.blockPosition().toShortString()));
-            if (review.appendTargetName()) {
+            if (review.appendTargetNameOrPos()) {
                 message.append(Component.literal(" for ")).append(targetName);
             }
         }
