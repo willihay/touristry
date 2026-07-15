@@ -3,7 +3,9 @@ package org.bensam.touristry.entity.goal;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.entity.ai.goal.Goal;
+import org.bensam.touristry.config.Verbosity;
 import org.bensam.touristry.entity.TouristEntity;
+import org.bensam.touristry.entity.TouristState;
 
 import java.util.EnumSet;
 
@@ -22,23 +24,21 @@ public class LookAtTargetPosGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        // TODO ...
-        return false;
+        return this.tourist.getMind().getState() == TouristState.EXPERIENCING_TARGET;
     }
 
     @Override
     public boolean canContinueToUse() {
-        return super.canContinueToUse();
+        return this.canUse();
     }
 
     @Override
     public void start() {
-        super.start();
-    }
+        if (this.tourist.level().isClientSide()) {
+            return;
+        }
 
-    @Override
-    public void stop() {
-        super.stop();
+        TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[LookAtTargetPosGoal] Starting to look at target at " + this.targetPos.toShortString());
     }
 
     @Override

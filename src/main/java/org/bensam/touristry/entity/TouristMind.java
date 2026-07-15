@@ -93,6 +93,8 @@ public final class TouristMind {
     public void onEntityLoaded(ServerLevel serverLevel) {
        if (this.state == TouristState.EXPERIENCING_TARGET) {
            this.reconstructExperienceGoals(serverLevel);
+       } else if (this.state == TouristState.POSITIONING_AT_TARGET) {
+           this.reconstructPositioningGoal(serverLevel);
        }
     }
 
@@ -127,6 +129,43 @@ public final class TouristMind {
             this.injectExperienceGoal(goal);
             TouristEntity.logActivity(Verbosity.LEVEL_1_DIAGNOSTICS, "[TouristMind] Load: Reconstructed experience goal {}", goal.getClass().getSimpleName());
         }
+    }
+
+    private void reconstructPositioningGoal(ServerLevel serverLevel) {
+        if (this.experienceTracker.isEmpty()) {
+            // Inconsistent state - should not be POSITIONING_AT_TARGET with empty stack.
+            TouristEntity.logActivity(Verbosity.GAMEPLAY_WARNINGS, "[TouristMind] Load warning: State is POSITIONING_AT_TARGET but experience tracker is empty");
+            this.transitionTo(TouristState.PLANNING_NEXT_MOVE);
+            return;
+        }
+
+        if (this.currentExperienceTarget == null) {
+            // Inconsistent state - should have a target.
+            TouristEntity.logActivity(Verbosity.GAMEPLAY_WARNINGS, "[TouristMind] Load warning: State is POSITIONING_AT_TARGET but current experience target is null");
+            this.transitionTo(TouristState.CHOOSING_EXPERIENCE_ACTIVITY);
+            return;
+        }
+
+        ExperienceVisit currentVisit = this.experienceTracker.peekFirst();
+        TouristExperience experience = TourismManager.getTouristExperienceById(currentVisit.experienceUUID());
+
+        if (experience == null) {
+            // Experience was unloaded / removed - exit gracefully.
+            TouristEntity.logActivity(Verbosity.GAMEPLAY_WARNINGS, "[TouristMind] Load warning: Experience {} no longer exists", currentVisit.experienceUUID());
+            this.exitCurrentExperience(serverLevel, false);
+            return;
+        }
+
+        // Recreate and inject the positioning goal for the current target.
+        int idealDistance = experience.getIdealViewingDistance();
+        Goal positioningGoal = new org.bensam.touristry.entity.goal.PositionForViewingGoal(
+                this.tourist,
+                this.currentExperienceTarget.pos(),
+                this.currentExperienceTarget.playerFacing(),
+                idealDistance
+        );
+        this.injectExperienceGoal(positioningGoal);
+        TouristEntity.logActivity(Verbosity.LEVEL_1_DIAGNOSTICS, "[TouristMind] Load: Reconstructed PositionForViewingGoal (distance: {})", idealDistance);
     }
 
     public boolean avoidWater() {
@@ -348,6 +387,7 @@ public final class TouristMind {
         }
 
         this.ticksAtCurrentExperience++;
+        this.ticksAtCurrentTarget++;
 
         // Call experience tick - returns true when target is complete.
         boolean targetComplete = experience.tick(this.tourist, serverLevel);
@@ -505,6 +545,7 @@ public final class TouristMind {
             case CHOOSING_EXPERIENCE_ACTIVITY -> this.chooseExperienceActivity(serverLevel);
             case TRAVELING_TO_EXPERIENCE, TRAVELING_TO_EXPERIENCE_TARGET -> this.resetExperienceJourneyStats();
             case ENTERING_EXPERIENCE -> this.enterExperience(serverLevel);
+            case POSITIONING_AT_TARGET -> this.positionAtTarget(serverLevel);
             case WANDERING_WORLD -> this.beginWanderingWorld();
             case WANDERING_AT_BEACON, WANDERING_AT_EXPERIENCE -> this.beginWanderingAtBlock();
             case DESPAWNING, LOST -> this.deSpawn();
@@ -604,25 +645,11 @@ public final class TouristMind {
             return;
         }
 
-        ExperienceVisit currentVisit = this.experienceTracker.peekFirst();
-        TouristExperience experience = TourismManager.getTouristExperienceById(currentVisit.experienceUUID());
-
-        if (experience == null) {
-            this.exitCurrentExperience(serverLevel, false);
-            return;
-        }
-
-        // Ask experience to create goal for this specific target.
-        Goal experienceGoal = experience.createGoalForTarget(this.tourist, this.currentExperienceTarget);
-
-        if (experienceGoal != null) {
-            this.injectExperienceGoal(experienceGoal);
-        }
-
         // Reset tick counter for this target.
         this.ticksAtCurrentTarget = 0;
 
-        this.transitionTo(TouristState.EXPERIENCING_TARGET);
+        // Transition to positioning state (fine-tune position and orientation)
+        this.transitionTo(TouristState.POSITIONING_AT_TARGET);
     }
 
     private void beginWanderingAtBlock() {
@@ -846,6 +873,35 @@ public final class TouristMind {
         }
     }
 
+    public void finishPositioning(ServerLevel serverLevel) {
+        if (this.experienceTracker.isEmpty() || this.currentExperienceTarget == null) {
+            this.transitionTo(TouristState.CHOOSING_EXPERIENCE_ACTIVITY);
+            return;
+        }
+
+        // Clear positioning goal.
+        this.clearInjectedGoals();
+
+        ExperienceVisit currentVisit = this.experienceTracker.peekFirst();
+        TouristExperience experience = TourismManager.getTouristExperienceById(currentVisit.experienceUUID());
+
+        if (experience == null) {
+            this.exitCurrentExperience(serverLevel, false);
+            return;
+        }
+
+        // Now inject experience-specific goals.
+        Goal experienceGoal = experience.createGoalForTarget(this.tourist, this.currentExperienceTarget);
+
+        if (experienceGoal != null) {
+            this.injectExperienceGoal(experienceGoal);
+            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS,
+                    "[TouristMind] Injected experience goal: {}", experienceGoal.getClass().getSimpleName());
+        }
+
+        this.transitionTo(TouristState.EXPERIENCING_TARGET);
+    }
+
     private void markCurrentTargetComplete(ServerLevel serverLevel) {
         if (this.experienceTracker.isEmpty()) {
             return;
@@ -991,6 +1047,35 @@ public final class TouristMind {
         }
 
         this.transitionTo(TouristState.WANDERING_WORLD);
+    }
+
+    private void positionAtTarget(ServerLevel serverLevel) {
+        if (this.experienceTracker.isEmpty() || this.currentExperienceTarget == null) {
+            this.transitionTo(TouristState.CHOOSING_EXPERIENCE_ACTIVITY);
+            return;
+        }
+
+        ExperienceVisit currentVisit = this.experienceTracker.peekFirst();
+        TouristExperience experience = TourismManager.getTouristExperienceById(currentVisit.experienceUUID());
+
+        if (experience == null) {
+            this.exitCurrentExperience(serverLevel, false);
+            return;
+        }
+
+        // Inject positioning goal to fine-tune position and orientation.
+        int idealDistance = experience.getIdealViewingDistance();
+        Goal positioningGoal = new org.bensam.touristry.entity.goal.PositionForViewingGoal(
+                this.tourist,
+                this.currentExperienceTarget.pos(),
+                this.currentExperienceTarget.playerFacing(),
+                idealDistance
+        );
+        this.injectExperienceGoal(positioningGoal);
+
+        TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS,
+                "[TouristMind] Injected PositionForViewingGoal for target at {} (ideal distance: {})",
+                this.currentExperienceTarget.pos().toShortString(), idealDistance);
     }
 
     public void prepareForJourney(@NonNull BlockPos beaconTarget) {

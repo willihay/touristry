@@ -232,6 +232,21 @@ public class TourismManager {
             }
         }
 
+        // Check if a different UUID already exists at this position.
+        // This handles the item placement lifecycle:
+        // 1. clearRemoved() registers with temporary UUID from constructor
+        // 2. applyImplicitComponents() re-registers with actual UUID from item components
+        UUID existingUUID = loadedExperiencesByPos.get(experience.getBlockPos());
+        if (existingUUID != null && !existingUUID.equals(experience.getUUID())) {
+            // Different UUID at same position - remove the old stale entry
+            TouristExperience oldExperience = loadedExperiences.remove(existingUUID);
+            if (oldExperience != null) {
+                logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, 
+                    "[TourismManager] Replaced stale registration at {} (old UUID: {}, new UUID: {})", 
+                    experience.getBlockPos().toShortString(), existingUUID, experience.getUUID());
+            }
+        }
+
         loadedExperiences.put(experience.getUUID(), experience);
         loadedExperiencesByPos.put(experience.getBlockPos(), experience.getUUID());
     }

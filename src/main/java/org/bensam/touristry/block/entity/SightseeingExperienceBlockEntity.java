@@ -102,6 +102,11 @@ public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEnt
     }
 
     @Override
+    public int getIdealViewingDistance() {
+        return 2; // Stand 2 blocks away for sightseeing targets
+    }
+
+    @Override
     public int getMaxDistanceToTarget() {
         return MAX_DISTANCE_TO_TARGET;
     }

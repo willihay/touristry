@@ -138,8 +138,9 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
     @Override
     public void clearRemoved() {
         super.clearRemoved();
-        // DO NOT register here - UUID might be temporary if applyImplicitComponents() will be called next.
-        // Registration happens in applyImplicitComponents() (item placement) or loadAdditional() (world load).
+        // Register this block entity for tourism when block entity is attached back into a chunk/world.
+        // This handles BOTH world load and item placement paths.
+        this.syncTourismRegistration();
     }
 
     public ItemStack createExperienceKey() {
@@ -392,8 +393,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         ContainerHelper.loadAllItems(valueInput, this.inventory);
         this.setItem(this.getExperienceKeySlotIndex(), this.createExperienceKey());
         
-        // Register now - UUID is final from world save
-        this.syncTourismRegistration();
+        // Registration happens in clearRemoved() after level is set, not here (level is still null).
     }
 
     @Override
