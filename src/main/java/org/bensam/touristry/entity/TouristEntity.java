@@ -218,21 +218,8 @@ public class TouristEntity extends AbstractVillager {
         return this.mind.getConsecutiveFailedProgressChecks();
     }
 
-    public Component getCurrentTouristLocationNameOrPos(Level level) {
-        TouristLocation currentLocation = this.mind.getState().touristLocation();
-        switch (currentLocation) {
-            case BEACON -> {
-                return TourismManager.getTouristBlockNameOrPos(level, currentLocation, this.mind.getBeaconPos());
-            }
-
-            case EXPERIENCE -> {
-                return TourismManager.getTouristBlockNameOrPos(level, currentLocation, this.mind.getExperiencePos());
-            }
-
-            default -> {
-                return Component.literal("unknown location");
-            }
-        }
+    public String getCurrentLocationNameOrPos() {
+        return this.mind.getLocationNameOrPos();
     }
 
     @Override

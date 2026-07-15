@@ -1,6 +1,5 @@
 package org.bensam.touristry.entity.goal;
 
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.ai.goal.RandomStrollGoal;
 import net.minecraft.world.entity.ai.util.LandRandomPos;
 import net.minecraft.world.phys.Vec3;
@@ -34,10 +33,14 @@ public class TouristRandomStrollGoal extends RandomStrollGoal {
         if (this.tourist.level().isClientSide()) return;
 
         if (this.tourist.isAtTouristLocation()) {
-            Component blockName = this.tourist.getCurrentTouristLocationNameOrPos(this.tourist.level());
-            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "Starting TouristRandomStrollGoal to wander around " + blockName.getString());
+            String locationName = this.tourist.getCurrentLocationNameOrPos();
+            if (!locationName.isEmpty()) {
+                TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[TouristRandomStrollGoal] Starting to wander around " + locationName);
+            } else {
+                TouristEntity.logActivity(Verbosity.GAMEPLAY_WARNINGS, "[TouristRandomStrollGoal] Starting to wander around unknown tourist location");
+            }
         } else {
-            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "Starting TouristRandomStrollGoal to wander in the world");
+            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[TouristRandomStrollGoal] Starting to wander in the world");
         }
     }
 

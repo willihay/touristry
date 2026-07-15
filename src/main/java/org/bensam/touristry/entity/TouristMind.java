@@ -17,6 +17,7 @@ import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
 import org.bensam.touristry.config.ModServerConfigManager;
 import org.bensam.touristry.config.Verbosity;
 import org.bensam.touristry.tourism.TourismManager;
+import org.bensam.touristry.tourism.TouristLocation;
 import org.bensam.touristry.tourism.TouristReview;
 import org.bensam.touristry.tourism.VisitResult;
 import org.bensam.touristry.tourism.experience.ExperienceTarget;
@@ -45,7 +46,8 @@ public final class TouristMind {
     private Set<UUID> visitedExperienceUUIDs = new HashSet<>(); // set of experiences already visited at current beacon
     private Deque<ExperienceVisit> experienceTracker = new ArrayDeque<>(); // target tracker for current experience
     private BlockPos beaconPos;
-    private BlockPos experiencePos;
+    private BlockPos experienceBlockPos; // position of the current experience block
+    private BlockPos targetPos; // position of the specific target within an experience (only for TRAVELING_TO_EXPERIENCE_TARGET)
     private double closestDistanceToDestination;
     private int consecutiveFailedProgressChecks;
     private boolean reportedHurtEnRoute;
@@ -66,7 +68,8 @@ public final class TouristMind {
         this.tourist = tourist;
         this.state = TouristState.IDLE;
         this.beaconPos = null;
-        this.experiencePos = null;
+        this.experienceBlockPos = null;
+        this.targetPos = null;
         this.resetBeaconJourneyStats();
         this.mood = this.chooseStartingMood();
         this.goodExperiencesToday = 0;
@@ -143,14 +146,33 @@ public final class TouristMind {
     }
 
     public @Nullable BlockPos getExperiencePos() {
-        return this.experiencePos;
+        return this.experienceBlockPos;
+    }
+
+    public String getLocationNameOrPos() {
+        TouristLocation currentLocation = this.state.touristLocation();
+        switch (currentLocation) {
+            case BEACON -> {
+                return TourismManager.getTouristBlockNameOrPos(this.tourist.level(), currentLocation, this.beaconPos).getString();
+            }
+
+            case EXPERIENCE -> {
+                return TourismManager.getTouristBlockNameOrPos(this.tourist.level(), currentLocation, this.experienceBlockPos).getString();
+            }
+
+            default -> {
+                return "";
+            }
+        }
     }
 
     public @Nullable BlockPos getMoveToTarget() {
         if (this.state == TouristState.TRAVELING_TO_BEACON) {
             return this.beaconPos;
         } else if (this.state == TouristState.TRAVELING_TO_EXPERIENCE) {
-            return this.experiencePos;
+            return this.experienceBlockPos;
+        } else if (this.state == TouristState.TRAVELING_TO_EXPERIENCE_TARGET) {
+            return this.targetPos;
         }
         return null;
     }
@@ -161,9 +183,13 @@ public final class TouristMind {
             if (beaconBlockEntity != null) {
                 return beaconBlockEntity.getPlainTextName();
             }
-        } else if (this.state == TouristState.TRAVELING_TO_EXPERIENCE) {
-            TouristExperience experience = TourismManager.getTouristExperienceByPos(this.experiencePos);
+        } else if (this.state == TouristState.TRAVELING_TO_EXPERIENCE || 
+                   this.state == TouristState.TRAVELING_TO_EXPERIENCE_TARGET) {
+            TouristExperience experience = TourismManager.getTouristExperienceByPos(this.experienceBlockPos);
             if (experience != null) {
+                if (this.state == TouristState.TRAVELING_TO_EXPERIENCE_TARGET && this.targetPos != null) {
+                    return experience.getDisplayName().getString() + " target at " + this.targetPos.toShortString();
+                }
                 return experience.getDisplayName().getString();
             }
         }
@@ -559,7 +585,7 @@ public final class TouristMind {
         // If already in this experience (stack top matches), skip re-entry.
         if (!this.experienceTracker.isEmpty()) {
             ExperienceVisit topVisit = this.experienceTracker.peekFirst();
-            TouristExperience experience = TourismManager.getTouristExperienceByPos(this.experiencePos);
+            TouristExperience experience = TourismManager.getTouristExperienceByPos(this.experienceBlockPos);
 
             if (experience != null && experience.getUUID().equals(topVisit.experienceUUID())) {
                 // Just transition to activity selection.
@@ -645,7 +671,8 @@ public final class TouristMind {
             return;
         }
 
-        this.experiencePos = experience.getBlockPos().immutable();
+        this.experienceBlockPos = experience.getBlockPos().immutable();
+        this.targetPos = null;  // Traveling to experience block, not a specific target
         this.transitionTo(TouristState.TRAVELING_TO_EXPERIENCE);
     }
 
@@ -683,7 +710,8 @@ public final class TouristMind {
 
             if (childExperience != null && childExperience.isOpenForBusiness()) {
                 // Navigate to child experience block position.
-                this.experiencePos = this.currentExperienceTarget.pos().immutable();
+                this.experienceBlockPos = this.currentExperienceTarget.pos().immutable();
+                this.targetPos = null;  // Traveling to child experience block, not a specific target
                 this.transitionTo(TouristState.TRAVELING_TO_EXPERIENCE);
             } else {
                 // Child experience unavailable - skip this target.
@@ -695,7 +723,8 @@ public final class TouristMind {
         }
 
         // Regular target (block or entity) - navigate to it.
-        this.experiencePos = this.currentExperienceTarget.pos().immutable();
+        // Keep experienceBlockPos as-is (parent experience block position)
+        this.targetPos = this.currentExperienceTarget.pos().immutable();
         this.transitionTo(TouristState.TRAVELING_TO_EXPERIENCE_TARGET);
     }
 
@@ -705,7 +734,7 @@ public final class TouristMind {
     }
 
     private void enterExperience(ServerLevel serverLevel) {
-        TouristExperience experience = TourismManager.getTouristExperienceByPos(this.experiencePos);
+        TouristExperience experience = TourismManager.getTouristExperienceByPos(this.experienceBlockPos);
 
         if (experience == null || !experience.isOpenForBusiness()) {
             // Experience closed or removed.
@@ -857,14 +886,19 @@ public final class TouristMind {
 
         this.updateMood(VisitResult.LOST);
 
-        if (this.state == TouristState.TRAVELING_TO_EXPERIENCE) {
-            TouristExperience experience = TourismManager.getTouristExperienceByPos(this.experiencePos);
+        if (this.state == TouristState.TRAVELING_TO_EXPERIENCE || 
+            this.state == TouristState.TRAVELING_TO_EXPERIENCE_TARGET) {
+            TouristExperience experience = TourismManager.getTouristExperienceByPos(this.experienceBlockPos);
             Component experienceMessage;
             if (experience == null) {
-                experienceMessage = Component.literal("got lost travelling to experience at " + this.experiencePos.toShortString());
+                experienceMessage = Component.literal("got lost travelling to experience at " + this.experienceBlockPos.toShortString());
             } else {
+                String targetInfo = this.state == TouristState.TRAVELING_TO_EXPERIENCE_TARGET && this.targetPos != null
+                        ? " target at " + this.targetPos.toShortString()
+                        : "";
                 experienceMessage = Component.literal("got lost travelling to ")
-                        .append(experience.getDisplayName());
+                        .append(experience.getDisplayName())
+                        .append(targetInfo);
             }
             this.recordExperience(serverLevel, new TouristReview(
                     this.state.reviewTarget(),
@@ -988,8 +1022,11 @@ public final class TouristMind {
         if (this.beaconPos != null) {
             valueOutput.store("BeaconPos", BlockPos.CODEC, this.beaconPos);
         }
-        if (this.experiencePos != null) {
-            valueOutput.store("ExperiencePos", BlockPos.CODEC, this.experiencePos);
+        if (this.experienceBlockPos != null) {
+            valueOutput.store("ExperienceBlockPos", BlockPos.CODEC, this.experienceBlockPos);
+        }
+        if (this.targetPos != null) {
+            valueOutput.store("TargetPos", BlockPos.CODEC, this.targetPos);
         }
 
         valueOutput.putDouble("ClosestDistanceToDestination", this.closestDistanceToDestination);
@@ -1024,7 +1061,8 @@ public final class TouristMind {
                 .orElse(List.of());
         this.experienceTracker = new ArrayDeque<>(trackerList);
         
-        this.experiencePos = valueInput.read("ExperiencePos", BlockPos.CODEC).orElse(null);
+        this.experienceBlockPos = valueInput.read("ExperienceBlockPos", BlockPos.CODEC).orElse(null);
+        this.targetPos = valueInput.read("TargetPos", BlockPos.CODEC).orElse(null);
         this.closestDistanceToDestination = valueInput.getDoubleOr("ClosestDistanceToDestination", Double.MAX_VALUE);
         this.consecutiveFailedProgressChecks = valueInput.getIntOr("FailedProgressChecks", 0);
         this.reportedHurtEnRoute = valueInput.getBooleanOr("ReportedHurtEnRoute", false);
