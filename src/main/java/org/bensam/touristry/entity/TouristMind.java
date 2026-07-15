@@ -324,6 +324,37 @@ public final class TouristMind {
         }
     }
 
+    private void tickExperiencingTarget(ServerLevel serverLevel) {
+        if (this.experienceTracker.isEmpty()) {
+            this.transitionTo(TouristState.PLANNING_NEXT_MOVE);
+            return;
+        }
+
+        ExperienceVisit currentVisit = this.experienceTracker.peekFirst();
+        TouristExperience experience = TourismManager.getTouristExperienceById(currentVisit.experienceUUID());
+
+        if (experience == null) {
+            this.exitCurrentExperience(serverLevel, false);
+            return;
+        }
+
+        this.ticksAtCurrentExperience++;
+
+        // Call experience tick - returns true when target is complete.
+        boolean targetComplete = experience.tick(this.tourist, serverLevel);
+
+        if (targetComplete) {
+            // Remove experience-specific goals.
+            this.clearInjectedGoals();
+
+            // Mark target as complete.
+            this.markCurrentTargetComplete(serverLevel);
+
+            // Choose next activity (or exit if experience is complete).
+            this.transitionTo(TouristState.CHOOSING_EXPERIENCE_ACTIVITY);
+        }
+    }
+
     private int chooseEveningDespawnTime() {
         return 12000 + this.random().nextInt(1000);
     }
@@ -728,7 +759,50 @@ public final class TouristMind {
     }
 
     private void exitCurrentExperience(ServerLevel serverLevel, boolean completed) {
-        // TODO
+        if (this.experienceTracker.isEmpty()) {
+            this.transitionTo(TouristState.PLANNING_NEXT_MOVE);
+            return;
+        }
+
+        ExperienceVisit currentVisit = this.experienceTracker.pollFirst();
+        TouristExperience experience = TourismManager.getTouristExperienceById(currentVisit.experienceUUID());
+
+        if (experience != null) {
+            // Call experience lifecycle method.
+            experience.onTouristDeparture(this.tourist, serverLevel, completed);
+
+            // Update experience statistics.
+            VisitResult result = completed ? VisitResult.GOOD : VisitResult.UNFAVORABLE;
+            experience.rateVisit(result, serverLevel.getDayTime());
+
+            // Record experience for tourist.
+            this.updateMood(result);
+            this.recordExperience(serverLevel, new TouristReview(
+                    this.state.reviewTarget(),
+                    result,
+                    true,
+                    false,
+                    Component.literal("is exiting experience"),
+                    true,
+                    true
+            ));
+        }
+
+        // Clear experience-specific goals.
+        this.clearInjectedGoals();
+
+        // Reset tracking.
+        this.ticksAtCurrentExperience = 0;
+        this.currentTargetIndex = 0;
+        this.currentExperienceTarget = null;
+
+        // Are we in child experience? If so, return to parent.
+        if (!this.experienceTracker.isEmpty()) {
+            this.transitionTo(TouristState.CHOOSING_EXPERIENCE_ACTIVITY);
+        } else {
+            // No parent experience - choose next experience at beacon.
+            this.transitionTo(TouristState.CHOOSING_EXPERIENCE);
+        }
     }
 
     private void markCurrentTargetComplete(ServerLevel serverLevel) {
