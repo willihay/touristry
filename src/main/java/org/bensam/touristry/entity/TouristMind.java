@@ -250,7 +250,9 @@ public final class TouristMind {
             return;
         }
 
+        // Time-based despawn check
         if (this.isTimeToDespawn()) {
+            this.clearBeaconSession();
             if (this.isCurrentActivityAtBeacon() && !this.isInMoodToDespawn()) {
                 this.recordGoodExperience(serverLevel);
             }
@@ -258,69 +260,62 @@ public final class TouristMind {
             return;
         }
 
-        if (this.isTimeToCheckMood()) {
-            if (this.nextMoodCheckTicks > 0) {
-                this.nextMoodCheckTicks--;
-            }
+        // Mood check
+        if (this.isTimeToCheckMood() && this.nextMoodCheckTicks <= 0) {
+            if (this.isInMoodToDespawn()) {
+                this.clearBeaconSession();
 
-            if (this.nextMoodCheckTicks <= 0) {
-                if (this.isInMoodToDespawn()) {
-                    Component moodMessage;
-                    boolean appendTargetName = true;
-                    if (this.isCurrentActivityAtBeacon() || this.isCurrentActivityAtExperience()) {
-                        moodMessage = Component.literal("is in a bad mood and is leaving early from");
-                    } else {
-                        moodMessage = Component.literal("is in a bad mood and is leaving early");
-                        appendTargetName = false;
-                    }
-
-                    // Impl note: applyRatingToTarget is false because rating has likely already been applied.
-                    TouristReview review = new TouristReview(
-                            this.state.reviewTarget(),
-                            VisitResult.UNFAVORABLE,
-                            false,
-                            true,
-                            moodMessage,
-                            true,
-                            appendTargetName
-                    );
-                    this.recordExperience(serverLevel, review);
-
-                    this.transitionTo(TouristState.DESPAWNING);
-                    return;
+                Component moodMessage;
+                boolean appendTargetName = true;
+                if (this.isCurrentActivityAtBeacon() || this.isCurrentActivityAtExperience()) {
+                    moodMessage = Component.literal("is in a bad mood and is leaving early from");
+                } else {
+                    moodMessage = Component.literal("is in a bad mood and is leaving early");
+                    appendTargetName = false;
                 }
-                this.nextMoodCheckTicks = CHECK_MOOD_INTERVAL_TICKS;
+
+                // Impl note: applyRatingToTarget is false because rating has likely already been applied.
+                TouristReview review = new TouristReview(
+                        this.state.reviewTarget(),
+                        VisitResult.UNFAVORABLE,
+                        false,
+                        true,
+                        moodMessage,
+                        true,
+                        appendTargetName
+                );
+                this.recordExperience(serverLevel, review);
+
+                this.transitionTo(TouristState.DESPAWNING);
+                return;
             }
+            this.nextMoodCheckTicks = CHECK_MOOD_INTERVAL_TICKS;
+        } else {
+            this.nextMoodCheckTicks--;
         }
 
-        if (this.state == TouristState.ENJOYING_EXPERIENCE) {
-            // TODO: Execute Experience tick.
-            // TODO: Consider adding substates that a TouristExperience will manage.
-            // EXPERIENCING_TARGET might be a good candidate for moving to a substate.
-            //     In this state, you'd advance ticksAtCurrentTarget, among other things.
-            // TODO: Determine which class is responsible for persisting ticksAtCurrentTarget.
-            this.transitionTo(TouristState.PLANNING_NEXT_MOVE);
-        } else if (!this.isTravelingToBlock() && !this.isPlanningActivity()) {
-            if (this.nextChooseActivityTicks > 0) {
-                this.nextChooseActivityTicks--;
-            }
+        // State-specific tick handlers
+        switch (this.state) {
+            case EXPERIENCING_TARGET -> this.tickExperiencingTarget(serverLevel);
 
-            if (this.nextChooseActivityTicks <= 0) {
-                if (this.isTimeToCheckMood() && this.isInMoodToDespawn()) {
-                    this.nextMoodCheckTicks = 0;
-                    return;
-                }
-
-                if (this.isCurrentActivityAtBeacon()) {
-                    this.recordGoodExperience(serverLevel);
-                }
-
-                if (this.state == TouristState.WANDERING_AT_EXPERIENCE) {
+            case WANDERING_AT_EXPERIENCE -> {
+                if (this.nextChooseActivityTicks <= 0) {
                     this.transitionTo(TouristState.CHOOSING_EXPERIENCE);
                 } else {
-                    this.transitionTo(TouristState.PLANNING_NEXT_MOVE);
+                    this.nextChooseActivityTicks--;
                 }
             }
+
+            case WANDERING_AT_BEACON, WANDERING_WORLD -> {
+                if (this.nextChooseActivityTicks <= 0) {
+                    this.transitionTo(TouristState.PLANNING_NEXT_MOVE);
+                } else {
+                    this.nextChooseActivityTicks--;
+                }
+            }
+
+            // Other states are transition-driven and therefore don't need per-tick updates.
+            default -> {}
         }
     }
 
@@ -365,6 +360,17 @@ public final class TouristMind {
 
     private double chooseStartingMood() {
         return 1.0 + this.random().nextDouble();
+    }
+
+    private void clearBeaconSession() {
+        this.availableExperienceUUIDs.clear();
+        this.visitedExperienceUUIDs.clear();
+
+        // Exit any active experiences.
+        ServerLevel serverLevel = (ServerLevel) this.tourist.level();
+        while (!this.experienceTracker.isEmpty()) {
+            this.exitCurrentExperience(serverLevel, false);
+        }
     }
 
     private void clearInjectedGoals() {
@@ -585,6 +591,37 @@ public final class TouristMind {
                 true,
                 false));
         this.transitionTo(TouristState.ENJOYING_EXPERIENCE);
+    }
+
+    private void arriveAtExperienceTarget(ServerLevel serverLevel) {
+        if (this.experienceTracker.isEmpty() || this.currentExperienceTarget == null) {
+            this.transitionTo(TouristState.CHOOSING_EXPERIENCE_ACTIVITY);
+            return;
+        }
+
+        ExperienceVisit currentVisit = this.experienceTracker.peekFirst();
+        TouristExperience experience = TourismManager.getTouristExperienceById(currentVisit.experienceUUID());
+
+        if (experience == null) {
+            this.exitCurrentExperience(serverLevel, false);
+            return;
+        }
+
+        // Stop navigation.
+        this.tourist.stopNavigation();
+        this.tourist.clearHeldItem();
+
+        // Ask experience to create goal for this specific target.
+        Goal experienceGoal = experience.createGoalForTarget(this.tourist, this.currentExperienceTarget);
+
+        if (experienceGoal != null) {
+            this.injectExperienceGoal(experienceGoal);
+        }
+
+        // Reset tick counter for this target.
+        this.ticksAtCurrentTarget = 0;
+
+        this.transitionTo(TouristState.EXPERIENCING_TARGET);
     }
 
     private void beginWanderingAtBeacon() {
