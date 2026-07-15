@@ -104,7 +104,7 @@ public final class TouristMind {
         if (this.currentExperienceTarget == null) {
             // Inconsistent state - should have a target.
             TouristEntity.logActivity(Verbosity.GAMEPLAY_WARNINGS, "[TouristMind] Load warning: State is EXPERIENCING_TARGET but current experience target is null");
-            this.transitionTo(TouristState.CHOOSING_EXPERIENCE_TARGET);
+            this.transitionTo(TouristState.CHOOSING_EXPERIENCE_ACTIVITY);
             return;
         }
 
@@ -192,7 +192,7 @@ public final class TouristMind {
     }
 
     public boolean isCurrentActivityAtExperience() {
-        return this.state == TouristState.CHOOSING_EXPERIENCE_TARGET ||
+        return this.state == TouristState.CHOOSING_EXPERIENCE_ACTIVITY ||
                 this.state == TouristState.TRAVELING_TO_EXPERIENCE_TARGET ||
                 this.state == TouristState.EXPERIENCING_TARGET;
     }
@@ -606,6 +606,56 @@ public final class TouristMind {
         this.transitionTo(TouristState.TRAVELING_TO_EXPERIENCE);
     }
 
+    private void chooseExperienceActivity(ServerLevel serverLevel) {
+        if (this.experienceTracker.isEmpty()) {
+            // Error state - no experience on stack.
+            this.transitionTo(TouristState.PLANNING_NEXT_MOVE);
+            return;
+        }
+
+        ExperienceVisit currentVisit = this.experienceTracker.peekFirst();
+        TouristExperience experience = TourismManager.getTouristExperienceById(currentVisit.experienceUUID());
+
+        if (experience == null) {
+            // Experience unloaded - exit gracefully.
+            this.exitCurrentExperience(serverLevel, false);
+            return;
+        }
+
+        // Check if this is a parent experience with child experience as targets.
+        List<ExperienceTarget> remainingTargets = currentVisit.remainingTargets();
+
+        if (remainingTargets.isEmpty()) {
+            // All targets completed - exit experience.
+            this.exitCurrentExperience(serverLevel, true);
+            return;
+        }
+
+        this.currentExperienceTarget = remainingTargets.getFirst();
+
+        // Is this target a child experience?
+        if (this.currentExperienceTarget.isChildExperience()) {
+            UUID childUUID = this.currentExperienceTarget.childExperienceUUID();
+            TouristExperience childExperience = TourismManager.getTouristExperienceById(childUUID);
+
+            if (childExperience != null && childExperience.isOpenForBusiness()) {
+                // Navigate to child experience block position.
+                this.experiencePos = this.currentExperienceTarget.pos().immutable();
+                this.transitionTo(TouristState.TRAVELING_TO_EXPERIENCE);
+            } else {
+                // Child experience unavailable - skip this target.
+                this.markCurrentTargetComplete(serverLevel);
+                this.transitionTo(TouristState.CHOOSING_EXPERIENCE_ACTIVITY);
+            }
+
+            return;
+        }
+
+        // Regular target (block or entity) - navigate to it.
+        this.experiencePos = this.currentExperienceTarget.pos().immutable();
+        this.transitionTo(TouristState.TRAVELING_TO_EXPERIENCE_TARGET);
+    }
+
     private void deSpawn() {
         this.tourist.onDespawn();
         this.transitionTo(TouristState.FINISHED);
@@ -674,11 +724,34 @@ public final class TouristMind {
                 true,
                 true));
 
-        this.transitionTo(TouristState.CHOOSING_EXPERIENCE_TARGET);
+        this.transitionTo(TouristState.CHOOSING_EXPERIENCE_ACTIVITY);
     }
 
     private void exitCurrentExperience(ServerLevel serverLevel, boolean completed) {
         // TODO
+    }
+
+    private void markCurrentTargetComplete(ServerLevel serverLevel) {
+        if (this.experienceTracker.isEmpty()) {
+            return;
+        }
+
+        // Pop current visit, update it, push it back.
+        ExperienceVisit currentVisit = this.experienceTracker.pollFirst();
+
+        List<ExperienceTarget> remainingTargets = new ArrayList<>(currentVisit.remainingTargets());
+        if (!remainingTargets.isEmpty()) {
+            remainingTargets.removeFirst(); // remove completed target
+        }
+
+        ExperienceVisit updatedVisit = new ExperienceVisit(
+                currentVisit.experienceUUID(),
+                remainingTargets,
+                currentVisit.targetsCompleted() + 1
+        );
+
+        this.experienceTracker.push(updatedVisit);
+        this.currentTargetIndex++;
     }
 
     public void onForcedDespawn() {

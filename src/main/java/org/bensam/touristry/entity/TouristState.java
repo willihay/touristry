@@ -13,7 +13,7 @@ public enum TouristState implements StringRepresentable {
     CHOOSING_EXPERIENCE(true, ReviewTarget.BEACON),
     TRAVELING_TO_EXPERIENCE(false, ReviewTarget.EXPERIENCE),
     ENTERING_EXPERIENCE(false, ReviewTarget.EXPERIENCE),
-    CHOOSING_EXPERIENCE_TARGET(false, ReviewTarget.EXPERIENCE),
+    CHOOSING_EXPERIENCE_ACTIVITY(false, ReviewTarget.EXPERIENCE),
     TRAVELING_TO_EXPERIENCE_TARGET(false, ReviewTarget.EXPERIENCE),
     EXPERIENCING_TARGET(false, ReviewTarget.EXPERIENCE),
     ENJOYING_EXPERIENCE(false, ReviewTarget.EXPERIENCE), // TODO: remove
