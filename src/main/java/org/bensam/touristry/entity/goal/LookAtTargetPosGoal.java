@@ -54,7 +54,7 @@ public class LookAtTargetPosGoal extends Goal {
         
         // Vary the look behavior to appear more natural:
         // 1. Initial focused gaze at target (first 2 seconds)
-        // 2. Look up/around briefly (every 2-4 seconds)
+        // 2. Look up/around briefly (every 1-2 seconds)
         // 3. Add slight random variations when looking at target
         
         if (this.tickCount <= 40) {
