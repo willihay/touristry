@@ -57,7 +57,7 @@ public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEnt
             return null; // just navigate to sub-experience
         }
 
-        return new LookAtTargetPosGoal(tourist, target.pos(), target.playerFacing());
+        return new LookAtTargetPosGoal(tourist, target.pos());
     }
 
     @Override

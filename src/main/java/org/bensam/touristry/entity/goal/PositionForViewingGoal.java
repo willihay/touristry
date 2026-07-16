@@ -38,8 +38,10 @@ public class PositionForViewingGoal extends Goal {
     }
 
     private BlockPos calculateIdealViewingPosition() {
-        // Stand at ideal distance from target, in the direction player was facing.
-        return this.targetPos.relative(this.playerFacing, this.idealDistance);
+        // Stand at ideal distance from target, on the same side the player was standing when the target was registered.
+        // For example, if player was facing NORTH looking at the target, player was standing SOUTH of target,
+        // so we move SOUTH from target (opposite of player's facing direction).
+        return this.targetPos.relative(this.playerFacing.getOpposite(), this.idealDistance);
     }
 
     @Override
@@ -157,6 +159,20 @@ public class PositionForViewingGoal extends Goal {
         );
 
         HitResult hitResult = serverLevel.clip(context);
-        return hitResult.getType() == HitResult.Type.MISS;
+        
+        // If we didn't hit anything, line of sight is clear
+        if (hitResult.getType() == HitResult.Type.MISS) {
+            return true;
+        }
+        
+        // If we hit something, check if it's at the target position (hitting the target itself is OK!)
+        if (hitResult.getType() == HitResult.Type.BLOCK) {
+            BlockPos hitPos = BlockPos.containing(hitResult.getLocation());
+            // Allow hits at or very close to the target position (target entity/block itself)
+            return hitPos.equals(this.targetPos) || 
+                   hitPos.closerThan(this.targetPos, 1.5);
+        }
+        
+        return false;
     }
 }
