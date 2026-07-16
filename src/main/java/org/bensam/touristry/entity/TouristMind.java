@@ -393,6 +393,8 @@ public final class TouristMind {
         boolean targetComplete = experience.tick(this.tourist, serverLevel);
 
         if (targetComplete) {
+            this.tourist.playSound(SoundEvents.VILLAGER_CELEBRATE);
+
             // Remove experience-specific goals.
             this.clearInjectedGoals();
 
