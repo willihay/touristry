@@ -48,9 +48,23 @@ public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEnt
             return true;
         }
 
+        // Calculate duration modifiers as needed.
         int durationModifier = 0;
-        if (target.isEntity()) {
+        if (target.isBlock()) {
+            BlockEntity blockEntity = this.level.getBlockEntity(target.pos());
+            // Extend duration of lectern targets that have books by the number of written pages in the book.
+            if (blockEntity instanceof LecternBlockEntity lectern) {
+                ItemStack book = lectern.getBook();
+                if (!book.isEmpty() && book.has(net.minecraft.core.component.DataComponents.WRITTEN_BOOK_CONTENT)) {
+                    WrittenBookContent content = book.get(net.minecraft.core.component.DataComponents.WRITTEN_BOOK_CONTENT);
+                    if (content != null) {
+                        durationModifier = Math.min(content.pages().size() * 10, 160); // extend duration by 10 ticks per written page (max 160)
+                    }
+                }
+            }
+        } else if (target.isEntity()) {
             Entity entity = serverLevel.getEntity(target.entityUUID());
+            // Extend duration of painting targets by the size of the painting.
             if (entity instanceof Painting painting) {
                 int area = painting.getVariant().value().area();
                 durationModifier = area * 5; // extend duration by 5 ticks per sq. unit of area
