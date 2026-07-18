@@ -10,12 +10,13 @@ import org.jspecify.annotations.NonNull;
 import java.util.EnumSet;
 
 public class MoveToTargetGoal extends Goal {
-    private static final double ARRIVAL_DISTANCE_SQUARED = 4.0;
-    private static final int REPATH_INTERVAL_GOALTICKS = 20;
-    private static final int CHECK_PROGRESS_GOALTICKS = 40;
-    private static final int PROGRESS_CHECK_RETRIES = 5;
+    private static final double DESIRED_DISTANCE_SQUARED = 4.0D;
+    private static final int REPATH_INTERVAL_GOALTICKS = 15;
+    private static final int CHECK_PROGRESS_GOALTICKS = 30;
+    private static final int PROGRESS_CHECK_RETRIES = 4;
 
     private final TouristEntity tourist;
+    private double maxDistanceSq;
     private int nextRepathTicks;
     private int nextCheckProgressTicks;
 
@@ -36,6 +37,8 @@ public class MoveToTargetGoal extends Goal {
 
     @Override
     public void start() {
+        int maxDistanceFromTarget = this.tourist.getMind().getMaxDistanceAwayFromTarget();
+        this.maxDistanceSq = maxDistanceFromTarget * maxDistanceFromTarget;
         this.nextRepathTicks = 0;
         this.nextCheckProgressTicks = CHECK_PROGRESS_GOALTICKS;
         BlockPos targetPos = this.tourist.getMoveToTarget();
@@ -54,7 +57,7 @@ public class MoveToTargetGoal extends Goal {
             TouristEntity.logActivity(Verbosity.GAMEPLAY_WARNINGS, "[MoveToTargetGoal] Starting navigation to (unknown) " + targetPos.toShortString());
         }
 
-        double distanceToTarget = Math.sqrt(this.getDistanceToTargetSqr(targetPos));
+        double distanceToTarget = Math.sqrt(this.getDistanceToTargetSqr(targetPos, false));
         this.tourist.getMind().recordProgressTowardsTarget(distanceToTarget, 0);
 
         if (!this.isAtTarget(targetPos)) {
@@ -93,14 +96,26 @@ public class MoveToTargetGoal extends Goal {
         // Check on progress towards target and report. Determine if tourist is lost.
         if (nextCheckProgressTicks <= 0 && !this.isAtTarget(targetPos)) {
             double closestDistanceToTarget = this.tourist.getClosestDistanceToTarget();
-            double distanceToTarget = Math.sqrt(getDistanceToTargetSqr(targetPos));
+            double distanceToTarget = Math.sqrt(getDistanceToTargetSqr(targetPos, false));
             if ((closestDistanceToTarget - distanceToTarget) < 0.5) {
                 int consecutiveFailedProgressChecks = this.tourist.getConsecutiveFailedProgressChecks();
                 consecutiveFailedProgressChecks++;
                 this.tourist.getMind().recordProgressTowardsTarget(closestDistanceToTarget, consecutiveFailedProgressChecks);
 
+                if (consecutiveFailedProgressChecks >= 2) {
+                    if (this.getDistanceToTargetSqr(targetPos, true) <= DESIRED_DISTANCE_SQUARED) {
+                        this.tourist.getMind().arriveAtDestination(); // tourist got within the right horizontal distance - the target might be just too high off the ground
+                        return;
+                    }
+                }
+
                 if (consecutiveFailedProgressChecks > PROGRESS_CHECK_RETRIES) {
-                    this.tourist.getMind().onLost();
+                    if (this.getDistanceToTargetSqr(targetPos, false) <= this.maxDistanceSq) {
+                        this.tourist.getMind().arriveAtDestination(); // tourist got "close enough"
+                    } else {
+                        this.tourist.getMind().onLost();
+                    }
+                    return;
                 } else {
                     if (this.tourist.level() instanceof ServerLevel) {
                         TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[MoveToTargetGoal] " + this.tourist.getDisplayName().getString() + " failed " + consecutiveFailedProgressChecks + " consecutive nav progress checks");
@@ -141,14 +156,14 @@ public class MoveToTargetGoal extends Goal {
         this.nextRepathTicks = REPATH_INTERVAL_GOALTICKS;
     }
 
-    private double getDistanceToTargetSqr(BlockPos targetPos) {
+    private double getDistanceToTargetSqr(BlockPos targetPos, boolean disregardHeightDifference) {
         double targetCenterX = targetPos.getX() + 0.5;
-        double targetCenterY = targetPos.getY();
+        double targetCenterY = disregardHeightDifference ? this.tourist.getY() : targetPos.getY();
         double targetCenterZ = targetPos.getZ() + 0.5;
         return this.tourist.distanceToSqr(targetCenterX, targetCenterY, targetCenterZ);
     }
 
     private boolean isAtTarget(@NonNull BlockPos targetPos) {
-        return this.getDistanceToTargetSqr(targetPos) <= ARRIVAL_DISTANCE_SQUARED;
+        return this.getDistanceToTargetSqr(targetPos, false) <= DESIRED_DISTANCE_SQUARED;
     }
 }

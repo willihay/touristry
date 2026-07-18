@@ -7,33 +7,37 @@ import org.bensam.touristry.tourism.TouristLocation;
 import java.util.Locale;
 
 public enum TouristState implements StringRepresentable {
-    IDLE(false, TouristLocation.WORLD, TouristLocation.WORLD),
-    PLANNING_NEXT_MOVE(false, TouristLocation.WORLD, TouristLocation.WORLD),
-    TRAVELING_TO_BEACON(true, TouristLocation.WORLD, TouristLocation.BEACON),
-    CHOOSING_EXPERIENCE(true, TouristLocation.BEACON, TouristLocation.BEACON),
-    TRAVELING_TO_EXPERIENCE(false, TouristLocation.BEACON, TouristLocation.EXPERIENCE),
-    ENTERING_EXPERIENCE(false, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
-    CHOOSING_EXPERIENCE_ACTIVITY(false, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
-    TRAVELING_TO_EXPERIENCE_TARGET(false, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
-    POSITIONING_AT_TARGET(false, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
-    EXPERIENCING_TARGET(false, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
-    LEAVING_EXPERIENCE(false, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
-    WANDERING_AT_BEACON(true, TouristLocation.BEACON, TouristLocation.BEACON),
-    WANDERING_AT_EXPERIENCE(false, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
-    WANDERING_WORLD(false, TouristLocation.WORLD, TouristLocation.WORLD),
-    SLEEPING(true, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
-    DESPAWNING(false, TouristLocation.WORLD, TouristLocation.WORLD),
-    LOST(false, TouristLocation.WORLD, TouristLocation.WORLD),
-    FINISHED(false, TouristLocation.WORLD, TouristLocation.WORLD);
+    IDLE(false, false, TouristLocation.WORLD, TouristLocation.WORLD),
+    TRAVELING_TO_BEACON(true, false, TouristLocation.WORLD, TouristLocation.BEACON),
+    WAIT_AT_BEACON(false, false, TouristLocation.BEACON, TouristLocation.BEACON),
+    CHOOSING_EXPERIENCE_AT_BEACON(true, false, TouristLocation.BEACON, TouristLocation.BEACON),
+    TRAVELING_TO_EXPERIENCE(false, true, TouristLocation.BEACON, TouristLocation.EXPERIENCE),
+    WAIT_AT_EXPERIENCE(false, false, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
+    ENTERING_EXPERIENCE(false, true, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
+    CHOOSING_EXPERIENCE_TARGET(false, true, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
+    TRAVELING_TO_EXPERIENCE_TARGET(false, true, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
+    POSITIONING_AT_TARGET(false, true, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
+    EXPERIENCING_TARGET(false, true, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
+    LEAVING_EXPERIENCE(false, false, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
+    WANDERING_AT_BEACON(true, false, TouristLocation.BEACON, TouristLocation.BEACON),
+    WANDERING_AT_EXPERIENCE(false, true, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
+    WANDERING_WORLD(false, false, TouristLocation.WORLD, TouristLocation.WORLD),
+    SLEEPING(true, true, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
+    PLANNING_NEXT_MOVE(false, false, TouristLocation.WORLD, TouristLocation.WORLD),
+    DESPAWNING(false, false, TouristLocation.WORLD, TouristLocation.WORLD),
+    LOST(false, false, TouristLocation.WORLD, TouristLocation.WORLD),
+    FINISHED(false, false, TouristLocation.WORLD, TouristLocation.WORLD);
 
-    private final boolean requiresBeacon;
+    private final boolean requiresBeaconPos;
+    private final boolean requiresExperiencePos;
     private final TouristLocation touristLocation;
     private final TouristLocation reviewTarget;
 
     public static final Codec<TouristState> CODEC = StringRepresentable.fromEnum(TouristState::values);
 
-    TouristState(boolean requiresBeacon, TouristLocation touristLocation, TouristLocation reviewTarget) {
-        this.requiresBeacon = requiresBeacon;
+    TouristState(boolean requiresBeaconPos, boolean requiresExperiencePos, TouristLocation touristLocation, TouristLocation reviewTarget) {
+        this.requiresBeaconPos = requiresBeaconPos;
+        this.requiresExperiencePos = requiresExperiencePos;
         this.touristLocation = touristLocation;
         this.reviewTarget = reviewTarget;
     }
@@ -63,8 +67,12 @@ public enum TouristState implements StringRepresentable {
         return this == WANDERING_WORLD || this == WANDERING_AT_BEACON || this == WANDERING_AT_EXPERIENCE;
     }
 
-    public boolean requiresBeacon() {
-        return this.requiresBeacon;
+    public boolean requiresBeaconPos() {
+        return this.requiresBeaconPos;
+    }
+
+    public boolean requiresExperiencePos() {
+        return this.requiresExperiencePos;
     }
 
     public TouristLocation reviewTarget() {

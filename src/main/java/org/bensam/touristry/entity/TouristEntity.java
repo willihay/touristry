@@ -32,7 +32,10 @@ import org.bensam.touristry.entity.goal.MoveToTargetGoal;
 import org.bensam.touristry.entity.goal.TouristLookAtEntityGoal;
 import org.bensam.touristry.entity.goal.TouristRandomLookAroundGoal;
 import org.bensam.touristry.entity.goal.TouristRandomStrollGoal;
-import org.bensam.touristry.tourism.*;
+import org.bensam.touristry.tourism.TourismManager;
+import org.bensam.touristry.tourism.TouristLocation;
+import org.bensam.touristry.tourism.TouristReview;
+import org.bensam.touristry.tourism.VisitResult;
 import org.bensam.touristry.tourism.experience.TouristExperience;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -254,6 +257,10 @@ public class TouristEntity extends AbstractVillager {
 
     public void giveItemToHold(ItemStack itemStack) {
         this.setItemSlot(EquipmentSlot.MAINHAND, itemStack);
+    }
+
+    public boolean hasHeldItem() {
+        return !(this.getMainHandItem().isEmpty());
     }
 
     @Override

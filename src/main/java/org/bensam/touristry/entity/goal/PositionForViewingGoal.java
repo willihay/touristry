@@ -27,6 +27,7 @@ public class PositionForViewingGoal extends Goal {
     private final BlockPos idealViewingPos;
     private int ticksPositioning = 0;
     private boolean positioned = false;
+    private boolean aborted = false;
 
     public PositionForViewingGoal(TouristEntity tourist, BlockPos targetPos, Direction playerFacing, int idealDistance) {
         this.tourist = tourist;
@@ -51,7 +52,7 @@ public class PositionForViewingGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
-        return this.canUse() && !this.positioned && this.ticksPositioning < MAX_POSITIONING_TICKS;
+        return this.canUse() && !this.aborted && !this.positioned && this.ticksPositioning < MAX_POSITIONING_TICKS;
     }
 
     @Override
@@ -71,7 +72,7 @@ public class PositionForViewingGoal extends Goal {
         if (!this.hasLineOfSight()) {
             TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS,
                 "[PositionForViewingGoal] No line of sight from ideal position, skipping fine positioning");
-            this.finishPositioning();
+            this.aborted = true;
             return;
         }
 
@@ -86,7 +87,7 @@ public class PositionForViewingGoal extends Goal {
         if (!moveStarted) {
             TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS,
                 "[PositionForViewingGoal] Unable to path to ideal position, skipping fine positioning");
-            this.finishPositioning();
+            this.aborted = true;
         }
     }
 
@@ -94,8 +95,9 @@ public class PositionForViewingGoal extends Goal {
     public void tick() {
         this.ticksPositioning++;
 
-        // Check if we've reached the ideal position (within 1.5 blocks)
-        if (this.tourist.blockPosition().closerToCenterThan(this.idealViewingPos.getCenter(), 1.5)) {
+        // Check if tourist has reached the ideal XZ position (okay for Y to be less than ideal)
+        BlockPos idealPos = new BlockPos(this.idealViewingPos.getX(), this.tourist.blockPosition().getY(), this.idealViewingPos.getZ());
+        if (this.tourist.blockPosition().closerToCenterThan(idealPos.getCenter(), this.idealDistance)) {
             this.positioned = true;
             
             // Orient tourist to look at target
@@ -116,7 +118,13 @@ public class PositionForViewingGoal extends Goal {
     public void stop() {
         if (!this.positioned && this.ticksPositioning >= MAX_POSITIONING_TICKS) {
             TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS,
-                "[PositionForViewingGoal] Positioning timeout, proceeding anyway");
+                "[PositionForViewingGoal] Positioning timeout, orienting tourist and proceeding anyway");
+
+            this.tourist.getLookControl().setLookAt(
+                    this.targetPos.getX() + 0.5,
+                    this.targetPos.getY() + 0.5,
+                    this.targetPos.getZ() + 0.5
+            );
         }
 
         // Always finish positioning when goal stops, even if not at ideal position.
@@ -138,6 +146,7 @@ public class PositionForViewingGoal extends Goal {
             return true; // Assume true if not on server
         }
 
+        // Create 2 vantage points (fromPos) and check line of sight to target (toPos).
         Vec3 fromPos = new Vec3(
             this.idealViewingPos.getX() + 0.5,
             this.idealViewingPos.getY() + 1.5, // Eye level
@@ -157,20 +166,34 @@ public class PositionForViewingGoal extends Goal {
             ClipContext.Fluid.NONE,
             this.tourist
         );
-
         HitResult hitResult = serverLevel.clip(context);
+
+        fromPos = fromPos.subtract(0.0, 1.0, 0.0);
+        ClipContext context2 = new ClipContext(
+                fromPos,
+                toPos,
+                ClipContext.Block.COLLIDER,
+                ClipContext.Fluid.NONE,
+                this.tourist
+        );
+        HitResult hitResult2 = serverLevel.clip(context2);
         
-        // If we didn't hit anything, line of sight is clear
-        if (hitResult.getType() == HitResult.Type.MISS) {
+        // If we didn't hit anything from either vantage point, line of sight is clear
+        if (hitResult.getType() == HitResult.Type.MISS || hitResult2.getType() == HitResult.Type.MISS ||
+                hitResult.getType() == HitResult.Type.ENTITY || hitResult2.getType() == HitResult.Type.ENTITY) {
             return true;
         }
         
         // If we hit something, check if it's at the target position (hitting the target itself is OK!)
-        if (hitResult.getType() == HitResult.Type.BLOCK) {
+        if (hitResult.getType() == HitResult.Type.BLOCK || hitResult2.getType() == HitResult.Type.BLOCK) {
             BlockPos hitPos = BlockPos.containing(hitResult.getLocation());
+            BlockPos hitPos2 = BlockPos.containing(hitResult2.getLocation());
+
             // Allow hits at or very close to the target position (target entity/block itself)
             return hitPos.equals(this.targetPos) || 
-                   hitPos.closerThan(this.targetPos, 1.5);
+                   hitPos.closerThan(this.targetPos, 1.5) ||
+                    hitPos2.equals(this.targetPos) ||
+                    hitPos2.closerThan(this.targetPos, 1.5);
         }
         
         return false;

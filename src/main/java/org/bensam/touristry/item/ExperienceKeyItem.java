@@ -49,7 +49,7 @@ public class ExperienceKeyItem extends Item {
         }
 
         BlockPos blockPos = hitResult.getBlockPos();
-        double maxDistance = experience.getMaxDistanceToTarget();
+        double maxDistance = experience.getMaxRangeToTarget();
         double maxDistanceSq = maxDistance * maxDistance;
         if (blockPos.distSqr(experience.getBlockPos()) > maxDistanceSq) {
             player.displayClientMessage(
@@ -122,7 +122,7 @@ public class ExperienceKeyItem extends Item {
         }
 
         BlockPos entityPos = entity.blockPosition();
-        double maxDistance = experience.getMaxDistanceToTarget();
+        double maxDistance = experience.getMaxRangeToTarget();
         double maxDistanceSq = maxDistance * maxDistance;
         if (entityPos.distSqr(experience.getBlockPos()) > maxDistanceSq) {
             player.displayClientMessage(

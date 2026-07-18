@@ -26,7 +26,9 @@ import org.bensam.touristry.tourism.experience.ExperienceTarget;
 import org.jspecify.annotations.Nullable;
 
 public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEntity {
-    public static final int MAX_DISTANCE_TO_TARGET = 100;
+    public static final int IDEAL_APPROACH_DISTANCE = 2; // Tourist should try to stand this far away for sightseeing targets
+    public static final int MAX_APPROACH_DISTANCE = 6; // Skip target if tourist can't get closer than this distance
+    public static final int MAX_RANGE_TO_TARGET = 100;
     public static final int PAYMENT_SLOT_SIZE = 9;
     public static final int TOTAL_INVENTORY_SIZE = PAYMENT_SLOT_SIZE + 1;
 
@@ -41,8 +43,21 @@ public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEnt
     }
 
     @Override
-    public boolean tick(TouristEntity tourist, ServerLevel serverLevel) {
-        return tourist.getTicksAtCurrentTarget() >= 200; // 10 game seconds
+    public boolean tickAtTarget(TouristEntity tourist, ServerLevel serverLevel, ExperienceTarget target) {
+        if (target == null) {
+            return true;
+        }
+
+        int durationModifier = 0;
+        if (target.isEntity()) {
+            Entity entity = serverLevel.getEntity(target.entityUUID());
+            if (entity instanceof Painting painting) {
+                int area = painting.getVariant().value().area();
+                durationModifier = area * 5; // extend duration by 5 ticks per sq. unit of area
+            }
+        }
+
+        return tourist.getTicksAtCurrentTarget() >= (160 + durationModifier); // minimum 8 game seconds at a sightseeing target
     }
 
     @Override
@@ -70,6 +85,31 @@ public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEnt
         return Component.translatable("block." + Touristry.MOD_ID + ".sightseeing_experience");
     }
 
+    @Override
+    protected int getExperienceKeySlotIndex() {
+        return PAYMENT_SLOT_SIZE;
+    }
+
+    @Override
+    public int getIdealApproachDistance() {
+        return IDEAL_APPROACH_DISTANCE;
+    }
+
+    @Override
+    public int getMaxApproachDistance() {
+        return MAX_APPROACH_DISTANCE;
+    }
+
+    @Override
+    public int getMaxRangeToTarget() {
+        return MAX_RANGE_TO_TARGET;
+    }
+
+    @Override
+    public int getPaymentSlotSize() {
+        return PAYMENT_SLOT_SIZE;
+    }
+
     public Component getTargetDisplayName(ExperienceTarget target) {
         BlockEntity blockEntity = this.level.getBlockEntity(target.pos());
         if (!(blockEntity instanceof LecternBlockEntity lectern)) {
@@ -94,26 +134,6 @@ public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEnt
 
         // Priority 3: Use translated block name (e.g., "Lectern")
         return blockEntity.getBlockState().getBlock().getName();
-    }
-
-    @Override
-    protected int getExperienceKeySlotIndex() {
-        return PAYMENT_SLOT_SIZE;
-    }
-
-    @Override
-    public int getIdealViewingDistance() {
-        return 2; // Stand 2 blocks away for sightseeing targets
-    }
-
-    @Override
-    public int getMaxDistanceToTarget() {
-        return MAX_DISTANCE_TO_TARGET;
-    }
-
-    @Override
-    public int getPaymentSlotSize() {
-        return PAYMENT_SLOT_SIZE;
     }
 
     private boolean isSightseeingBlock(BlockState blockState) {

@@ -23,8 +23,9 @@ public interface TouristExperience {
     boolean addBlockTarget(ServerLevel serverLevel, BlockPos blockPos, Direction playerFacing);
     boolean addChildExperienceTarget(ServerLevel serverLevel, BlockPos blockPos, Direction playerFacing, UUID childUUID);
     boolean addEntityTarget(ServerLevel serverLevel, BlockPos entityPos, Direction playerFacing, UUID entityUUID);
-    int getMaxDistanceToTarget();
-    int getIdealViewingDistance();
+    int getIdealApproachDistance();
+    int getMaxApproachDistance();
+    int getMaxRangeToTarget();
     List<ExperienceTarget> getTargets(ServerLevel serverLevel);
     boolean isOpenForBusiness();
     boolean isTargetValid(ServerLevel serverLevel, ExperienceTarget target);
@@ -36,7 +37,7 @@ public interface TouristExperience {
 
     // Lifecycle
     void onTouristArrival(TouristEntity tourist, ServerLevel serverLevel);
-    boolean tick(TouristEntity tourist, ServerLevel serverLevel);
+    boolean tickAtTarget(TouristEntity tourist, ServerLevel serverLevel, ExperienceTarget target);
     void onTouristDeparture(TouristEntity tourist, ServerLevel serverLevel, boolean completed);
 
     @Nullable Goal createGoalForTarget(TouristEntity tourist, ExperienceTarget target);
