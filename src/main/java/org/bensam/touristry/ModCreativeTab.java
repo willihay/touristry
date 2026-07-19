@@ -30,6 +30,7 @@ public final class ModCreativeTab {
                 .title(Component.translatable("itemGroup." + Touristry.MOD_ID))
                 .displayItems((params, output) -> {
                     output.accept(ModBlocks.TOURIST_BEACON.get().asItem());
+                    output.accept(ModBlocks.SHOPPING_EXPERIENCE.get().asItem());
                     output.accept(ModBlocks.SIGHTSEEING_EXPERIENCE.get().asItem());
                     output.accept(ModItems.KEY_BLANK.get());
                 })

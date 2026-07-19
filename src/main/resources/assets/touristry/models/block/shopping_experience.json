@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "touristry:block/shopping_experience_side",
+    "down": "touristry:block/shopping_experience_bottom",
+    "up": "touristry:block/shopping_experience_top",
+    "north": "touristry:block/shopping_experience_side",
+    "south": "touristry:block/shopping_experience_side",
+    "west": "touristry:block/shopping_experience_side",
+    "east": "touristry:block/shopping_experience_side"
+  }
+}

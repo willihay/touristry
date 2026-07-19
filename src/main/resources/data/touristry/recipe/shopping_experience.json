@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "BCQ",
+    "GKG",
+    "###"
+  ],
+  "key": {
+    "B": "minecraft:book",
+    "C": "minecraft:chest",
+    "Q": "minecraft:writable_book",
+    "G": "minecraft:granite_slab",
+    "K": "touristry:key_blank",
+    "#": "#minecraft:planks"
+  },
+  "result": {
+    "id": "touristry:shopping_experience"
+  }
+}

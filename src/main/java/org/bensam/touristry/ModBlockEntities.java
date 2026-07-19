@@ -5,6 +5,7 @@ import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.entity.BlockEntityType;
+import org.bensam.touristry.block.entity.ShoppingExperienceBlockEntity;
 import org.bensam.touristry.block.entity.SightseeingExperienceBlockEntity;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
 
@@ -16,6 +17,9 @@ public final class ModBlockEntities {
     private static BlockEntityType<TouristBeaconBlockEntity> touristBeacon;
     public static final Supplier<BlockEntityType<TouristBeaconBlockEntity>> TOURIST_BEACON = () -> touristBeacon;
 
+    private static BlockEntityType<ShoppingExperienceBlockEntity> shoppingExperience;
+    public static final Supplier<BlockEntityType<ShoppingExperienceBlockEntity>> SHOPPING_EXPERIENCE = () -> shoppingExperience;
+
     private static BlockEntityType<SightseeingExperienceBlockEntity> sightseeingExperience;
     public static final Supplier<BlockEntityType<SightseeingExperienceBlockEntity>> SIGHTSEEING_EXPERIENCE = () -> sightseeingExperience;
 
@@ -26,6 +30,15 @@ public final class ModBlockEntities {
                 FabricBlockEntityTypeBuilder.create(
                         TouristBeaconBlockEntity::new,
                         ModBlocks.TOURIST_BEACON.get()
+                ).build()
+        );
+
+        shoppingExperience = Registry.register(
+                BuiltInRegistries.BLOCK_ENTITY_TYPE,
+                Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "shopping_experience"),
+                FabricBlockEntityTypeBuilder.create(
+                        ShoppingExperienceBlockEntity::new,
+                        ModBlocks.SHOPPING_EXPERIENCE.get()
                 ).build()
         );
 

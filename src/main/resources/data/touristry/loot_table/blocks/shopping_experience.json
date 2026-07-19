@@ -1,0 +1,41 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "touristry:shopping_experience",
+          "functions": [
+            {
+              "function": "minecraft:copy_components",
+              "source": "block_entity",
+              "include": [
+                "minecraft:container",
+                "minecraft:custom_name",
+                "touristry:tourist_experience_uuid",
+                "touristry:tourist_experience_parent_uuid",
+                "touristry:tourist_experience_statistics",
+                "touristry:tourist_experience_status",
+                "touristry:tourist_experience_targets"
+              ]
+            },
+            {
+              "function": "minecraft:copy_state",
+              "block": "touristry:shopping_experience",
+              "properties": [
+                "open_for_business"
+              ]
+            }
+          ]
+        }
+      ],
+      "conditions": [
+        {
+          "condition": "minecraft:survives_explosion"
+        }
+      ]
+    }
+  ]
+}
