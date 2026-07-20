@@ -213,6 +213,11 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
     }
 
     @Override
+    public boolean hasTarget(BlockPos blockPos) {
+        return targets.stream().anyMatch(target -> target.pos().equals(blockPos));
+    }
+
+    @Override
     public boolean isOpenForBusiness() {
         return this.openForBusiness;
     }
@@ -274,7 +279,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
     }
 
     @Override
-    public void removeTarget(ServerLevel serverLevel, BlockPos pos) {
+    public boolean removeTarget(ServerLevel serverLevel, BlockPos pos) {
         // Clear parent relationship if removing a child experience.
         for (ExperienceTarget target : this.targets) {
             if (target.pos().equals(pos) && target.isChildExperience()) {
@@ -287,14 +292,20 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
             }
         }
         
-        this.targets.removeIf(target -> target.pos().equals(pos));
-        this.setChanged();
+        boolean removed = this.targets.removeIf(target -> target.pos().equals(pos));
+        if (removed) {
+            this.setChanged();
+        }
+        return removed;
     }
 
     @Override
-    public void removeEntityTargetById(ServerLevel serverLevel, UUID entityUUID) {
-        this.targets.removeIf(target -> entityUUID.equals(target.entityUUID()));
-        this.setChanged();
+    public boolean removeEntityTargetById(ServerLevel serverLevel, UUID entityUUID) {
+        boolean removed = this.targets.removeIf(target -> entityUUID.equals(target.entityUUID()));
+        if (removed) {
+            this.setChanged();
+        }
+        return removed;
     }
 
     public void resetAllStats() {

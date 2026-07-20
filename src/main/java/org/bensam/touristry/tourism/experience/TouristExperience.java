@@ -27,10 +27,11 @@ public interface TouristExperience {
     int getMaxApproachDistance();
     int getMaxRangeToTarget();
     List<ExperienceTarget> getTargets(ServerLevel serverLevel);
+    boolean hasTarget(BlockPos blockPos);
     boolean isOpenForBusiness();
     boolean isTargetValid(ServerLevel serverLevel, ExperienceTarget target);
-    void removeTarget(ServerLevel serverLevel, BlockPos pos);
-    void removeEntityTargetById(ServerLevel serverLevel, UUID entityUUID);
+    boolean removeTarget(ServerLevel serverLevel, BlockPos pos);
+    boolean removeEntityTargetById(ServerLevel serverLevel, UUID entityUUID);
 
     TouristLocationStats getStatistics();
     void rateVisit(VisitResult result, long currentTimeTicks);

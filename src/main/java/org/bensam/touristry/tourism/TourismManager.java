@@ -183,6 +183,16 @@ public class TourismManager {
         return closestBlockEntity;
     }
 
+    public static @Nullable TouristExperience findOwnerOfExperienceTarget(BlockPos pos) {
+        TouristExperience owner = null;
+        for (TouristExperience experience : loadedExperiences.values()) {
+            if (experience.hasTarget(pos)) {
+                return experience;
+            }
+        }
+        return null;
+    }
+
     public static @Nullable TouristExperience getTouristExperienceByPos(BlockPos blockPos) {
         return loadedExperiences.get(loadedExperiencesByPos.get(blockPos));
     }
