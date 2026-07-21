@@ -20,8 +20,8 @@ public class TourismStatusToggleButton extends AbstractButton {
     private static final int BUTTON_HEIGHT = 16;
     private static final int DRAW_WIDTH = 16;
     private static final int DRAW_HEIGHT = 8;
-    private static final Component OPEN_FOR_BUSINESS_MESSAGE = Component.translatable("screen." + Touristry.MOD_ID + ".tourism_status.open_for_business");
-    private static final Component CLOSED_FOR_BUSINESS_MESSAGE = Component.translatable("screen." + Touristry.MOD_ID + ".tourism_status.closed_for_business");
+    private static final Component OPEN_FOR_BUSINESS_MESSAGE = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.status.open_for_business");
+    private static final Component CLOSED_FOR_BUSINESS_MESSAGE = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.status.closed_for_business");
 
     private final TourismStatusMenu menu;
     private final Identifier texture;

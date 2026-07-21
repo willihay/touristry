@@ -151,7 +151,7 @@ public final class PlayerCommands {
         Component message = beaconBlockEntity.getName().copy()
                 .append(Component.literal(" @ " + beaconBlockEntity.getBlockPos().toShortString() + " is now "))
                 .append(Component.translatable("message." + Touristry.MOD_ID
-                        + (beaconBlockEntity.isOpenForBusiness() ? ".tourism_status.open_for_business" : ".tourism_status.closed_for_business")));
+                        + (beaconBlockEntity.isOpenForBusiness() ? ".tourist_block.status.open_for_business" : ".tourist_block.status.closed_for_business")));
         source.sendSuccess(() -> message,  false);
         return 1;
     }
@@ -230,7 +230,7 @@ public final class PlayerCommands {
         Component message = experienceBlockEntity.getName().copy()
                 .append(Component.literal(" @ " + experienceBlockEntity.getBlockPos().toShortString() + " is now "))
                 .append(Component.translatable("message." + Touristry.MOD_ID
-                        + (experienceBlockEntity.isOpenForBusiness() ? ".tourism_status.open_for_business" : ".tourism_status.closed_for_business")));
+                        + (experienceBlockEntity.isOpenForBusiness() ? ".tourist_block.status.open_for_business" : ".tourist_block.status.closed_for_business")));
         source.sendSuccess(() -> message,  false);
         return 1;
     }
@@ -249,7 +249,7 @@ public final class PlayerCommands {
                     .append(beaconBlockEntity.getName().copy())
                     .append(Component.literal(" @ " + beaconBlockEntity.getBlockPos().toShortString() + " ("))
                     .append(Component.translatable("message." + Touristry.MOD_ID
-                            + (beaconBlockEntity.isOpenForBusiness() ? ".tourism_status.open_for_business" : ".tourism_status.closed_for_business")))
+                            + (beaconBlockEntity.isOpenForBusiness() ? ".tourist_block.status.open_for_business" : ".tourist_block.status.closed_for_business")))
                     .append(Component.literal(")"));
             source.sendSuccess(() -> message, false);
         }

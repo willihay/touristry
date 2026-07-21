@@ -64,7 +64,7 @@ public class TouristBeaconScreen extends AbstractContainerScreen<TouristBeaconMe
         super.renderLabels(guiGraphics, i, j);
 
         Component reputationLabel = Component.translatable(
-                "screen." + Touristry.MOD_ID + ".tourism_status.reputation",
+                "screen." + Touristry.MOD_ID + ".tourist_block.reputation",
                 String.format("%.2f", this.menu.getReputation())
         );
 
@@ -77,7 +77,7 @@ public class TouristBeaconScreen extends AbstractContainerScreen<TouristBeaconMe
                 false
         );
 
-        Component statusLabel = Component.translatable("screen." + Touristry.MOD_ID + ".tourism_status.status_label");
+        Component statusLabel = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.status.label");
 
         guiGraphics.drawString(
                 this.font,

@@ -7,7 +7,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.Item;
 import org.bensam.touristry.config.ModServerConfig;
-import org.bensam.touristry.item.ExperienceKeyItem;
+import org.bensam.touristry.item.ExperienceTargetKeyItem;
 
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -15,8 +15,8 @@ import java.util.function.Supplier;
 public final class ModItems {
     private ModItems() {}
 
-    private static ExperienceKeyItem experienceKeyItem;
-    public static final Supplier<ExperienceKeyItem> EXPERIENCE_KEY = () -> experienceKeyItem;
+    private static ExperienceTargetKeyItem experienceTargetKeyItem;
+    public static final Supplier<ExperienceTargetKeyItem> EXPERIENCE_TARGET_KEY = () -> experienceTargetKeyItem;
 
     private static Item keyBlankItem;
     public static final Supplier<Item> KEY_BLANK = () -> keyBlankItem;
@@ -24,9 +24,9 @@ public final class ModItems {
     public static void initialize() {
         ModServerConfig defaults = ModServerConfig.defaults();
 
-        experienceKeyItem = register(
+        experienceTargetKeyItem = register(
                 "experience_key",
-                ExperienceKeyItem::new,
+                ExperienceTargetKeyItem::new,
                 new Item.Properties()
         );
 

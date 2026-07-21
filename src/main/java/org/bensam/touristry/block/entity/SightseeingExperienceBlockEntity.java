@@ -30,7 +30,7 @@ public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEnt
     public static final int MAX_APPROACH_DISTANCE = 6; // Skip target if tourist can't get closer than this distance
     public static final int MAX_RANGE_TO_TARGET = 100;
     public static final int PAYMENT_SLOT_SIZE = 9;
-    public static final int TOTAL_INVENTORY_SIZE = PAYMENT_SLOT_SIZE + 1;
+    public static final int TOTAL_INVENTORY_SIZE = PAYMENT_SLOT_SIZE + 2;
 
     public SightseeingExperienceBlockEntity(BlockPos blockPos, BlockState blockState) {
         super(ModBlockEntities.SIGHTSEEING_EXPERIENCE.get(), blockPos, blockState, TOTAL_INVENTORY_SIZE);
@@ -100,11 +100,6 @@ public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEnt
     }
 
     @Override
-    protected int getExperienceKeySlotIndex() {
-        return PAYMENT_SLOT_SIZE;
-    }
-
-    @Override
     public int getIdealApproachDistance() {
         return IDEAL_APPROACH_DISTANCE;
     }
@@ -148,6 +143,11 @@ public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEnt
 
         // Priority 3: Use translated block name (e.g., "Lectern")
         return blockEntity.getBlockState().getBlock().getName();
+    }
+
+    @Override
+    protected int getTargetKeySlotIndex() {
+        return PAYMENT_SLOT_SIZE;
     }
 
     private boolean isSightseeingBlock(BlockState blockState) {

@@ -11,7 +11,6 @@ import net.minecraft.world.entity.decoration.painting.Painting;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BarrelBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
@@ -30,7 +29,7 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
     public static final int MAX_APPROACH_DISTANCE = 4; // Skip target if tourist can't get closer than this distance
     public static final int MAX_RANGE_TO_TARGET = 100;
     public static final int PAYMENT_SLOT_SIZE = 9;
-    public static final int TOTAL_INVENTORY_SIZE = PAYMENT_SLOT_SIZE + 1;
+    public static final int TOTAL_INVENTORY_SIZE = PAYMENT_SLOT_SIZE + 2;
 
     public ShoppingExperienceBlockEntity(BlockPos blockPos, BlockState blockState) {
         super(ModBlockEntities.SHOPPING_EXPERIENCE.get(), blockPos, blockState, TOTAL_INVENTORY_SIZE);
@@ -77,11 +76,6 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
     }
 
     @Override
-    protected int getExperienceKeySlotIndex() {
-        return PAYMENT_SLOT_SIZE;
-    }
-
-    @Override
     public int getIdealApproachDistance() {
         return IDEAL_APPROACH_DISTANCE;
     }
@@ -98,6 +92,11 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
 
     @Override
     public int getPaymentSlotSize() {
+        return PAYMENT_SLOT_SIZE;
+    }
+
+    @Override
+    protected int getTargetKeySlotIndex() {
         return PAYMENT_SLOT_SIZE;
     }
 

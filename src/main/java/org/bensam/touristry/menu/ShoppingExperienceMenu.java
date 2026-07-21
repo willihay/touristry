@@ -11,6 +11,8 @@ import org.bensam.touristry.ModMenus;
 import org.bensam.touristry.block.entity.ShoppingExperienceBlockEntity;
 import org.jspecify.annotations.NonNull;
 
+import java.util.Optional;
+
 public class ShoppingExperienceMenu extends AbstractContainerMenu implements TourismStatusMenu {
     public static final int BUTTON_TOGGLE_OPEN_FOR_BUSINESS = 0;
 
@@ -19,9 +21,12 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
     private static final int EXPERIENCE_SLOT_COUNT = ShoppingExperienceBlockEntity.TOTAL_INVENTORY_SIZE;
     private static final int EXPERIENCE_PAYMENT_SLOT_START_X = 116;
     private static final int EXPERIENCE_PAYMENT_SLOT_START_Y = 16;
-    private static final int EXPERIENCE_KEY_SLOT = ShoppingExperienceBlockEntity.PAYMENT_SLOT_SIZE;
-    private static final int EXPERIENCE_KEY_SLOT_X = 80;
-    private static final int EXPERIENCE_KEY_SLOT_Y = 34;
+    private static final int EXPERIENCE_TARGET_KEY_SLOT = ShoppingExperienceBlockEntity.PAYMENT_SLOT_SIZE;
+    private static final int EXPERIENCE_TARGET_KEY_SLOT_X = 80;
+    private static final int EXPERIENCE_TARGET_KEY_SLOT_Y = 34;
+    private static final int EXPERIENCE_ENTRY_FEE_SLOT = EXPERIENCE_TARGET_KEY_SLOT + 1;
+    private static final int EXPERIENCE_ENTRY_FEE_SLOT_X = 80;
+    private static final int EXPERIENCE_ENTRY_FEE_SLOT_Y = 52;
     private static final int SLOT_SIDE_LENGTH = 18;
 
     // Player inventory layout
@@ -53,17 +58,63 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
         this.experienceContainerData = data;
         this.containerLevelAccess = access;
 
-        // Add beacon payment slots.
+        // Add payment slots.
         this.add3x3GridSlots(this.experienceInventory, EXPERIENCE_PAYMENT_SLOT_START_X, EXPERIENCE_PAYMENT_SLOT_START_Y);
 
-        // Add beacon key slot.
-        this.addSlot(new Slot(this.experienceInventory, EXPERIENCE_KEY_SLOT, EXPERIENCE_KEY_SLOT_X, EXPERIENCE_KEY_SLOT_Y) {
+        // Add target key slot.
+        this.addSlot(new Slot(this.experienceInventory, EXPERIENCE_TARGET_KEY_SLOT, EXPERIENCE_TARGET_KEY_SLOT_X, EXPERIENCE_TARGET_KEY_SLOT_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) { return false; }
 
             @Override
             public void onTake(Player player, ItemStack stack) {
                 ShoppingExperienceMenu.this.onKeyTake(player, stack);
+            }
+        });
+
+        // Add entry fee slot.
+        this.addSlot(new Slot(this.experienceInventory, EXPERIENCE_ENTRY_FEE_SLOT, EXPERIENCE_ENTRY_FEE_SLOT_X, EXPERIENCE_ENTRY_FEE_SLOT_Y) {
+            @Override
+            public boolean mayPlace(ItemStack itemStack) {
+                return !itemStack.isEmpty();
+            }
+
+            @Override
+            public int getMaxStackSize(ItemStack itemStack) {
+                return itemStack.getMaxStackSize();
+            }
+
+            @Override
+            public ItemStack safeInsert(ItemStack itemStack, int amount) {
+                if (!this.mayPlace(itemStack)) {
+                    return itemStack;
+                }
+
+                int copiedCount = Math.min(amount, itemStack.getMaxStackSize());
+                this.set(itemStack.copyWithCount(copiedCount));
+                return itemStack; // unchanged - player's stack is not consumed
+            }
+
+            @Override
+            public Optional<ItemStack> tryRemove(int amount, int maxAmount, Player player) {
+                ItemStack current = this.getItem();
+                if (current.isEmpty()) {
+                    return Optional.empty();
+                }
+
+                int removedCount = Math.min(amount, current.getCount());
+                if (removedCount >= current.getCount()) {
+                    this.set(ItemStack.EMPTY);
+                } else {
+                    this.set(current.copyWithCount(current.getCount() - removedCount));
+                }
+
+                return Optional.empty(); // destroy removed stack instead of giving it to the player
+            }
+
+            @Override
+            public void onTake(Player player, ItemStack itemStack) {
+                this.setChanged();
             }
         });
 
@@ -119,8 +170,8 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
 
     protected void onKeyTake(Player player, ItemStack itemStack) {
         if (this.experienceInventory instanceof ShoppingExperienceBlockEntity shoppingExperienceBlockEntity) {
-            Slot slot = this.slots.get(EXPERIENCE_KEY_SLOT);
-            slot.set(shoppingExperienceBlockEntity.createExperienceKey());
+            Slot slot = this.slots.get(EXPERIENCE_TARGET_KEY_SLOT);
+            slot.set(shoppingExperienceBlockEntity.createTargetKey());
         }
     }
 
@@ -139,7 +190,7 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
         // The experience key slot is intentionally infinite. Returning the copied
         // key here would make Minecraft's quick-move loop keep pulling keys
         // while the refilled slot still matches the returned stack.
-        if (slotIndex == EXPERIENCE_KEY_SLOT) {
+        if (slotIndex == EXPERIENCE_TARGET_KEY_SLOT) {
             ItemStack keyToMove = sourceStack.copy();
             keyToMove.setCount(1);
 
@@ -151,15 +202,21 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
             return ItemStack.EMPTY;
         }
 
+        if (slotIndex == EXPERIENCE_ENTRY_FEE_SLOT) {
+            slot.setByPlayer(ItemStack.EMPTY);
+            slot.setChanged();
+            return ItemStack.EMPTY;
+        }
+
         // Experience slot -> player inventory
         if (slotIndex < EXPERIENCE_SLOT_COUNT) {
             if (!this.moveItemStackTo(sourceStack, PLAYER_SLOT_START, inventorySize, false)) {
                 return ItemStack.EMPTY;
             }
         }
-        // Player inventory -> payment slot
+        // Player inventory -> payment slots only
         else {
-            if (!this.moveItemStackTo(sourceStack, 0, EXPERIENCE_SLOT_COUNT, false)) {
+            if (!this.moveItemStackTo(sourceStack, 0, EXPERIENCE_PAYMENT_SLOT_COUNT, false)) {
                 return ItemStack.EMPTY;
             }
         }

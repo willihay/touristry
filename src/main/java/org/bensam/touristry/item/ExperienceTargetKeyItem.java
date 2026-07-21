@@ -19,8 +19,8 @@ import org.bensam.touristry.tourism.experience.TouristExperience;
 
 import java.util.UUID;
 
-public class ExperienceKeyItem extends Item {
-    public ExperienceKeyItem(Properties properties) {
+public class ExperienceTargetKeyItem extends Item {
+    public ExperienceTargetKeyItem(Properties properties) {
         super(properties);
     }
 

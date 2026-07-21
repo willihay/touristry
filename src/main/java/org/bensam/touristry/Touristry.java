@@ -13,7 +13,7 @@ import org.bensam.touristry.command.TourCommand;
 import org.bensam.touristry.config.ModServerConfigManager;
 import org.bensam.touristry.config.ModServerConfigSync;
 import org.bensam.touristry.config.SyncedClientConfig;
-import org.bensam.touristry.item.ExperienceKeyItem;
+import org.bensam.touristry.item.ExperienceTargetKeyItem;
 import org.bensam.touristry.tourism.TourismManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,12 +83,12 @@ public class Touristry implements ModInitializer {
 		UseBlockCallback.EVENT.register((player, level, hand, hitResult) -> {
 			ItemStack itemStack = player.getItemInHand(hand);
 
-			if (!(itemStack.getItem() instanceof ExperienceKeyItem experienceKeyItem)) {
+			if (!(itemStack.getItem() instanceof ExperienceTargetKeyItem experienceTargetKeyItem)) {
 				return InteractionResult.PASS;
 			}
 
 			if (!level.isClientSide() && !player.isSpectator()) {
-				return experienceKeyItem.useOnBlock((ServerLevel) level, player, itemStack, hitResult);
+				return experienceTargetKeyItem.useOnBlock((ServerLevel) level, player, itemStack, hitResult);
 			}
 
 			return InteractionResult.SUCCESS;
@@ -97,12 +97,12 @@ public class Touristry implements ModInitializer {
 		UseEntityCallback.EVENT.register((player, level, hand, entity, hitResult) -> {
 			ItemStack itemStack = player.getItemInHand(hand);
 
-			if (!(itemStack.getItem() instanceof ExperienceKeyItem experienceKeyItem)) {
+			if (!(itemStack.getItem() instanceof ExperienceTargetKeyItem experienceTargetKeyItem)) {
 				return InteractionResult.PASS;
 			}
 
 			if (!level.isClientSide() && !player.isSpectator()) {
-				return experienceKeyItem.useOnEntity((ServerLevel) level, player, itemStack, entity, hitResult);
+				return experienceTargetKeyItem.useOnEntity((ServerLevel) level, player, itemStack, entity, hitResult);
 			}
 
 			return InteractionResult.SUCCESS;

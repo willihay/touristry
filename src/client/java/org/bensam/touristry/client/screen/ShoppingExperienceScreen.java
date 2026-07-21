@@ -8,7 +8,6 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import org.bensam.touristry.Touristry;
 import org.bensam.touristry.menu.ShoppingExperienceMenu;
-import org.bensam.touristry.menu.SightseeingExperienceMenu;
 import org.jspecify.annotations.NonNull;
 
 public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingExperienceMenu> {
@@ -17,6 +16,10 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
 
     private static final int REPUTATION_LABEL_X = 8;
     private static final int REPUTATION_LABEL_Y = 17;
+    private static final int TARGET_KEY_LABEL_X = 8;
+    private static final int TARGET_KEY_LABEL_Y = 38;
+    private static final int ENTRY_FEE_LABEL_X = 8;
+    private static final int ENTRY_FEE_LABEL_Y = 56;
     private static final int STATUS_LABEL_X = 116;
     private static final int STATUS_LABEL_Y = 72;
     private static final int ON_OFF_SLIDER_X = 152;
@@ -65,10 +68,9 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
         super.renderLabels(guiGraphics, i, j);
 
         Component reputationLabel = Component.translatable(
-                "screen." + Touristry.MOD_ID + ".tourism_status.reputation",
+                "screen." + Touristry.MOD_ID + ".tourist_block.reputation",
                 String.format("%.2f", this.menu.getReputation())
         );
-
         guiGraphics.drawString(
                 this.font,
                 reputationLabel,
@@ -78,8 +80,27 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                 false
         );
 
-        Component statusLabel = Component.translatable("screen." + Touristry.MOD_ID + ".tourism_status.status_label");
+        Component targetKeyLabel = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.target_key.label");
+        guiGraphics.drawString(
+                this.font,
+                targetKeyLabel,
+                TARGET_KEY_LABEL_X,
+                TARGET_KEY_LABEL_Y,
+                0xFF404040, // gray
+                false
+        );
 
+        Component entryFeeLabel = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.entry_fee.label");
+        guiGraphics.drawString(
+                this.font,
+                entryFeeLabel,
+                ENTRY_FEE_LABEL_X,
+                ENTRY_FEE_LABEL_Y,
+                0xFF404040, // gray
+                false
+        );
+
+        Component statusLabel = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.status.label");
         guiGraphics.drawString(
                 this.font,
                 statusLabel,
