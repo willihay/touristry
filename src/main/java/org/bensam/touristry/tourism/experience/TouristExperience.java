@@ -5,6 +5,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.item.ItemStack;
 import org.bensam.touristry.entity.TouristEntity;
 import org.bensam.touristry.tourism.VisitResult;
 import org.jspecify.annotations.Nullable;
@@ -23,6 +24,7 @@ public interface TouristExperience {
     boolean addBlockTarget(ServerLevel serverLevel, BlockPos blockPos, Direction playerFacing);
     boolean addChildExperienceTarget(ServerLevel serverLevel, BlockPos blockPos, Direction playerFacing, UUID childUUID);
     boolean addEntityTarget(ServerLevel serverLevel, BlockPos entityPos, Direction playerFacing, UUID entityUUID);
+    ItemStack getEntryFee();
     int getIdealApproachDistance();
     int getMaxApproachDistance();
     int getMaxRangeToTarget();
@@ -32,6 +34,7 @@ public interface TouristExperience {
     boolean isTargetValid(ServerLevel serverLevel, ExperienceTarget target);
     boolean removeTarget(ServerLevel serverLevel, BlockPos pos);
     boolean removeEntityTargetById(ServerLevel serverLevel, UUID entityUUID);
+    boolean tryDepositPayment(ItemStack itemStack);
 
     TouristLocationStats getStatistics();
     void rateVisit(VisitResult result, long currentTimeTicks);

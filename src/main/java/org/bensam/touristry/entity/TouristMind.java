@@ -296,7 +296,7 @@ public final class TouristMind {
 
         switch (review.result()) {
             case ARRIVED, GOOD, GREAT -> soundEvent = SoundEvents.VILLAGER_CELEBRATE;
-            case LOST, CLOSED_EARLY, UNFAVORABLE -> soundEvent = SoundEvents.VILLAGER_NO;
+            case LOST, CLOSED_EARLY, PAYMENT_FAILED, UNFAVORABLE -> soundEvent = SoundEvents.VILLAGER_NO;
             case HURT_EN_ROUTE -> this.reportedHurtEnRoute = true;
             case HURT_ON_PREMISES -> this.reportedHurtOnPremises = true;
         }
@@ -319,7 +319,7 @@ public final class TouristMind {
                 VisitResult modifiedResult = this.goodExperiencesToday % 3 == 0 ? VisitResult.GREAT : result;
                 yield modifiedResult.moodDelta() * (1.0 - positiveNormalized) * (1.0 + 0.5 * negativeNormalized);
             }
-            case UNFAVORABLE, FAILED_SPAWN, LOST, CLOSED_EARLY, HURT_EN_ROUTE, HURT_ON_PREMISES, KILLED_EN_ROUTE, KILLED_ON_PREMISES ->
+            case UNFAVORABLE, FAILED_SPAWN, LOST, CLOSED_EARLY, PAYMENT_FAILED, HURT_EN_ROUTE, HURT_ON_PREMISES, KILLED_EN_ROUTE, KILLED_ON_PREMISES ->
                     result.moodDelta() * (0.75 + 0.5 * positiveNormalized);
         };
 
@@ -890,6 +890,26 @@ public final class TouristMind {
             ));
             this.transitionTo(TouristState.CHOOSING_EXPERIENCE_AT_BEACON); // Try next experience.
             return;
+        }
+
+        // Pay entry fee, if applicable.
+        ItemStack entryFee = experience.getEntryFee();
+        if (entryFee != null && entryFee.getItem() != Items.AIR) {
+            if (!experience.tryDepositPayment(entryFee)) {
+                // Payment failed. Assume that we cannot enter this experience.
+                this.updateMood(VisitResult.PAYMENT_FAILED);
+                this.recordExperience(serverLevel, new TouristReview(
+                        this.state.reviewTarget(),
+                        VisitResult.PAYMENT_FAILED,
+                        true,
+                        true,
+                        Component.literal("could not pay entry fee for"),
+                        true,
+                        true
+                ));
+                this.transitionTo(TouristState.CHOOSING_EXPERIENCE_AT_BEACON); // Try next experience.
+                return;
+            }
         }
 
         // Reset experience-specific tracking.

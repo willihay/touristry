@@ -8,6 +8,7 @@ public enum VisitResult {
     FAILED_SPAWN(-1.0, 0),
     LOST(-1.5, -1.0),
     CLOSED_EARLY(-1.5, -1.0),
+    PAYMENT_FAILED(-0.5, -1.0),
     HURT_EN_ROUTE(-2.0, -2.0),
     HURT_ON_PREMISES(-4.0, -2.0),
     KILLED_EN_ROUTE(-3.0, 0),

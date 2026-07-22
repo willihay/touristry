@@ -132,6 +132,7 @@ public class TouristBeaconBlockEntity extends BlockEntity implements MenuProvide
             case FAILED_SPAWN -> this.statistics::recordFailedSpawn;
             case LOST -> this.statistics::recordNavFailure;
             case CLOSED_EARLY -> this.statistics::recordClosedEarly;
+            case PAYMENT_FAILED -> this.statistics::recordPaymentFailed;
             case HURT_EN_ROUTE, HURT_ON_PREMISES -> this.statistics::recordTouristHurt;
             case KILLED_EN_ROUTE, KILLED_ON_PREMISES -> this.statistics::recordTouristKilled;
         };

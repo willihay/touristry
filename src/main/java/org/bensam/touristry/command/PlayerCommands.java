@@ -74,12 +74,13 @@ public final class PlayerCommands {
                 false);
         if (showFailedSpawns) {
             source.sendSuccess(() -> Component.literal(
-                    " - failed spawns: " + stats.getFailedSpawns()),
+                    " - failed spawns: " + stats.getFailedSpawns()
+                            + "; navigation failures: " + stats.getNavFailures()),
                     false);
         }
         source.sendSuccess(() -> Component.literal(
-                        " - navigation failures: " + stats.getNavFailures()
-                                + "; closed early: " + stats.getClosedEarly()),
+                        " - closed early: " + stats.getClosedEarly()
+                                + "; failed payments: " + stats.getPaymentFailed()),
                 false);
         source.sendSuccess(() -> Component.literal(
                         " - tourists hurt: " + stats.getTouristsHurt()

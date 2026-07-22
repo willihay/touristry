@@ -11,6 +11,7 @@ import net.minecraft.world.entity.decoration.painting.Painting;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BarrelBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
@@ -29,6 +30,8 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
     public static final int MAX_APPROACH_DISTANCE = 4; // Skip target if tourist can't get closer than this distance
     public static final int MAX_RANGE_TO_TARGET = 100;
     public static final int PAYMENT_SLOT_SIZE = 9;
+    public static final int TARGET_KEY_INDEX = PAYMENT_SLOT_SIZE;
+    public static final int ENTRY_FEE_INDEX = TARGET_KEY_INDEX + 1;
     public static final int TOTAL_INVENTORY_SIZE = PAYMENT_SLOT_SIZE + 2;
 
     public ShoppingExperienceBlockEntity(BlockPos blockPos, BlockState blockState) {
@@ -73,6 +76,11 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
     @Override
     protected Component getDefaultName() {
         return Component.translatable("block." + Touristry.MOD_ID + ".shopping_experience");
+    }
+
+    @Override
+    public ItemStack getEntryFee() {
+        return this.inventory.get(ENTRY_FEE_INDEX).copy();
     }
 
     @Override

@@ -30,6 +30,8 @@ public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEnt
     public static final int MAX_APPROACH_DISTANCE = 6; // Skip target if tourist can't get closer than this distance
     public static final int MAX_RANGE_TO_TARGET = 100;
     public static final int PAYMENT_SLOT_SIZE = 9;
+    public static final int TARGET_KEY_INDEX = PAYMENT_SLOT_SIZE;
+    public static final int ENTRY_FEE_INDEX = TARGET_KEY_INDEX + 1;
     public static final int TOTAL_INVENTORY_SIZE = PAYMENT_SLOT_SIZE + 2;
 
     public SightseeingExperienceBlockEntity(BlockPos blockPos, BlockState blockState) {
@@ -97,6 +99,11 @@ public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEnt
     @Override
     protected Component getDefaultName() {
         return Component.translatable("block." + Touristry.MOD_ID + ".sightseeing_experience");
+    }
+
+    @Override
+    public ItemStack getEntryFee() {
+        return this.inventory.get(ENTRY_FEE_INDEX).copy();
     }
 
     @Override
