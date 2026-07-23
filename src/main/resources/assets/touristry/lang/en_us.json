@@ -17,6 +17,8 @@
 
   "message.touristry.tourist_block.status.open_for_business": "OPEN for business",
   "message.touristry.tourist_block.status.closed_for_business": "CLOSED for business",
+  "message.touristry.tourist_block.targets.ordered": "Tourists will visit %1$s targets in order",
+  "message.touristry.tourist_block.targets.randomized": "Tourists will visit %1$s targets randomly",
 
   "screen.touristry.tourist_block.entry_fee.label": "Entry Fee:",
   "screen.touristry.tourist_block.reputation": "Reputation: %1$s",

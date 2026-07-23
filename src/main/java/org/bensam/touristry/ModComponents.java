@@ -56,6 +56,14 @@ public final class ModComponents {
                     .build()
     );
 
+    public static final DataComponentType<Boolean> TOURIST_EXPERIENCE_ORDERED_TARGETS = Registry.register(
+            BuiltInRegistries.DATA_COMPONENT_TYPE,
+            Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tourist_experience_ordered_targets"),
+            DataComponentType.<Boolean>builder()
+                    .persistent(Codec.BOOL)
+                    .build()
+    );
+
     public static final DataComponentType<UUID> TOURIST_EXPERIENCE_PARENT_UUID = Registry.register(
             BuiltInRegistries.DATA_COMPONENT_TYPE,
             Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tourist_experience_parent_uuid"),

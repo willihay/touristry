@@ -171,6 +171,10 @@ public final class PlayerCommands {
                 .then(Commands.literal("toggleStatus")
                         .executes(ctx -> toggleExperienceStatus(
                                 ctx.getSource(),
+                                resolver.resolve(ctx))))
+                .then(Commands.literal("toggleOrderedTargets")
+                        .executes(ctx -> toggleOrderedTargets(
+                                ctx.getSource(),
                                 resolver.resolve(ctx))));
     }
 
@@ -185,7 +189,8 @@ public final class PlayerCommands {
 
         // targets
         List<ExperienceTarget> targets = experienceBlockEntity.getTargets(source.getLevel());
-        source.sendSuccess(() -> Component.literal(" - targets: " + targets.size()), false);
+        source.sendSuccess(() -> Component.literal(" - targets: " + targets.size())
+                .append(experienceBlockEntity.isTargetListOrdered() ? " (visited in order)" : " (visited randomly)"), false);
         for (ExperienceTarget target : targets) {
             Component targetMessage = Component.literal("   - ")
                     .append(target.getDisplayName(source.getLevel()))
@@ -234,6 +239,16 @@ public final class PlayerCommands {
                 .append(Component.literal(" @ " + experienceBlockEntity.getBlockPos().toShortString() + " is now "))
                 .append(Component.translatable("message." + Touristry.MOD_ID
                         + (experienceBlockEntity.isOpenForBusiness() ? ".tourist_block.status.open_for_business" : ".tourist_block.status.closed_for_business")));
+        source.sendSuccess(() -> message,  false);
+        return 1;
+    }
+
+    private static int toggleOrderedTargets(CommandSourceStack source, AbstractExperienceBlockEntity experienceBlockEntity) {
+        experienceBlockEntity.setOrderedTargets(!experienceBlockEntity.isTargetListOrdered());
+
+        Component message = Component.translatable("message." + Touristry.MOD_ID
+                        + (experienceBlockEntity.isTargetListOrdered() ? ".tourist_block.targets.ordered" : ".tourist_block.targets.randomized"),
+                experienceBlockEntity.getPlainTextName());
         source.sendSuccess(() -> message,  false);
         return 1;
     }

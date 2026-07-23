@@ -43,6 +43,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
     protected UUID uuid;
     protected @Nullable UUID parentExperienceUUID;
     private boolean openForBusiness;
+    private boolean orderedTargets;
     protected List<ExperienceTarget> targets;
     protected TouristLocationStats statistics;
     protected NonNullList<ItemStack> inventory;
@@ -76,6 +77,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
 
         this.uuid = UUID.randomUUID();
         this.openForBusiness = false;
+        this.orderedTargets = true;
         this.targets = new ArrayList<>();
         this.statistics = new TouristLocationStats();
         this.inventory = NonNullList.withSize(inventorySize, ItemStack.EMPTY);
@@ -200,7 +202,11 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
     @Override
     public List<ExperienceTarget> getTargets(ServerLevel serverLevel) {
         this.pruneInvalidTargets(serverLevel);
-        return Collections.unmodifiableList(this.targets);
+        List<ExperienceTarget> targetList = new ArrayList<>(this.targets);
+        if (!this.orderedTargets) {
+            Collections.shuffle(targetList);
+        }
+        return targetList;
     }
 
     @Override
@@ -248,6 +254,10 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         }
 
         return true;
+    }
+
+    public boolean isTargetListOrdered() {
+        return this.orderedTargets;
     }
 
     protected void pruneInvalidTargets(ServerLevel serverLevel) {
@@ -333,6 +343,11 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         this.setChanged();
     }
 
+    public void setOrderedTargets(boolean orderedTargets) {
+        this.orderedTargets = orderedTargets;
+        this.setChanged();
+    }
+
     public void setParent(@Nullable UUID parentUUID) {
         this.parentExperienceUUID = parentUUID;
         this.setChanged();
@@ -400,6 +415,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         valueInput.read("UUID", UUIDUtil.CODEC).ifPresent(UUID -> { this.uuid = UUID; });
         valueInput.read("ParentExperienceUUID", UUIDUtil.CODEC).ifPresent(UUID -> { this.parentExperienceUUID = UUID; });
         this.setOpenForBusiness(valueInput.getBooleanOr("OpenForBusiness", false));
+        this.setOrderedTargets(valueInput.getBooleanOr("OrderedTargets", true));
         this.targets = new ArrayList<>(valueInput.read("Targets", ExperienceTarget.CODEC.listOf()).orElse(List.of()));
         valueInput.read("Statistics", TouristLocationStats.CODEC).ifPresent(statistics -> { this.statistics = statistics; });
         this.inventory = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
@@ -417,6 +433,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
             valueOutput.store("ParentExperienceUUID", UUIDUtil.CODEC, this.parentExperienceUUID);
         }
         valueOutput.putBoolean("OpenForBusiness", this.openForBusiness);
+        valueOutput.putBoolean("OrderedTargets", this.orderedTargets);
         valueOutput.store("Targets", ExperienceTarget.CODEC.listOf(), this.targets);
         valueOutput.store("Statistics", TouristLocationStats.CODEC, this.statistics);
         ContainerHelper.saveAllItems(valueOutput, this.inventory);
@@ -435,6 +452,10 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         this.setOpenForBusiness(dataComponentGetter.getOrDefault(
                 ModComponents.TOURIST_EXPERIENCE_STATUS,
                 false
+        ));
+        this.setOrderedTargets(dataComponentGetter.getOrDefault(
+                ModComponents.TOURIST_EXPERIENCE_ORDERED_TARGETS,
+                true
         ));
         this.targets = new ArrayList<>(dataComponentGetter.getOrDefault(
                 ModComponents.TOURIST_EXPERIENCE_TARGETS,
@@ -459,6 +480,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
             builder.set(ModComponents.TOURIST_EXPERIENCE_PARENT_UUID, this.parentExperienceUUID);
         }
         builder.set(ModComponents.TOURIST_EXPERIENCE_STATUS, this.openForBusiness);
+        builder.set(ModComponents.TOURIST_EXPERIENCE_ORDERED_TARGETS, this.orderedTargets);
         if (!this.targets.isEmpty()) {
             builder.set(ModComponents.TOURIST_EXPERIENCE_TARGETS, List.copyOf(this.targets));
         }
@@ -473,6 +495,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         valueOutput.discard("UUID");
         valueOutput.discard("ParentExperienceUUID");
         valueOutput.discard("OpenForBusiness");
+        valueOutput.discard("OrderedTargets");
         valueOutput.discard("Targets");
         valueOutput.discard("Statistics");
     }
