@@ -32,6 +32,7 @@ public class TourismManager {
     private static final int SPAWN_ATTEMPTS_PER_BEACON = 8;
 
     private static @Nullable TourismSavedData tourismSavedData;
+    private static int recordHighestTouristBudget;
 
     private static long lastDayThreshold = -1;
     private static long lastHourThreshold = -1;
@@ -74,7 +75,7 @@ public class TourismManager {
     }
 
     public static void shutdown() {
-        persistPendingSpawns();
+        persistSavedData();
         resetThresholds();
         pendingSpawns.clear();
         loadedTouristBeacons.clear();
@@ -106,6 +107,8 @@ public class TourismManager {
     private static void loadPersistentState(ServerLevel serverLevel) {
         tourismSavedData = serverLevel.getDataStorage().computeIfAbsent(TourismSavedData.TYPE);
 
+        recordHighestTouristBudget = tourismSavedData.getRecordHighestTouristBudget();
+
         long currentDay = serverLevel.getDayCount();
         int currentTimeOfDay = (int)(serverLevel.getDayTime() % 24000L);
         if (tourismSavedData.getPreparedDay() != currentDay) {
@@ -122,15 +125,16 @@ public class TourismManager {
             }
         }
 
-        persistPendingSpawns();
+        persistSavedData();
     }
 
-    private static void persistPendingSpawns() {
+    private static void persistSavedData() {
         if (tourismSavedData == null) {
             return;
         }
 
-        tourismSavedData.setScheduleState(
+        tourismSavedData.setSavedState(
+                recordHighestTouristBudget,
                 lastPreparedDay,
                 pendingSpawns.stream()
                         .map(scheduledTouristSpawn -> new TourismSavedData.PendingTouristSpawnData(
@@ -193,6 +197,10 @@ public class TourismManager {
         return null;
     }
 
+    public static int getRecordHighestTouristBudget() {
+        return recordHighestTouristBudget;
+    }
+
     public static @Nullable TouristExperience getTouristExperienceByPos(BlockPos blockPos) {
         return loadedExperiences.get(loadedExperiencesByPos.get(blockPos));
     }
@@ -233,6 +241,14 @@ public class TourismManager {
 
             return false;
         });
+    }
+
+    public static void recordTouristBudget(int budget) {
+        if (budget > recordHighestTouristBudget) {
+            recordHighestTouristBudget = budget;
+            logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "New record tourist budget: {} emeralds", budget);
+            persistSavedData();
+        }
     }
 
     public static void registerTouristExperience(TouristExperience experience) {
@@ -403,14 +419,14 @@ public class TourismManager {
             }
             if (lastPreparedDay != dayCount) {
                 lastPreparedDay = dayCount; // we never want the lastPreparedDay to get *ahead* of the actual day count on the server (e.g. from a time set command)
-                persistPendingSpawns();
+                persistSavedData();
             }
 
             // Spawn tourists throughout the day according to schedule.
             while (!pendingSpawns.isEmpty() && tickTimeOfDay >= pendingSpawns.peek().timeOfDay()) {
                 pruneInvalidTouristBeacons(serverLevel);
                 ScheduledTouristSpawn scheduledTouristSpawn = pendingSpawns.poll();
-                persistPendingSpawns();
+                persistSavedData();
                 spawnTouristOnSchedule(serverLevel, scheduledTouristSpawn);
             }
         }
@@ -421,13 +437,13 @@ public class TourismManager {
     //region Spawn Helpers
     public static void clearSpawnSchedule() {
         pendingSpawns.clear();
-        persistPendingSpawns();
+        persistSavedData();
     }
 
     public static void resetSpawnSchedule() {
         pendingSpawns.clear();
         lastPreparedDay = -1;
-        persistPendingSpawns();
+        persistSavedData();
     }
 
     public static String getFriendlyTimeOfDay(long dayTimeTicks) {
@@ -493,7 +509,7 @@ public class TourismManager {
         }
 
         lastPreparedDay = serverLevel.getDayCount();
-        persistPendingSpawns();
+        persistSavedData();
     }
 
     private static void spawnTouristOnSchedule(ServerLevel serverLevel, ScheduledTouristSpawn scheduledTouristSpawn) {
@@ -544,6 +560,7 @@ public class TourismManager {
         );
 
         tourist.snapTo(spawnPoint, serverLevel.random.nextFloat() * 360.0F, 0.0F);
+        tourist.getMind().postInitialize();
         tourist.getMind().prepareForJourney(beaconPos);
         tourist.finalizeSpawn(serverLevel, serverLevel.getCurrentDifficultyAt(tourist.blockPosition()), EntitySpawnReason.EVENT, null);
         // TODO: Implement random tourist names (ensuring name isn't currently in use)
@@ -575,6 +592,7 @@ public class TourismManager {
         );
 
         tourist.snapTo(spawnPoint, serverLevel.random.nextFloat() * 360.0F, 0.0F);
+        tourist.getMind().postInitialize();
         tourist.getMind().prepareForJourney(beaconBlockEntity.getBlockPos());
         tourist.finalizeSpawn(serverLevel, serverLevel.getCurrentDifficultyAt(tourist.blockPosition()), EntitySpawnReason.COMMAND, null);
         tourist.setCustomName(Component.literal("Tassian Candor"));

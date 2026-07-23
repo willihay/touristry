@@ -53,7 +53,9 @@ public final class PlayerCommands {
                 .then(Commands.literal("experiences")
                         .executes(ctx -> listExperiences(ctx.getSource())))
                 .then(Commands.literal("touristSchedule")
-                        .executes(ctx -> listTouristSchedule(ctx.getSource()))));
+                        .executes(ctx -> listTouristSchedule(ctx.getSource())))
+                .then(Commands.literal("touristStatistics")
+                        .executes(ctx -> listTouristStatistics(ctx.getSource()))));
 
         root.then(Commands.literal("next")
                 .executes(ctx -> showNextSpawn(ctx.getSource())));
@@ -279,7 +281,7 @@ public final class PlayerCommands {
     private static int listTouristSchedule(CommandSourceStack source) {
         List<TourismManager.ScheduledTouristSpawn> pendingSpawns = TourismManager.getPendingSpawns();
         if (pendingSpawns.isEmpty()) {
-            source.sendSuccess(() -> Component.literal("No tourists scheduled for today"), false);
+            source.sendSuccess(() -> Component.literal("No remaining tourists scheduled for today"), false);
             return 1;
         }
 
@@ -296,6 +298,11 @@ public final class PlayerCommands {
             }
             source.sendSuccess(() -> message, false);
         }
+        return 1;
+    }
+
+    private static int listTouristStatistics(CommandSourceStack source) {
+        source.sendSuccess(() -> Component.literal("Highest tourist daily budget: " + TourismManager.getRecordHighestTouristBudget()), false);
         return 1;
     }
 

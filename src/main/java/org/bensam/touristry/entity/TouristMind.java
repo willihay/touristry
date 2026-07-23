@@ -31,6 +31,9 @@ import java.util.stream.Collectors;
 
 public final class TouristMind {
     //region Constants
+    private static final int BUDGET_MIN_EMERALDS = 3;
+    private static final int BUDGET_MEAN_EMERALDS = 7;
+    private static final double BUDGET_STD_DEV_EMERALDS = 2.0;
     private static final int CHECK_MOOD_INTERVAL_TICKS = 250;
     private static final double MIN_MOOD = -3.0;
     private static final double MAX_MOOD = 4.0;
@@ -47,15 +50,17 @@ public final class TouristMind {
     private TouristState state;
     private double closestDistanceToDestination;
     private int consecutiveFailedProgressChecks;
+    private int dailyBudgetEmeralds;
     private int eveningDespawnTimeTicks;
     private int goodExperiencesToday;
     private boolean isHungry;
     private boolean isStayingOvernight;
     private long lastMapToggleTicks; // (not persisted)
     private double mood;
+    private int nextMoodCheckTicks; // (not persisted)
+    private int remainingBudgetEmeralds;
     private boolean reportedHurtEnRoute;
     private boolean reportedHurtOnPremises;
-    private int nextMoodCheckTicks; // (not persisted)
     private int waitTicks;
 
     // Beacon-related
@@ -80,12 +85,18 @@ public final class TouristMind {
         this.tourist = tourist;
         this.beaconPos = null;
         this.closestDistanceToDestination = Double.MAX_VALUE;
+        this.dailyBudgetEmeralds = this.getDailyBudget();
         this.eveningDespawnTimeTicks = this.getRandomDespawnTime();
         this.experienceBlockPos = null;
         this.mood = this.getRandomStartingMood();
         this.nextMoodCheckTicks = this.random().nextInt(CHECK_MOOD_INTERVAL_TICKS);
+        this.remainingBudgetEmeralds = this.dailyBudgetEmeralds;
         this.state = TouristState.IDLE;
         this.targetPos = null;
+    }
+
+    public void postInitialize() {
+        TourismManager.recordTouristBudget(this.dailyBudgetEmeralds);
     }
 
     private void resetBeaconJourneyStats() {
@@ -211,6 +222,14 @@ public final class TouristMind {
 
     public int getConsecutiveFailedProgressChecks() {
         return this.consecutiveFailedProgressChecks;
+    }
+
+    private int getDailyBudget() {
+        double budget = 0;
+        for (int i = 1; i <= 20; i++) {
+            budget = this.random().nextGaussian() * BUDGET_STD_DEV_EMERALDS;
+        }
+        return BUDGET_MEAN_EMERALDS + Math.clamp(Math.round(budget), BUDGET_MIN_EMERALDS - BUDGET_MEAN_EMERALDS, Integer.MAX_VALUE);
     }
 
     public @Nullable BlockPos getExperiencePos() {
@@ -1266,6 +1285,8 @@ public final class TouristMind {
         valueOutput.putInt("TicksAtCurrentExperience", this.ticksAtCurrentExperience);
         valueOutput.putInt("TicksAtCurrentTarget", this.ticksAtCurrentTarget);
         valueOutput.putInt("WaitTicks", this.waitTicks);
+        valueOutput.putInt("DailyBudget", this.dailyBudgetEmeralds);
+        valueOutput.putInt("RemainingBudget", this.remainingBudgetEmeralds);
     }
 
     public void readAdditionalSaveData(ValueInput valueInput) {
@@ -1292,15 +1313,17 @@ public final class TouristMind {
         this.consecutiveFailedProgressChecks = valueInput.getIntOr("FailedProgressChecks", 0);
         this.reportedHurtEnRoute = valueInput.getBooleanOr("ReportedHurtEnRoute", false);
         this.reportedHurtOnPremises = valueInput.getBooleanOr("ReportedHurtOnPremises", false);
-        this.mood = valueInput.getDoubleOr("Mood", this.getRandomStartingMood());
+        this.mood = valueInput.getDoubleOr("Mood", this.mood);
         this.goodExperiencesToday = valueInput.getIntOr("GoodExperiencesToday", 0);
-        this.eveningDespawnTimeTicks = valueInput.getIntOr("DespawnTimeTicks", this.getRandomDespawnTime());
+        this.eveningDespawnTimeTicks = valueInput.getIntOr("DespawnTimeTicks", this.eveningDespawnTimeTicks);
         this.isHungry = valueInput.getBooleanOr("IsHungry", false);
         this.isStayingOvernight = valueInput.getBooleanOr("IsStayingOvernight", false);
         this.currentTargetIndex = valueInput.getIntOr("CurrentTargetIndex", 0);
         this.ticksAtCurrentExperience = valueInput.getIntOr("TicksAtCurrentExperience", 0);
         this.ticksAtCurrentTarget = valueInput.getIntOr("TicksAtCurrentTarget", 0);
         this.waitTicks = valueInput.getIntOr("WaitTicks", 0);
+        this.dailyBudgetEmeralds = valueInput.getIntOr("DailyBudgetEmeralds", this.dailyBudgetEmeralds);
+        this.remainingBudgetEmeralds = valueInput.getIntOr("RemainingBudgetEmeralds", this.remainingBudgetEmeralds);
 
         // Reconstruct currentExperienceTarget from experienceTargetTracker.
         if (!this.experienceTargetTracker.isEmpty()) {
@@ -1310,5 +1333,8 @@ public final class TouristMind {
                 this.currentExperienceTarget = remaining.getFirst();
             }
         }
+
+        // Run post-initialization steps.
+        this.postInitialize();
     }
 }
