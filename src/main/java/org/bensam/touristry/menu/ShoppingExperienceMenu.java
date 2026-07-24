@@ -12,10 +12,9 @@ import org.bensam.touristry.block.entity.ShoppingExperienceBlockEntity;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Optional;
+import java.util.function.Predicate;
 
 public class ShoppingExperienceMenu extends AbstractContainerMenu implements TourismStatusMenu {
-    public static final int BUTTON_TOGGLE_OPEN_FOR_BUSINESS = 0;
-
     // Slot layout
     private static final int EXPERIENCE_PAYMENT_SLOT_COUNT = ShoppingExperienceBlockEntity.PAYMENT_SLOT_SIZE;
     private static final int EXPERIENCE_SLOT_COUNT = ShoppingExperienceBlockEntity.TOTAL_INVENTORY_SIZE;
@@ -34,9 +33,31 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
     private static final int PLAYER_INVENTORY_ROW_Y = 84;
     private static final int PLAYER_SLOT_START = EXPERIENCE_SLOT_COUNT;
 
+    public enum Tab {
+        STATUS,
+        TARGETS,
+        PRICING
+    }
+
+    private class TabbedSlot extends Slot {
+        private final Predicate<ShoppingExperienceMenu> visibleWhen;
+
+        TabbedSlot(Container container, int slot, int x, int y, Predicate<ShoppingExperienceMenu> visibleWhen) {
+            super(container, slot, x, y);
+            this.visibleWhen = visibleWhen;
+        }
+
+        @Override
+        public boolean isActive() {
+            return this.visibleWhen.test(ShoppingExperienceMenu.this);
+        }
+    }
+
     private final Container experienceInventory;
     private final ContainerData experienceContainerData;
     private final ContainerLevelAccess containerLevelAccess;
+
+    private Tab selectedTab = Tab.STATUS;
 
     // Client-side constructor:
     // Uses dummy containers so the menu can be constructed on the client
@@ -62,7 +83,12 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
         this.add3x3GridSlots(this.experienceInventory, EXPERIENCE_PAYMENT_SLOT_START_X, EXPERIENCE_PAYMENT_SLOT_START_Y);
 
         // Add target key slot.
-        this.addSlot(new Slot(this.experienceInventory, EXPERIENCE_TARGET_KEY_SLOT, EXPERIENCE_TARGET_KEY_SLOT_X, EXPERIENCE_TARGET_KEY_SLOT_Y) {
+        this.addSlot(new TabbedSlot(
+                this.experienceInventory,
+                EXPERIENCE_TARGET_KEY_SLOT,
+                EXPERIENCE_TARGET_KEY_SLOT_X,
+                EXPERIENCE_TARGET_KEY_SLOT_Y,
+                menu -> menu.isSelectedTab(Tab.STATUS)) {
             @Override
             public boolean mayPlace(ItemStack stack) { return false; }
 
@@ -73,7 +99,12 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
         });
 
         // Add entry fee slot.
-        this.addSlot(new Slot(this.experienceInventory, EXPERIENCE_ENTRY_FEE_SLOT, EXPERIENCE_ENTRY_FEE_SLOT_X, EXPERIENCE_ENTRY_FEE_SLOT_Y) {
+        this.addSlot(new TabbedSlot(
+                this.experienceInventory,
+                EXPERIENCE_ENTRY_FEE_SLOT,
+                EXPERIENCE_ENTRY_FEE_SLOT_X,
+                EXPERIENCE_ENTRY_FEE_SLOT_Y,
+                menu -> menu.isSelectedTab(Tab.STATUS)) {
             @Override
             public boolean mayPlace(ItemStack itemStack) {
                 return !itemStack.isEmpty();
@@ -119,7 +150,7 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
         });
 
         // Add the player inventory slots.
-        this.addStandardInventorySlots(playerInventory, PLAYER_INVENTORY_ROW_X, PLAYER_INVENTORY_ROW_Y);
+        this.addPlayerInventorySlots(playerInventory, PLAYER_INVENTORY_ROW_X, PLAYER_INVENTORY_ROW_Y);
 
         // Add data slots for data sync.
         this.addDataSlots(this.experienceContainerData);
@@ -129,9 +160,74 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 3; col++) {
                 int slotIndex = col + row * 3;
-                this.addSlot(new Slot(container, slotIndex, firstSlotX + col * SLOT_SIDE_LENGTH, firstSlotY + row * SLOT_SIDE_LENGTH));
+                this.addSlot(new TabbedSlot(
+                        container,
+                        slotIndex,
+                        firstSlotX + col * SLOT_SIDE_LENGTH,
+                        firstSlotY + row * SLOT_SIDE_LENGTH,
+                        menu -> menu.isSelectedTab(Tab.STATUS)));
             }
         }
+    }
+
+    protected void addPlayerInventorySlots(Container container, int i, int j) {
+        // Add standard 3-row inventory.
+        for (int k = 0; k < 3; k++) {
+            for (int l = 0; l < 9; l++) {
+                this.addSlot(new TabbedSlot(
+                        container,
+                        l + (k + 1) * 9,
+                        i + l * 18,
+                        j + k * 18,
+                        menu -> menu.isSelectedTab(Tab.STATUS) || menu.isSelectedTab(Tab.PRICING)));
+            }
+        }
+
+        // Add hotbar inventory.
+        int n = j + 58;
+        for (int m = 0; m < 9; m++) {
+            this.addSlot(new TabbedSlot(
+                    container,
+                    m,
+                    i + m * 18,
+                    n,
+                    menu -> menu.isSelectedTab(Tab.STATUS) || menu.isSelectedTab(Tab.PRICING)));
+        }
+    }
+
+    public static int buttonForTab(Tab tab) {
+        return switch (tab) {
+            case STATUS -> BUTTON_SELECT_STATUS;
+            case TARGETS -> BUTTON_SELECT_TARGETS;
+            case PRICING -> BUTTON_SELECT_PRICING;
+        };
+    }
+
+    @Override
+    public boolean clickMenuButton(@NonNull Player player, int buttonId) {
+        if (buttonId == BUTTON_TOGGLE_OPEN_FOR_BUSINESS) {
+            if (!player.level().isClientSide()) {
+                this.toggleOpenForBusiness();
+            }
+            return true;
+        }
+
+        if (buttonId == BUTTON_SELECT_STATUS) {
+            this.setSelectedTab(Tab.STATUS);
+            return true;
+        }
+
+        if (buttonId == BUTTON_SELECT_TARGETS) {
+            this.setSelectedTab(Tab.TARGETS);
+            return true;
+        }
+
+        if (buttonId == BUTTON_SELECT_PRICING) {
+            this.setSelectedTab(Tab.PRICING);
+            return true;
+        }
+
+        return false;
     }
 
     public int getContainerId() {
@@ -146,6 +242,14 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
         return this.experienceContainerData.get(ShoppingExperienceBlockEntity.DATA_OPEN_FOR_BUSINESS) != 0;
     }
 
+    public boolean isSelectedTab(Tab tab) {
+        return this.selectedTab == tab;
+    }
+
+    public void setSelectedTab(Tab selectedTab) {
+        this.selectedTab = selectedTab;
+    }
+
     private void toggleOpenForBusiness() {
         this.containerLevelAccess.execute((level, blockPos) -> {
             if (level.getBlockEntity(blockPos) instanceof ShoppingExperienceBlockEntity shoppingExperienceBlockEntity) {
@@ -153,19 +257,6 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
                 level.updateNeighbourForOutputSignal(blockPos, level.getBlockState(blockPos).getBlock());
             }
         });
-    }
-
-    @Override
-    public boolean clickMenuButton(@NonNull Player player, int buttonId) {
-        if (buttonId != BUTTON_TOGGLE_OPEN_FOR_BUSINESS) {
-            return false;
-        }
-
-        if (!player.level().isClientSide()) {
-            this.toggleOpenForBusiness();
-        }
-
-        return true;
     }
 
     protected void onKeyTake(Player player, ItemStack itemStack) {

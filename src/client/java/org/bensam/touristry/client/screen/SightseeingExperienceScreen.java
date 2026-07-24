@@ -12,6 +12,7 @@ import org.jspecify.annotations.NonNull;
 
 public class SightseeingExperienceScreen extends AbstractContainerScreen<SightseeingExperienceMenu> {
     private static final Identifier BG_TEXTURE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "textures/gui/tourist_experience.png");
+
     private static final Identifier ON_OFF_SLIDER_TEXTURE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "textures/gui/on_off_slider.png");
 
     private static final int REPUTATION_LABEL_X = 8;

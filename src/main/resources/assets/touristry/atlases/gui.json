@@ -1,0 +1,9 @@
+{
+  "sources": [
+    {
+      "type": "directory",
+      "source": "touristry:sprites/gui",
+      "prefix": "touristry:gui/sprites/"
+    }
+  ]
+}

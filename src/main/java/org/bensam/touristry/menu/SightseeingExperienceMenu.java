@@ -14,8 +14,6 @@ import org.jspecify.annotations.NonNull;
 import java.util.Optional;
 
 public class SightseeingExperienceMenu extends AbstractContainerMenu implements TourismStatusMenu {
-    public static final int BUTTON_TOGGLE_OPEN_FOR_BUSINESS = 0;
-
     // Slot layout
     private static final int EXPERIENCE_PAYMENT_SLOT_COUNT = SightseeingExperienceBlockEntity.PAYMENT_SLOT_SIZE;
     private static final int EXPERIENCE_SLOT_COUNT = SightseeingExperienceBlockEntity.TOTAL_INVENTORY_SIZE;

@@ -13,8 +13,6 @@ import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
 import org.jspecify.annotations.NonNull;
 
 public class TouristBeaconMenu extends AbstractContainerMenu implements TourismStatusMenu {
-    public static final int BUTTON_TOGGLE_OPEN_FOR_BUSINESS = 0;
-
     // Player inventory layout
     private static final int PLAYER_INVENTORY_ROW_X = 8;
     private static final int PLAYER_INVENTORY_ROW_Y = 84;

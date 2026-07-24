@@ -11,7 +11,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import org.bensam.touristry.Touristry;
 import org.bensam.touristry.menu.TourismStatusMenu;
-import org.bensam.touristry.menu.TouristBeaconMenu;
 
 public class TourismStatusToggleButton extends AbstractButton {
     private static final int TEXTURE_WIDTH = 32;
@@ -39,8 +38,8 @@ public class TourismStatusToggleButton extends AbstractButton {
 
         if (minecraft.player != null
                 && minecraft.gameMode != null
-                && this.menu.clickMenuButton(minecraft.player, TouristBeaconMenu.BUTTON_TOGGLE_OPEN_FOR_BUSINESS)) {
-            minecraft.gameMode.handleInventoryButtonClick(this.menu.getContainerId(), TouristBeaconMenu.BUTTON_TOGGLE_OPEN_FOR_BUSINESS);
+                && this.menu.clickMenuButton(minecraft.player, TourismStatusMenu.BUTTON_TOGGLE_OPEN_FOR_BUSINESS)) {
+            minecraft.gameMode.handleInventoryButtonClick(this.menu.getContainerId(), TourismStatusMenu.BUTTON_TOGGLE_OPEN_FOR_BUSINESS);
         }
     }
 
