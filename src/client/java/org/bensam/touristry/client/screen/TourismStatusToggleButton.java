@@ -1,5 +1,7 @@
 package org.bensam.touristry.client.screen;
 
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractButton;
@@ -12,6 +14,7 @@ import net.minecraft.resources.Identifier;
 import org.bensam.touristry.Touristry;
 import org.bensam.touristry.menu.TourismStatusMenu;
 
+@Environment(EnvType.CLIENT)
 public class TourismStatusToggleButton extends AbstractButton {
     private static final int TEXTURE_WIDTH = 32;
     private static final int TEXTURE_HEIGHT = 32;

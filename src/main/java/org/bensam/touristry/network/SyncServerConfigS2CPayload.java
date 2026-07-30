@@ -12,7 +12,7 @@ import org.jspecify.annotations.NonNull;
 public record SyncServerConfigS2CPayload(ModServerConfig config) implements CustomPacketPayload {
     public static final Identifier ID = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "sync_server_config");
     public static final Type<SyncServerConfigS2CPayload> TYPE = new Type<>(ID);
-    public static final StreamCodec<RegistryFriendlyByteBuf, SyncServerConfigS2CPayload> CODEC =
+    public static final StreamCodec<RegistryFriendlyByteBuf, SyncServerConfigS2CPayload> STREAM_CODEC =
             ByteBufCodecs.fromCodecWithRegistries(ModServerConfig.CODEC)
                     .map(SyncServerConfigS2CPayload::new, SyncServerConfigS2CPayload::config);
 

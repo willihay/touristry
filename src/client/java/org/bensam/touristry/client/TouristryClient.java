@@ -7,6 +7,7 @@ import org.bensam.touristry.ModEntities;
 import org.bensam.touristry.ModMenus;
 import org.bensam.touristry.client.config.ModClientConfigManager;
 import org.bensam.touristry.client.network.ConfigClientPackets;
+import org.bensam.touristry.client.network.ExperienceClientPackets;
 import org.bensam.touristry.client.render.entity.TouristRenderer;
 import org.bensam.touristry.client.screen.ShoppingExperienceScreen;
 import org.bensam.touristry.client.screen.SightseeingExperienceScreen;
@@ -27,6 +28,7 @@ public class TouristryClient implements ClientModInitializer {
 
 		// Register packet receivers.
 		ConfigClientPackets.registerClientReceivers();
+		ExperienceClientPackets.registerClientReceivers();
 
 		// Register screens.
 		MenuScreens.register(ModMenus.TOURIST_BEACON_MENU.get(), TouristBeaconScreen::new);

@@ -1,5 +1,8 @@
 package org.bensam.touristry.menu;
 
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
@@ -8,9 +11,14 @@ import net.minecraft.world.inventory.*;
 import net.minecraft.world.item.ItemStack;
 import org.bensam.touristry.ModBlocks;
 import org.bensam.touristry.ModMenus;
+import org.bensam.touristry.block.entity.AbstractExperienceBlockEntity;
 import org.bensam.touristry.block.entity.ShoppingExperienceBlockEntity;
+import org.bensam.touristry.network.ExperienceScreenActionC2SPayload;
+import org.bensam.touristry.network.SyncTargetViewS2CPayload;
+import org.bensam.touristry.tourism.experience.TargetView;
 import org.jspecify.annotations.NonNull;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
 
@@ -18,18 +26,18 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
     // Slot layout
     private static final int EXPERIENCE_PAYMENT_SLOT_COUNT = ShoppingExperienceBlockEntity.PAYMENT_SLOT_SIZE;
     private static final int EXPERIENCE_SLOT_COUNT = ShoppingExperienceBlockEntity.TOTAL_INVENTORY_SIZE;
-    private static final int EXPERIENCE_PAYMENT_SLOT_START_X = 116;
-    private static final int EXPERIENCE_PAYMENT_SLOT_START_Y = 16;
+    private static final int EXPERIENCE_PAYMENT_SLOT_START_X = 216;
+    private static final int EXPERIENCE_PAYMENT_SLOT_START_Y = 17;
     private static final int EXPERIENCE_TARGET_KEY_SLOT = ShoppingExperienceBlockEntity.TARGET_KEY_INDEX;
-    private static final int EXPERIENCE_TARGET_KEY_SLOT_X = 80;
-    private static final int EXPERIENCE_TARGET_KEY_SLOT_Y = 34;
+    private static final int EXPERIENCE_TARGET_KEY_SLOT_X = 180;
+    private static final int EXPERIENCE_TARGET_KEY_SLOT_Y = 35;
     private static final int EXPERIENCE_ENTRY_FEE_SLOT = ShoppingExperienceBlockEntity.ENTRY_FEE_INDEX;
-    private static final int EXPERIENCE_ENTRY_FEE_SLOT_X = 80;
-    private static final int EXPERIENCE_ENTRY_FEE_SLOT_Y = 52;
+    private static final int EXPERIENCE_ENTRY_FEE_SLOT_X = 180;
+    private static final int EXPERIENCE_ENTRY_FEE_SLOT_Y = 53;
     private static final int SLOT_SIDE_LENGTH = 18;
 
     // Player inventory layout
-    private static final int PLAYER_INVENTORY_ROW_X = 8;
+    private static final int PLAYER_INVENTORY_ROW_X = 108;
     private static final int PLAYER_INVENTORY_ROW_Y = 84;
     private static final int PLAYER_SLOT_START = EXPERIENCE_SLOT_COUNT;
 
@@ -58,6 +66,10 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
     private final ContainerLevelAccess containerLevelAccess;
 
     private Tab selectedTab = Tab.STATUS;
+
+    // Client-side snapshot fields:
+    private boolean syncedOrderedTargets = true;
+    private List<TargetView> syncedTargets = List.of();
 
     // Client-side constructor:
     // Uses dummy containers so the menu can be constructed on the client
@@ -238,6 +250,44 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
         return (double) this.experienceContainerData.get(ShoppingExperienceBlockEntity.DATA_REPUTATION) / 100;
     }
 
+    // client-side getter
+    public boolean getSyncedOrderedTargets() {
+        return this.syncedOrderedTargets;
+    }
+
+    // client-side getter
+    public List<TargetView> getSyncedTargets() {
+        return this.syncedTargets;
+    }
+
+    // server-side screen action handler
+    public void handleScreenAction(ServerPlayer serverPlayer, ExperienceScreenActionC2SPayload payload) {
+        this.containerLevelAccess.execute((level, blockPos) -> {
+            if (!(level instanceof ServerLevel serverLevel)) {
+                return;
+            }
+
+            if (!(serverLevel.getBlockEntity(blockPos) instanceof ShoppingExperienceBlockEntity shoppingExperienceBlockEntity)) {
+                return;
+            }
+
+            switch (payload.action()) {
+                case REQUEST_TARGETS -> this.syncTargets(serverPlayer, serverLevel, shoppingExperienceBlockEntity);
+
+                case MOVE_TARGET -> {
+                    if (shoppingExperienceBlockEntity.moveTarget(payload.primary(), payload.secondary())) {
+                        this.syncTargets(serverPlayer, serverLevel, shoppingExperienceBlockEntity);
+                    }
+                }
+
+                case SET_ORDERED_TARGETS -> {
+                    shoppingExperienceBlockEntity.setOrderedTargets(payload.primary() != 0);
+                    this.syncTargets(serverPlayer, serverLevel, shoppingExperienceBlockEntity);
+                }
+            }
+        });
+    }
+
     public boolean isOpenForBusiness() {
         return this.experienceContainerData.get(ShoppingExperienceBlockEntity.DATA_OPEN_FOR_BUSINESS) != 0;
     }
@@ -248,6 +298,24 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
 
     public void setSelectedTab(Tab selectedTab) {
         this.selectedTab = selectedTab;
+    }
+
+    // client-side setter
+    public void setSyncedTargets(boolean orderedTargets, List<TargetView> targets) {
+        this.syncedOrderedTargets = orderedTargets;
+        this.syncedTargets = List.copyOf(targets);
+    }
+
+    // server-side sync initiator
+    public void syncTargets(ServerPlayer serverPlayer, ServerLevel serverLevel, AbstractExperienceBlockEntity experienceBlockEntity) {
+        ServerPlayNetworking.send(
+                serverPlayer,
+                new SyncTargetViewS2CPayload(
+                        this.containerId,
+                        experienceBlockEntity.isTargetListOrdered(),
+                        experienceBlockEntity.getTargetView(serverLevel)
+                )
+        );
     }
 
     private void toggleOpenForBusiness() {

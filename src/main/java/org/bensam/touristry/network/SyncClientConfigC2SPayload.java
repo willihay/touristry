@@ -11,7 +11,7 @@ import org.jspecify.annotations.NonNull;
 public record SyncClientConfigC2SPayload(boolean verboseTooltips) implements CustomPacketPayload {
     public static final Identifier ID = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "sync_client_config");
     public static final Type<SyncClientConfigC2SPayload> TYPE = new Type<>(ID);
-    public static final StreamCodec<RegistryFriendlyByteBuf, SyncClientConfigC2SPayload> CODEC =
+    public static final StreamCodec<RegistryFriendlyByteBuf, SyncClientConfigC2SPayload> STREAM_CODEC =
             StreamCodec.composite(
                     ByteBufCodecs.BOOL, SyncClientConfigC2SPayload::verboseTooltips,
                     SyncClientConfigC2SPayload::new

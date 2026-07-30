@@ -1,5 +1,7 @@
 package org.bensam.touristry.menu;
 
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
@@ -8,6 +10,8 @@ import net.minecraft.world.inventory.*;
 import net.minecraft.world.item.ItemStack;
 import org.bensam.touristry.ModBlocks;
 import org.bensam.touristry.ModMenus;
+import org.bensam.touristry.block.entity.AbstractExperienceBlockEntity;
+import org.bensam.touristry.block.entity.ShoppingExperienceBlockEntity;
 import org.bensam.touristry.block.entity.SightseeingExperienceBlockEntity;
 import org.jspecify.annotations.NonNull;
 
@@ -18,13 +22,13 @@ public class SightseeingExperienceMenu extends AbstractContainerMenu implements 
     private static final int EXPERIENCE_PAYMENT_SLOT_COUNT = SightseeingExperienceBlockEntity.PAYMENT_SLOT_SIZE;
     private static final int EXPERIENCE_SLOT_COUNT = SightseeingExperienceBlockEntity.TOTAL_INVENTORY_SIZE;
     private static final int EXPERIENCE_PAYMENT_SLOT_START_X = 116;
-    private static final int EXPERIENCE_PAYMENT_SLOT_START_Y = 16;
+    private static final int EXPERIENCE_PAYMENT_SLOT_START_Y = 17;
     private static final int EXPERIENCE_TARGET_KEY_SLOT = SightseeingExperienceBlockEntity.TARGET_KEY_INDEX;
     private static final int EXPERIENCE_TARGET_KEY_SLOT_X = 80;
-    private static final int EXPERIENCE_TARGET_KEY_SLOT_Y = 34;
+    private static final int EXPERIENCE_TARGET_KEY_SLOT_Y = 35;
     private static final int EXPERIENCE_ENTRY_FEE_SLOT = SightseeingExperienceBlockEntity.ENTRY_FEE_INDEX;
     private static final int EXPERIENCE_ENTRY_FEE_SLOT_X = 80;
-    private static final int EXPERIENCE_ENTRY_FEE_SLOT_Y = 52;
+    private static final int EXPERIENCE_ENTRY_FEE_SLOT_Y = 53;
     private static final int SLOT_SIDE_LENGTH = 18;
 
     // Player inventory layout
@@ -142,6 +146,10 @@ public class SightseeingExperienceMenu extends AbstractContainerMenu implements 
 
     public boolean isOpenForBusiness() {
         return this.experienceContainerData.get(SightseeingExperienceBlockEntity.DATA_OPEN_FOR_BUSINESS) != 0;
+    }
+
+    public void syncTargets(ServerPlayer player, ServerLevel serverLevel, AbstractExperienceBlockEntity experienceBlockEntity) {
+        // TODO: Implement in an AbstractExperienceMenu class.
     }
 
     private void toggleOpenForBusiness() {

@@ -1,6 +1,7 @@
 package org.bensam.touristry.client.screen;
 
 import com.mojang.blaze3d.platform.cursor.CursorTypes;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.events.GuiEventListener;
@@ -9,13 +10,20 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.*;
 import org.bensam.touristry.ModBlocks;
 import org.bensam.touristry.ModItems;
 import org.bensam.touristry.Touristry;
 import org.bensam.touristry.menu.ShoppingExperienceMenu;
+import org.bensam.touristry.network.ExperienceScreenActionC2SPayload;
+import org.bensam.touristry.tourism.experience.ExperienceScreenAction;
+import org.bensam.touristry.tourism.experience.TargetView;
 import org.jspecify.annotations.NonNull;
+
+import java.util.Arrays;
+import java.util.List;
 
 public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingExperienceMenu> {
     // Screen textures
@@ -41,37 +49,65 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     private static final Identifier SCROLLER_DISABLED_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "scroller_disabled");
 
     // Common constants
+    private static final int ARGB_SCREEN_TEXT = 0xFF404040;
+    private static final int ARGB_SCROLL_BUTTON_LABEL = 0xFFFFFFFF;
+    private static final int BG_TEXTURE_WIDTH = 512;
+    private static final int BG_TEXTURE_HEIGHT = 256;
+    private static final int BG_SCREEN_WIDTH = 276;
     private static final int TAB_WIDTH = 26;
     private static final int TAB_HEIGHT = 32;
-    private static final int SCROLLER_WIDTH = 12;
-    private static final int SCROLLER_HEIGHT = 15;
+    private static final int SCROLLBOX_WIDTH = 96;
+    private static final int SCROLLBOX_LABEL_Y = 6;
+    private static final int SCROLLBOX_ROW_X = 5;
+    private static final int SCROLLBOX_TOP_Y = 18;
+    private static final int SCROLLBOX_ROW_WIDTH = 88;
+    private static final int SCROLLBOX_ROW_HEIGHT = 20;
+    private static final int SCROLLBOX_ROWS = 7;
+    private static final int SCROLL_BAR_X = 94;
+    private static final int SCROLL_BAR_TOP_Y = SCROLLBOX_TOP_Y;
+    private static final int SCROLL_BAR_BOTTOM_Y = 157;
+    private static final int SCROLLER_WIDTH = 6;
+    private static final int SCROLLER_HEIGHT = 27;
 
     // Status screen constants
-    private static final Component TITLE_STATUS = Component.translatable("screen.touristry.tourist_block.tab.status");
+    private static final Component STATUS_SCREEN_TITLE = Component.translatable("screen.touristry.tourist_block.tab.status");
+    private static final Component PAYMENTS_LABEL = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.payments.label");
+    private static final Component TARGET_KEY_LABEL = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.target_key.label");
+    private static final Component ENTRY_FEE_LABEL = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.entry_fee.label");
+    private static final Component STATUS_LABEL = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.status.label");
     private static final int REPUTATION_LABEL_X = 8;
     private static final int REPUTATION_LABEL_Y = 17;
-    private static final int TARGET_KEY_LABEL_X = 8;
-    private static final int TARGET_KEY_LABEL_Y = 38;
-    private static final int ENTRY_FEE_LABEL_X = 8;
-    private static final int ENTRY_FEE_LABEL_Y = 56;
-    private static final int STATUS_LABEL_X = 116;
-    private static final int STATUS_LABEL_Y = 72;
-    private static final int ON_OFF_SLIDER_X = 152;
-    private static final int ON_OFF_SLIDER_Y = 72;
+    private static final int PAYMENTS_BOX_WIDTH = 54;
+    private static final int PAYMENTS_BOX_X = 215;
+    private static final int PAYMENTS_LABEL_Y = 6;
+    private static final int STATUS_LABEL_X = 107;
+    private static final int STATUS_LABEL_Y = 21;
+    private static final int ON_OFF_SLIDER_X = 180;
+    private static final int ON_OFF_SLIDER_Y = 21;
+    private static final int TARGET_KEY_LABEL_X = STATUS_LABEL_X;
+    private static final int TARGET_KEY_LABEL_Y = 39;
+    private static final int ENTRY_FEE_LABEL_X = STATUS_LABEL_X;
+    private static final int ENTRY_FEE_LABEL_Y = 57;
 
     // Targets screen constants
-    private static final Component TITLE_TARGETS = Component.translatable("screen.touristry.tourist_block.tab.targets");
-    private static final int NUM_ROWS = 5;
-    private static final int NUM_COLS = 9;
+    private static final Component TARGETS_SCREEN_TITLE = Component.translatable("screen.touristry.tourist_block.tab.targets");
+    private static final Component TARGET_ORDERED_LABEL = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.targets.ordered_button.label");
+    private static final int TARGET_DETAILS_LABEL_X = 107;
+    private static final int TARGET_DETAILS_LABEL_Y = SCROLLBOX_TOP_Y;
+    private static final int TARGET_CHANGE_ORDER_BUTTON_X = TARGET_DETAILS_LABEL_X;
+    private static final int TARGET_CHANGE_ORDER_BUTTON_Y = 40;
+    private static final int TARGET_ORDERED_LABEL_X = 135;
+    private static final int TARGET_ORDERED_LABEL_Y = 45;
+    private static final int TARGET_ORDERED_BUTTON_X = 193;
+    private static final int TARGET_ORDERED_BUTTON_Y = 40;
 
     // Pricing screen constants
-    private static final Component TITLE_PRICING = Component.translatable("screen.touristry.tourist_block.tab.pricing");
-
+    private static final Component PRICING_SCREEN_TITLE = Component.translatable("screen.touristry.tourist_block.tab.pricing");
 
     private enum TabDisplay {
-        STATUS(ShoppingExperienceMenu.Tab.STATUS, BG_TEXTURE_STATUS, ModBlocks.SHOPPING_EXPERIENCE.get().asItem(), TITLE_STATUS, false),
-        TARGETS(ShoppingExperienceMenu.Tab.TARGETS, BG_TEXTURE_TARGETS, ModItems.EXPERIENCE_TARGET_KEY.get(), TITLE_TARGETS, true),
-        PRICING(ShoppingExperienceMenu.Tab.PRICING, BG_TEXTURE_PRICING, Items.EMERALD, TITLE_PRICING, true);
+        STATUS(ShoppingExperienceMenu.Tab.STATUS, BG_TEXTURE_STATUS, ModBlocks.SHOPPING_EXPERIENCE.get().asItem(), STATUS_SCREEN_TITLE, false),
+        TARGETS(ShoppingExperienceMenu.Tab.TARGETS, BG_TEXTURE_TARGETS, ModItems.EXPERIENCE_TARGET_KEY.get(), TARGETS_SCREEN_TITLE, true),
+        PRICING(ShoppingExperienceMenu.Tab.PRICING, BG_TEXTURE_PRICING, Items.EMERALD, PRICING_SCREEN_TITLE, true);
 
         private final ShoppingExperienceMenu.Tab menuTab;
         private final Identifier background;
@@ -124,26 +160,58 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
         }
     }
 
-    private boolean scrolling;
+    // Common fields
+    private boolean isScrolling;
     private TabDisplay selectedTab = TabDisplay.STATUS;
+
+    // Status screen fields
     private GuiEventListener statusToggleButton;
+
+    // Targets screen fields
+    private int selectedTargetIndex;
+    private int targetsScrolledOff;
+    private final ExperienceScrollBoxButton[] targetButtons = new ExperienceScrollBoxButton[SCROLLBOX_ROWS];
+    private GuiEventListener targetOrderedToggleButton;
+
+    // Pricing screen fields
+    private int selectedPricingIndex;
+    private int pricingScrolledOff;
+    private final ExperienceScrollBoxButton[] pricingButtons = new ExperienceScrollBoxButton[SCROLLBOX_ROWS];
 
     public ShoppingExperienceScreen(ShoppingExperienceMenu container, Inventory inventory, Component title) {
         super(container, inventory, title);
+        this.imageWidth = BG_SCREEN_WIDTH;
+        this.inventoryLabelX = 107;
+        this.selectedPricingIndex = -1;
+        this.selectedTargetIndex = -1;
     }
 
     @Override
     protected void init() {
         super.init();
-        this.addStatusToggleButton();
+        this.selectTab(this.selectedTab);
+        ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
+                this.menu.getContainerId(),
+                ExperienceScreenAction.REQUEST_TARGETS,
+                -1,
+                -1
+        ));
+    }
+
+    private void removeAllButtons() {
+        this.removeStatusToggleButton();
+        this.removeTargetButtons();
+        this.removePricingButtons();
     }
 
     private void addStatusToggleButton() {
-        this.statusToggleButton = this.addRenderableWidget(new TourismStatusToggleButton(
-                this.leftPos + ON_OFF_SLIDER_X,
-                this.topPos + ON_OFF_SLIDER_Y,
-                this.menu, ON_OFF_SLIDER_TEXTURE)
-        );
+        if (this.statusToggleButton == null) {
+            this.statusToggleButton = this.addRenderableWidget(new TourismStatusToggleButton(
+                    this.leftPos + ON_OFF_SLIDER_X,
+                    this.topPos + ON_OFF_SLIDER_Y,
+                    this.menu, ON_OFF_SLIDER_TEXTURE)
+            );
+        }
     }
 
     private void removeStatusToggleButton() {
@@ -151,6 +219,101 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
             this.removeWidget(this.statusToggleButton);
             this.statusToggleButton = null;
         }
+    }
+
+    private void addTargetButtons() {
+        if (this.targetButtons[0] != null) {
+            // already populated
+            return;
+        }
+
+        int buttonX = this.leftPos + SCROLLBOX_ROW_X;
+        int buttonY = this.topPos + SCROLLBOX_TOP_Y;
+
+        for (int m = 0; m < SCROLLBOX_ROWS; m++) {
+            this.targetButtons[m] = this.addRenderableWidget(new ExperienceScrollBoxButton(m, buttonX, buttonY, button -> {
+                if (button instanceof ExperienceScrollBoxButton selectedButton) {
+                    this.selectTargetRow(selectedButton.getIndex());
+                }
+            }));
+            buttonY += SCROLLBOX_ROW_HEIGHT;
+        }
+
+        this.updateRowFocusForSelectedTarget();
+
+        buttonX = this.leftPos + TARGET_ORDERED_BUTTON_X;
+        buttonY = this.topPos + TARGET_ORDERED_BUTTON_Y;
+        this.targetOrderedToggleButton = this.addRenderableWidget(new TargetOrderedButton(
+                this.menu.getSyncedOrderedTargets(),
+                buttonX,
+                buttonY,
+                button -> {
+                    if (button instanceof TargetOrderedButton orderedButton) {
+                        boolean isOrdered = !this.menu.getSyncedOrderedTargets();
+                        orderedButton.setOrdered(isOrdered);
+                        button.setFocused(false);
+                        this.updateRowFocusForSelectedTarget();
+
+                        ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
+                                this.menu.getContainerId(),
+                                ExperienceScreenAction.SET_ORDERED_TARGETS,
+                                isOrdered ? 1 : 0,
+                                -1
+                        ));
+                    }
+                }
+        ));
+    }
+
+    private void removeTargetButtons() {
+        if (this.targetButtons[0] == null) {
+            // already cleared
+            return;
+        }
+
+        for (var button : this.targetButtons) {
+            if (button != null) {
+                this.removeWidget(button);
+            }
+        }
+        Arrays.fill(this.targetButtons, null);
+
+        this.removeWidget(this.targetOrderedToggleButton);
+    }
+
+    private void addPricingButtons() {
+        if (this.pricingButtons[0] != null) {
+            // already populated
+            return;
+        }
+
+        int buttonX = this.leftPos + SCROLLBOX_ROW_X;
+        int buttonY = this.topPos + SCROLLBOX_TOP_Y;
+
+        for (int m = 0; m < SCROLLBOX_ROWS; m++) {
+            this.pricingButtons[m] = this.addRenderableWidget(new ExperienceScrollBoxButton(m, buttonX, buttonY, button -> {
+                if (button instanceof ExperienceScrollBoxButton selectedButton) {
+                    this.selectPricingRow(selectedButton.getIndex());
+                }
+            }));
+            buttonY += SCROLLBOX_ROW_HEIGHT;
+        }
+
+        this.updateRowFocusForSelectedPricing();
+    }
+
+    private void removePricingButtons() {
+        if (this.pricingButtons[0] == null) {
+            // already cleared
+            return;
+        }
+
+        for (var button : this.pricingButtons) {
+            if (button != null) {
+                this.removeWidget(button);
+            }
+        }
+        Arrays.fill(this.pricingButtons, null);
     }
 
     @Override
@@ -184,8 +347,8 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                 0.0F,
                 this.imageWidth,
                 this.imageHeight,
-                BACKGROUND_TEXTURE_WIDTH,
-                BACKGROUND_TEXTURE_HEIGHT
+                BG_TEXTURE_WIDTH,
+                BG_TEXTURE_HEIGHT
         );
 
         // Render selected tab.
@@ -208,16 +371,102 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     }
 
     @Override
-    protected void renderLabels(@NonNull GuiGraphics guiGraphics, int i, int j) {
-        guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, -12566464, false);
-        if (this.selectedTab == TabDisplay.STATUS) {
-            guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, -12566464, false);
-        }
+    public void renderContents(@NonNull GuiGraphics guiGraphics, int i, int j, float f) {
+        super.renderContents(guiGraphics, i, j, f);
 
+        if (this.selectedTab == TabDisplay.TARGETS) {
+            List<TargetView> syncedTargets = this.menu.getSyncedTargets();
+            if (!syncedTargets.isEmpty()) {
+                int yRow = this.topPos + SCROLLBOX_TOP_Y;
+                int xItemStart = this.leftPos + 10;
+                int xTextStart = this.leftPos + 30;
+                int maxTextWidth = SCROLLBOX_ROW_WIDTH - 30;
+                this.renderTargetScroller(guiGraphics, i, j, syncedTargets.size());
+                //int o = 0;
+
+                for (int row = 0; row < SCROLLBOX_ROWS; row++) {
+                    int targetIndex = this.targetsScrolledOff + row;
+                    if (targetIndex < syncedTargets.size()) {
+                        this.targetButtons[row].visible = true;
+
+                        TargetView target = syncedTargets.get(targetIndex);
+                        guiGraphics.renderFakeItem(target.itemStack(), xItemStart, yRow + 1);
+                        guiGraphics.drawString(
+                                this.font,
+                                this.font.plainSubstrByWidth(target.displayName(), maxTextWidth),
+                                xTextStart,
+                                yRow + 6,
+                                ARGB_SCROLL_BUTTON_LABEL,
+                                true);
+                    } else {
+                        this.targetButtons[row].visible = false;
+                    }
+
+                    yRow += SCROLLBOX_ROW_HEIGHT;
+                }
+
+                /*
+                for (TargetView target : syncedTargets) {
+                    if (!this.canScroll() || o >= this.scrolledOff && o < SCROLLBOX_ROWS + this.scrolledOff) {
+                        guiGraphics.renderFakeItem(target.itemStack(), xItemStart, yRow + 1);
+                        guiGraphics.drawString(
+                                this.font,
+                                this.font.plainSubstrByWidth(target.displayName(), maxTextWidth),
+                                xTextStart,
+                                yRow + 6,
+                                ARGB_SCROLL_BUTTON_LABEL,
+                                true);
+                        yRow += SCROLLBOX_ROW_HEIGHT;
+                    }
+                    o++;
+                }
+
+                for (ExperienceScrollBoxButton button : this.targetButtons) {
+                    button.visible = button.getIndex() < syncedTargets.size();
+                }
+                */
+            }
+        }
+    }
+
+    private void renderTargetScroller(GuiGraphics guiGraphics, int i, int j, int numTargets) {
+        int m = numTargets + 1 - SCROLLBOX_ROWS;
+        int xScroller = this.leftPos + SCROLL_BAR_X;
+        int yScrollbarTop = this.topPos + SCROLL_BAR_TOP_Y;
+        if (m > 1) {
+            int n = 139 - (27 + (m - 1) * 139 / m);
+            int o = 1 + n / m + 139 / m;
+            int p = 113;
+            int q = Math.min(113, this.targetsScrolledOff * o);
+            if (this.targetsScrolledOff == m - 1) {
+                q = 113;
+            }
+            int s = yScrollbarTop + q;
+
+            guiGraphics.blitSprite(RenderPipelines.GUI_TEXTURED, SCROLLER_SPRITE, xScroller, s, SCROLLER_WIDTH, SCROLLER_HEIGHT);
+            if (i >= xScroller && i < xScroller + SCROLLER_WIDTH && j >= s && j <= s + SCROLLER_HEIGHT) {
+                guiGraphics.requestCursor(this.isScrolling ? CursorTypes.RESIZE_NS : CursorTypes.POINTING_HAND);
+            }
+        } else {
+            guiGraphics.blitSprite(RenderPipelines.GUI_TEXTURED, SCROLLER_DISABLED_SPRITE, xScroller, yScrollbarTop, SCROLLER_WIDTH, SCROLLER_HEIGHT);
+        }
+    }
+
+    @Override
+    protected void renderLabels(@NonNull GuiGraphics guiGraphics, int i, int j) {
         switch (this.selectedTab) {
-            case STATUS -> this.renderStatusLabels(guiGraphics, i, j);
-            case TARGETS -> this.renderTargetLabels(guiGraphics, i, j);
-            case PRICING -> this.renderPricingLabels(guiGraphics, i, j);
+            case STATUS -> {
+                guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, ARGB_SCREEN_TEXT, false);
+                guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, ARGB_SCREEN_TEXT, false);
+                this.renderStatusLabels(guiGraphics, i, j);
+            }
+            case TARGETS -> {
+                this.renderTargetLabels(guiGraphics, i, j);
+            }
+            case PRICING -> {
+                guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, ARGB_SCREEN_TEXT, false);
+                this.renderPricingLabels(guiGraphics, i, j);
+            }
         }
     }
 
@@ -235,59 +484,112 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                 false
         );
 
-        Component targetKeyLabel = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.target_key.label");
+        int paymentsLabelWidth = this.font.width(PAYMENTS_LABEL);
         guiGraphics.drawString(
                 this.font,
-                targetKeyLabel,
+                PAYMENTS_LABEL,
+                PAYMENTS_BOX_X + ((PAYMENTS_BOX_WIDTH - paymentsLabelWidth) / 2),
+                PAYMENTS_LABEL_Y,
+                ARGB_SCREEN_TEXT,
+                false
+        );
+
+        guiGraphics.drawString(
+                this.font,
+                TARGET_KEY_LABEL,
                 TARGET_KEY_LABEL_X,
                 TARGET_KEY_LABEL_Y,
-                0xFF404040, // gray
+                ARGB_SCREEN_TEXT,
                 false
         );
 
-        Component entryFeeLabel = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.entry_fee.label");
         guiGraphics.drawString(
                 this.font,
-                entryFeeLabel,
+                ENTRY_FEE_LABEL,
                 ENTRY_FEE_LABEL_X,
                 ENTRY_FEE_LABEL_Y,
-                0xFF404040, // gray
+                ARGB_SCREEN_TEXT,
                 false
         );
 
-        Component statusLabel = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.status.label");
         guiGraphics.drawString(
                 this.font,
-                statusLabel,
+                STATUS_LABEL,
                 STATUS_LABEL_X,
                 STATUS_LABEL_Y,
-                0xFF404040, // gray
+                ARGB_SCREEN_TEXT,
                 false
         );
     }
 
     private void renderTargetLabels(@NonNull GuiGraphics guiGraphics, int i, int j) {
+        int targetsLabelWidth = this.font.width(TARGETS_SCREEN_TITLE);
+        guiGraphics.drawString(
+                this.font,
+                TARGETS_SCREEN_TITLE,
+                SCROLLBOX_ROW_X + ((SCROLLBOX_WIDTH - targetsLabelWidth) / 2),
+                SCROLLBOX_LABEL_Y,
+                ARGB_SCREEN_TEXT,
+                false
+        );
 
+        if (this.selectedTargetIndex >= 0 && this.selectedTargetIndex < this.menu.getSyncedTargets().size()) {
+            TargetView targetView = this.menu.getSyncedTargets().get(this.selectedTargetIndex);
+            String targetDetails = targetView.displayName() + " @ " + targetView.pos().toShortString();
+            guiGraphics.drawString(
+                    this.font,
+                    targetDetails,
+                    TARGET_DETAILS_LABEL_X,
+                    TARGET_DETAILS_LABEL_Y,
+                    ARGB_SCREEN_TEXT,
+                    false
+            );
+        }
+
+        guiGraphics.drawString(
+                this.font,
+                TARGET_ORDERED_LABEL,
+                TARGET_ORDERED_LABEL_X,
+                TARGET_ORDERED_LABEL_Y,
+                ARGB_SCREEN_TEXT,
+                false
+        );
     }
 
     private void renderPricingLabels(@NonNull GuiGraphics guiGraphics, int i, int j) {
-
+        int pricingLabelWidth = this.font.width(PRICING_SCREEN_TITLE);
+        guiGraphics.drawString(
+                this.font,
+                PRICING_SCREEN_TITLE,
+                SCROLLBOX_ROW_X + ((SCROLLBOX_WIDTH - pricingLabelWidth) / 2),
+                SCROLLBOX_LABEL_Y,
+                ARGB_SCREEN_TEXT,
+                false
+        );
     }
 
     private boolean canScroll() {
-        return selectedTab.canScroll() /* && this.menu.canScroll() */;
+        return switch (this.selectedTab) {
+            case STATUS -> false;
+            case TARGETS -> this.menu.getSyncedTargets().size() > SCROLLBOX_ROWS;
+            case PRICING -> false;
+        };
     }
 
-    private boolean checkTabClicked(TabDisplay tab, double d, double e) {
-        int i = tab.getTabX();
-        int j = tab.getTabY();
-        return d >= i && d <= i + TAB_WIDTH && e >= j && e <= j + TAB_HEIGHT;
+    private boolean canScroll(int i) {
+        return this.selectedTab.canScroll() && i > SCROLLBOX_ROWS;
+    }
+
+    private boolean checkTabClicked(TabDisplay tab, double x, double y) {
+        int tabX = tab.getTabX();
+        int tabY = tab.getTabY();
+        return x >= tabX && x <= tabX + TAB_WIDTH && y >= tabY && y <= tabY + TAB_HEIGHT;
     }
 
     private boolean checkTabHovering(GuiGraphics guiGraphics, TabDisplay tab, int i, int j) {
-        int k = tab.getTabX();
-        int l = tab.getTabY();
-        if (this.isHovering(k + 3, l + 3, 21, 27, i, j)) {
+        int tabX = tab.getTabX();
+        int tabY = tab.getTabY();
+        if (this.isHovering(tabX + 3, tabY + 3, TAB_WIDTH - 5, TAB_HEIGHT - 5, i, j)) {
             guiGraphics.setTooltipForNextFrame(this.font, tab.getTitle(), i, j);
             return true;
         } else {
@@ -295,27 +597,29 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
         }
     }
 
+    private boolean isInsideScrollbar(double x, double y) {
+        return x >= SCROLL_BAR_X &&
+                x < SCROLL_BAR_X + SCROLLER_WIDTH &&
+                y >= SCROLL_BAR_TOP_Y &&
+                y <= SCROLL_BAR_BOTTOM_Y;
+    }
+
     @Override
     public boolean mouseClicked(MouseButtonEvent mouseButtonEvent, boolean bl) {
         if (mouseButtonEvent.button() == 0) {
-            double d = mouseButtonEvent.x() - this.leftPos;
-            double e = mouseButtonEvent.y() - this.topPos;
+            double relativeX = mouseButtonEvent.x() - this.leftPos;
+            double relativeY = mouseButtonEvent.y() - this.topPos;
 
             for (TabDisplay tab : TabDisplay.values()) {
-                if (this.checkTabClicked(tab, d, e)) {
+                if (this.checkTabClicked(tab, relativeX, relativeY)) {
                     return true;
                 }
             }
 
-            /*
-            if (selectedTab == Tab.TARGETS && this.insideTargetsScrollbar(mouseButtonEvent.x(), mouseButtonEvent.y())) {
-                this.scrolling = this.canScroll();
-                return true;
-            } else if (selectedTab == Tab.PRICING && this.insidePricingScrollbar(mouseButtonEvent.x(), mouseButtonEvent.y())) {
-                this.scrolling = this.canScroll();
+            if (this.selectedTab.canScroll() && this.isInsideScrollbar(relativeX, relativeY)) {
+                this.isScrolling = this.canScroll();
                 return true;
             }
-            */
         }
 
         return super.mouseClicked(mouseButtonEvent, bl);
@@ -324,12 +628,13 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     @Override
     public boolean mouseReleased(MouseButtonEvent mouseButtonEvent) {
         if (mouseButtonEvent.button() == 0) {
-            double d = mouseButtonEvent.x() - this.leftPos;
-            double e = mouseButtonEvent.y() - this.topPos;
-            this.scrolling = false;
+            this.isScrolling = false;
+
+            double relativeX = mouseButtonEvent.x() - this.leftPos;
+            double relativeY = mouseButtonEvent.y() - this.topPos;
 
             for (TabDisplay tab : TabDisplay.values()) {
-                if (this.checkTabClicked(tab, d, e)) {
+                if (this.checkTabClicked(tab, relativeX, relativeY)) {
                     this.selectTab(tab);
                     return true;
                 }
@@ -339,18 +644,82 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
         return super.mouseReleased(mouseButtonEvent);
     }
 
-    private void selectTab(TabDisplay tab) {
-        if (tab == this.selectedTab) {
-            return;
+    @Override
+    public boolean mouseDragged(MouseButtonEvent mouseButtonEvent, double d, double e) {
+        if (!this.isScrolling) {
+            return super.mouseDragged(mouseButtonEvent, d, e);
         }
 
+        int totalRows = this.selectedTab == TabDisplay.TARGETS ? this.menu.getSyncedTargets().size() : 0;
+        int maxScrolledOff = totalRows - SCROLLBOX_ROWS;
+        if (maxScrolledOff <= 0) {
+            if (this.selectedTab == TabDisplay.TARGETS) {
+                this.targetsScrolledOff = 0;
+                this.updateRowFocusForSelectedTarget();
+            } else if (this.selectedTab == TabDisplay.PRICING) {
+                this.pricingScrolledOff = 0;
+                this.updateRowFocusForSelectedPricing();
+            }
+            return true;
+        }
+
+        int yScrollBarTop = this.topPos + SCROLL_BAR_TOP_Y;
+        float scrollableTrackLength = SCROLL_BAR_BOTTOM_Y - SCROLL_BAR_TOP_Y - SCROLLER_HEIGHT;
+        float scrollerCenterY = (float)mouseButtonEvent.y() - yScrollBarTop - ((float) SCROLLER_HEIGHT / 2.0F);
+
+        // Convert the mouse's Y position on the scrollbar into a number from 0 to maxScrolledOff.
+        float scrollFraction = scrollerCenterY / scrollableTrackLength;
+        int rowOffset = (int)(scrollFraction * maxScrolledOff + 0.5F); // rounded to nearest integer
+        int scrolledOff = Mth.clamp(rowOffset, 0, maxScrolledOff);
+
+        if (this.selectedTab == TabDisplay.TARGETS) {
+            this.targetsScrolledOff = scrolledOff;
+            this.updateRowFocusForSelectedTarget();
+        } else if (this.selectedTab == TabDisplay.PRICING) {
+            this.pricingScrolledOff = scrolledOff;
+            this.updateRowFocusForSelectedPricing();
+        }
+        return true;
+    }
+
+    @Override
+    public boolean mouseScrolled(double d, double e, double f, double scrollDelta) {
+        if (super.mouseScrolled(d, e, f, scrollDelta)) {
+            return true;
+        }
+
+        if (this.canScroll()) {
+            if (this.selectedTab == TabDisplay.TARGETS) {
+                int totalRows = this.menu.getSyncedTargets().size();
+                int maxScrolledOff = totalRows - SCROLLBOX_ROWS;
+                this.targetsScrolledOff = Mth.clamp((int)(this.targetsScrolledOff - scrollDelta), 0, maxScrolledOff);
+                this.updateRowFocusForSelectedTarget();
+            } else if (this.selectedTab == TabDisplay.PRICING) {
+                int totalRows = 0;
+                int maxScrolledOff = totalRows - SCROLLBOX_ROWS;
+                this.pricingScrolledOff = Mth.clamp((int)(this.pricingScrolledOff - scrollDelta), 0, maxScrolledOff);
+                this.updateRowFocusForSelectedPricing();
+            }
+            return true;
+        }
+
+        return false;
+    }
+
+    private void selectPricingRow(int selectedRow) {
+        this.selectedPricingIndex = selectedRow + this.pricingScrolledOff;
+        this.updateRowFocusForSelectedPricing();
+    }
+
+    private void selectTab(TabDisplay tab) {
         this.selectedTab = tab;
         this.menu.setSelectedTab(tab.getMenuTab());
 
-        if (tab == TabDisplay.STATUS) {
-            this.addStatusToggleButton();
-        } else {
-            this.removeStatusToggleButton();
+        this.removeAllButtons();
+        switch (tab) {
+            case STATUS -> this.addStatusToggleButton();
+            case TARGETS -> this.addTargetButtons();
+            case PRICING -> this.addPricingButtons();
         }
 
         Minecraft minecraft = Minecraft.getInstance();
@@ -360,5 +729,58 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                     ShoppingExperienceMenu.buttonForTab(tab.getMenuTab())
             );
         }
+    }
+
+    private void selectTargetRow(int selectedRow) {
+        this.selectedTargetIndex = selectedRow + this.targetsScrolledOff;
+        this.updateRowFocusForSelectedTarget();
+    }
+
+    private void updateRowFocusForSelectedPricing() {
+        for (var button : this.pricingButtons) {
+            button.setFocused(false);
+        }
+
+        int numPricings = 0; // this.menu.getSyncedPricings().size();
+
+        if (this.selectedPricingIndex < 0 || this.selectedPricingIndex >= numPricings) {
+            this.selectedPricingIndex = -1;
+            return;
+        }
+
+        int visibleRows = Math.min(numPricings, SCROLLBOX_ROWS);
+        int firstVisible = this.pricingScrolledOff;
+        int lastVisible = this.pricingScrolledOff + visibleRows - 1;
+
+        if (this.selectedPricingIndex < firstVisible || this.selectedPricingIndex > lastVisible) {
+            return;
+        }
+
+        int visibleRow = this.selectedPricingIndex - firstVisible;
+        this.pricingButtons[visibleRow].setFocused(true);
+    }
+
+    private void updateRowFocusForSelectedTarget() {
+        for (var button : this.targetButtons) {
+            button.setFocused(false);
+        }
+
+        int numTargets = this.menu.getSyncedTargets().size();
+
+        if (this.selectedTargetIndex < 0 || this.selectedTargetIndex >= numTargets) {
+            this.selectedTargetIndex = -1;
+            return;
+        }
+
+        int visibleRows = Math.min(numTargets, SCROLLBOX_ROWS);
+        int firstVisible = this.targetsScrolledOff;
+        int lastVisible = this.targetsScrolledOff + visibleRows - 1;
+
+        if (this.selectedTargetIndex < firstVisible || this.selectedTargetIndex > lastVisible) {
+            return;
+        }
+
+        int visibleRow = this.selectedTargetIndex - firstVisible;
+        this.targetButtons[visibleRow].setFocused(true);
     }
 }

@@ -14,6 +14,7 @@ import org.bensam.touristry.config.ModServerConfigManager;
 import org.bensam.touristry.config.ModServerConfigSync;
 import org.bensam.touristry.config.SyncedClientConfig;
 import org.bensam.touristry.item.ExperienceTargetKeyItem;
+import org.bensam.touristry.network.ExperienceServerPackets;
 import org.bensam.touristry.tourism.TourismManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,9 +43,14 @@ public class Touristry implements ModInitializer {
 		ModBlockEntities.initialize();
 		ModEntities.initialize();
 		ModMenus.initialize();
-		ModNetworks.initialize();
-		SyncedClientConfig.initialize();
 		ModCreativeTab.initialize();
+
+		// Register network payloads.
+		ModNetworks.initialize();
+
+		// Register server-side player connection event handlers and packet receiver handlers.
+		SyncedClientConfig.initialize();
+		ExperienceServerPackets.registerServerReceivers();
 
 		ServerWorldEvents.LOAD.register((server, serverLevel) -> {
 			if (serverLevel == server.overworld()) {

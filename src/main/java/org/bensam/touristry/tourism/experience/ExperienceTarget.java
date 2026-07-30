@@ -11,8 +11,10 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import org.bensam.touristry.tourism.TourismManager;
+import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Optional;
@@ -61,12 +63,20 @@ public record ExperienceTarget(
             }
         }
 
-        BlockEntity blockEntity = serverLevel.getBlockEntity(this.pos);
-        if (blockEntity != null) {
-            return blockEntity.getBlockState().getBlock().getName();
+        return serverLevel.getBlockState(this.pos).getBlock().getName();
+    }
+
+    public @NonNull ItemStack getItemStack(ServerLevel serverLevel) {
+        if (this.isEntity()) {
+            Entity entity = serverLevel.getEntity(this.entityUUID);
+            if (entity == null) {
+                return new ItemStack(Items.AIR);
+            }
+            ItemStack itemStack = entity.getPickResult();
+            return itemStack.isEmpty() ? ItemStack.EMPTY : itemStack.copy();
         }
 
-        return Component.literal("Unknown block");
+        return new ItemStack(serverLevel.getBlockState(this.pos).getBlock().asItem());
     }
 
     public boolean isBlock() {

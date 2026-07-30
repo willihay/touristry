@@ -13,6 +13,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.entity.BaseContainerBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
@@ -24,6 +25,7 @@ import org.bensam.touristry.block.TouristExperienceBlock;
 import org.bensam.touristry.tourism.TourismManager;
 import org.bensam.touristry.tourism.TouristReview;
 import org.bensam.touristry.tourism.VisitResult;
+import org.bensam.touristry.tourism.experience.TargetView;
 import org.bensam.touristry.tourism.experience.TouristLocationStats;
 import org.bensam.touristry.tourism.experience.ExperienceTarget;
 import org.bensam.touristry.tourism.experience.TouristExperience;
@@ -209,6 +211,19 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         return targetList;
     }
 
+    public List<TargetView> getTargetView(ServerLevel serverLevel) {
+        this.pruneInvalidTargets(serverLevel);
+        List<TargetView> targetView = new ArrayList<>();
+        for (ExperienceTarget target : this.targets) {
+            ItemStack targetItemStack = target.getItemStack(serverLevel);
+            if (targetItemStack == ItemStack.EMPTY) {
+                targetItemStack = new ItemStack(Items.CHEST);
+            }
+            targetView.add(new TargetView(target.pos(), targetItemStack, target.getDisplayName(serverLevel).getString()));
+        }
+        return targetView;
+    }
+
     @Override
     public UUID getUUID() {
         return this.uuid;
@@ -258,6 +273,21 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
 
     public boolean isTargetListOrdered() {
         return this.orderedTargets;
+    }
+
+    public boolean moveTarget(int fromIndex, int toIndex) {
+        int lastIndex = this.targets.size() - 1;
+        if (fromIndex < 0 || fromIndex > lastIndex || toIndex < 0 || toIndex > lastIndex) {
+            return false;
+        }
+
+        if (fromIndex == toIndex) {
+            return true;
+        }
+
+        ExperienceTarget targetToMove = this.targets.remove(fromIndex);
+        this.targets.add(toIndex, targetToMove);
+        return true;
     }
 
     protected void pruneInvalidTargets(ServerLevel serverLevel) {
