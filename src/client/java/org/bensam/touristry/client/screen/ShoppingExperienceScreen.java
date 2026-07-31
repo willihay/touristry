@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.cursor.CursorTypes;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.WidgetSprites;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -47,6 +48,10 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     private static final Identifier ON_OFF_SLIDER_TEXTURE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "textures/gui/on_off_slider.png");
     private static final Identifier SCROLLER_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "scroller");
     private static final Identifier SCROLLER_DISABLED_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "scroller_disabled");
+    private static final Identifier MOVE_UP_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "move_up");
+    private static final Identifier MOVE_UP_HIGHLIGHTED_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "move_up_highlighted");
+    private static final Identifier MOVE_DOWN_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "move_down");
+    private static final Identifier MOVE_DOWN_HIGHLIGHTED_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "move_down_highlighted");
 
     // Common constants
     private static final int ARGB_SCREEN_TEXT = 0xFF404040;
@@ -92,11 +97,13 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
 
     // Targets screen constants
     private static final Component TARGETS_SCREEN_TITLE = Component.translatable("screen.touristry.tourist_block.tab.targets");
+    private static final Component TARGET_MOVE_UP_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.target.move_up.tooltip");
+    private static final Component TARGET_MOVE_DOWN_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.target.move_down.tooltip");
     private static final Component TARGET_ORDERED_LABEL = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.targets.ordered_button.label");
     private static final int TARGET_DETAILS_LABEL_X = 107;
     private static final int TARGET_DETAILS_LABEL_Y = SCROLLBOX_TOP_Y;
     private static final int TARGET_CHANGE_ORDER_BUTTON_X = TARGET_DETAILS_LABEL_X;
-    private static final int TARGET_CHANGE_ORDER_BUTTON_Y = 40;
+    private static final int TARGET_CHANGE_ORDER_BUTTON_Y = 39;
     private static final int TARGET_ORDERED_LABEL_X = 135;
     private static final int TARGET_ORDERED_LABEL_Y = 45;
     private static final int TARGET_ORDERED_BUTTON_X = 193;
@@ -172,6 +179,8 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     private int selectedTargetIndex;
     private int targetsScrolledOff;
     private final ExperienceScrollBoxButton[] targetButtons = new ExperienceScrollBoxButton[SCROLLBOX_ROWS];
+    private GuiEventListener targetOrderUpButton;
+    private GuiEventListener targetOrderDownButton;
     private GuiEventListener targetOrderedToggleButton;
 
     // Pricing screen fields
@@ -228,6 +237,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
             return;
         }
 
+        // Add target row buttons for scroll box.
         int buttonX = this.leftPos + SCROLLBOX_ROW_X;
         int buttonY = this.topPos + SCROLLBOX_TOP_Y;
 
@@ -240,8 +250,58 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
             buttonY += SCROLLBOX_ROW_HEIGHT;
         }
 
+        // Set the focus if there already is one.
         this.updateRowFocusForSelectedTarget();
 
+        // Add target move up button.
+        buttonX = this.leftPos + TARGET_CHANGE_ORDER_BUTTON_X;
+        buttonY = this.topPos + TARGET_CHANGE_ORDER_BUTTON_Y;
+        int u = 18;
+        int v = 4;
+        this.targetOrderUpButton = this.addRenderableWidget(new MoveTargetOrderButton(
+                buttonX, buttonY,
+                u, v,
+                new WidgetSprites(MOVE_UP_SPRITE, MOVE_UP_HIGHLIGHTED_SPRITE),
+                button -> {
+                    if (this.selectedTargetIndex <= 0 || this.selectedTargetIndex >= this.menu.getSyncedTargets().size()) {
+                        // Selected target index is invalid or is already at the top of the list.
+                        return;
+                    }
+                    ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
+                            this.menu.getContainerId(),
+                            ExperienceScreenAction.MOVE_TARGET,
+                            this.selectedTargetIndex,
+                            this.selectedTargetIndex - 1
+                    ));
+                    this.selectTargetIndex(this.selectedTargetIndex - 1);
+                },
+                TARGET_MOVE_UP_TOOLTIP
+        ));
+
+        // Add target move down button.
+        buttonY += 12;
+        v = 20;
+        this.targetOrderDownButton = this.addRenderableWidget(new MoveTargetOrderButton(
+                buttonX, buttonY,
+                u, v,
+                new WidgetSprites(MOVE_DOWN_SPRITE, MOVE_DOWN_HIGHLIGHTED_SPRITE),
+                button -> {
+                    if (this.selectedTargetIndex < 0 || this.selectedTargetIndex >= this.menu.getSyncedTargets().size() - 1) {
+                        // Selected target index is invalid or is already at the bottom of the list.
+                        return;
+                    }
+                    ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
+                            this.menu.getContainerId(),
+                            ExperienceScreenAction.MOVE_TARGET,
+                            this.selectedTargetIndex,
+                            this.selectedTargetIndex + 1
+                    ));
+                    this.selectTargetIndex(this.selectedTargetIndex + 1);
+                },
+                TARGET_MOVE_DOWN_TOOLTIP
+        ));
+
+        // Add target order toggle button.
         buttonX = this.leftPos + TARGET_ORDERED_BUTTON_X;
         buttonY = this.topPos + TARGET_ORDERED_BUTTON_Y;
         this.targetOrderedToggleButton = this.addRenderableWidget(new TargetOrderedButton(
@@ -279,6 +339,8 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
         }
         Arrays.fill(this.targetButtons, null);
 
+        this.removeWidget(this.targetOrderUpButton);
+        this.removeWidget(this.targetOrderDownButton);
         this.removeWidget(this.targetOrderedToggleButton);
     }
 
@@ -548,10 +610,11 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
 
         if (this.selectedTargetIndex >= 0 && this.selectedTargetIndex < numTargets) {
             TargetView targetView = this.menu.getSyncedTargets().get(this.selectedTargetIndex);
-            String targetDetails = targetView.displayName() + " @ " + targetView.pos().toShortString();
+            String targetDetails = (this.selectedTargetIndex + 1) + ") " + targetView.displayName() + " @ " + targetView.pos().toShortString();
+            int maxDetailWidth = this.width - TARGET_DETAILS_LABEL_X - 5;
             guiGraphics.drawString(
                     this.font,
-                    targetDetails,
+                    this.font.plainSubstrByWidth(targetDetails, maxDetailWidth),
                     TARGET_DETAILS_LABEL_X,
                     TARGET_DETAILS_LABEL_Y,
                     ARGB_SCREEN_TEXT,
@@ -764,6 +827,11 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
 
         int visibleRow = this.selectedPricingIndex - firstVisible;
         this.pricingButtons[visibleRow].setFocused(true);
+    }
+
+    private void selectTargetIndex(int selectedTargetIndex) {
+        this.selectedTargetIndex = selectedTargetIndex;
+        this.updateRowFocusForSelectedTarget();
     }
 
     private void selectTargetRow(int selectedRow) {

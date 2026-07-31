@@ -49,7 +49,6 @@ public class TargetOrderedButton extends Button {
     @Override
     protected void renderContents(GuiGraphics guiGraphics, int i, int j, float f) {
         this.renderDefaultSprite(guiGraphics);
-        //this.renderDefaultLabel(guiGraphics.textRendererForWidget(this, GuiGraphics.HoveredTextEffects.NONE));
 
         Component label = this.isOrdered ? BUTTON_LABEL_ORDERED : BUTTON_LABEL_RANDOMIZED;
         int labelWidth = this.font.width(label);

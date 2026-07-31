@@ -287,6 +287,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
 
         ExperienceTarget targetToMove = this.targets.remove(fromIndex);
         this.targets.add(toIndex, targetToMove);
+        this.setChanged();
         return true;
     }
 
