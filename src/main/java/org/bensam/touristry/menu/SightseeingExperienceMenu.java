@@ -11,7 +11,6 @@ import net.minecraft.world.item.ItemStack;
 import org.bensam.touristry.ModBlocks;
 import org.bensam.touristry.ModMenus;
 import org.bensam.touristry.block.entity.AbstractExperienceBlockEntity;
-import org.bensam.touristry.block.entity.ShoppingExperienceBlockEntity;
 import org.bensam.touristry.block.entity.SightseeingExperienceBlockEntity;
 import org.jspecify.annotations.NonNull;
 

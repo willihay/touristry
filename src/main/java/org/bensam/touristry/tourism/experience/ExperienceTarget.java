@@ -73,7 +73,7 @@ public record ExperienceTarget(
                 return new ItemStack(Items.AIR);
             }
             ItemStack itemStack = entity.getPickResult();
-            return itemStack.isEmpty() ? ItemStack.EMPTY : itemStack.copy();
+            return itemStack == null || itemStack.isEmpty() ? ItemStack.EMPTY : itemStack.copy();
         }
 
         return new ItemStack(serverLevel.getBlockState(this.pos).getBlock().asItem());

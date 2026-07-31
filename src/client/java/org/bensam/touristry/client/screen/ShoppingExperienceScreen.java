@@ -63,9 +63,10 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     private static final int SCROLLBOX_ROW_WIDTH = 88;
     private static final int SCROLLBOX_ROW_HEIGHT = 20;
     private static final int SCROLLBOX_ROWS = 7;
-    private static final int SCROLL_BAR_X = 94;
-    private static final int SCROLL_BAR_TOP_Y = SCROLLBOX_TOP_Y;
-    private static final int SCROLL_BAR_BOTTOM_Y = 157;
+    private static final int SCROLLER_TRACK_X = 94;
+    private static final int SCROLLER_TRACK_TOP_Y = SCROLLBOX_TOP_Y;
+    private static final int SCROLLER_TRACK_BOTTOM_Y = 157;
+    private static final int SCROLLER_TRACK_LENGTH = SCROLLER_TRACK_BOTTOM_Y - SCROLLBOX_TOP_Y + 1;
     private static final int SCROLLER_WIDTH = 6;
     private static final int SCROLLER_HEIGHT = 27;
 
@@ -336,13 +337,11 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
             }
         }
         // Render background.
-        int xo = (this.width - this.imageWidth) / 2;
-        int yo = (this.height - this.imageHeight) / 2;
         guiGraphics.blit(
                 RenderPipelines.GUI_TEXTURED,
                 this.selectedTab.getBackground(),
-                xo,
-                yo,
+                this.leftPos,
+                this.topPos,
                 0.0F,
                 0.0F,
                 this.imageWidth,
@@ -355,13 +354,13 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
         this.renderTabButton(guiGraphics, i, j, this.selectedTab);
     }
 
-    private void renderTabButton(GuiGraphics guiGraphics, int i, int j, TabDisplay tab) {
+    private void renderTabButton(GuiGraphics guiGraphics, int x, int y, TabDisplay tab) {
         boolean isSelectedTab = tab == this.selectedTab;
         int xTab = this.leftPos + tab.getTabX();
         int yTab = this.topPos + tab.getTabY();
         guiGraphics.blitSprite(RenderPipelines.GUI_TEXTURED, tab.getTexture(this.selectedTab), xTab, yTab, 26, 32);
 
-        if (!isSelectedTab && i > xTab && j > yTab && i < xTab + TAB_WIDTH && j < yTab + TAB_HEIGHT) {
+        if (!isSelectedTab && x > xTab && y > yTab && x < xTab + TAB_WIDTH && y < yTab + TAB_HEIGHT) {
             guiGraphics.requestCursor(CursorTypes.POINTING_HAND);
         }
 
@@ -371,8 +370,8 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     }
 
     @Override
-    public void renderContents(@NonNull GuiGraphics guiGraphics, int i, int j, float f) {
-        super.renderContents(guiGraphics, i, j, f);
+    public void renderContents(@NonNull GuiGraphics guiGraphics, int x, int y, float f) {
+        super.renderContents(guiGraphics, x, y, f);
 
         if (this.selectedTab == TabDisplay.TARGETS) {
             List<TargetView> syncedTargets = this.menu.getSyncedTargets();
@@ -381,8 +380,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                 int xItemStart = this.leftPos + 10;
                 int xTextStart = this.leftPos + 30;
                 int maxTextWidth = SCROLLBOX_ROW_WIDTH - 30;
-                this.renderTargetScroller(guiGraphics, i, j, syncedTargets.size());
-                //int o = 0;
+                this.renderTargetScroller(guiGraphics, x, y, syncedTargets.size());
 
                 for (int row = 0; row < SCROLLBOX_ROWS; row++) {
                     int targetIndex = this.targetsScrolledOff + row;
@@ -404,51 +402,64 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
 
                     yRow += SCROLLBOX_ROW_HEIGHT;
                 }
-
-                /*
-                for (TargetView target : syncedTargets) {
-                    if (!this.canScroll() || o >= this.scrolledOff && o < SCROLLBOX_ROWS + this.scrolledOff) {
-                        guiGraphics.renderFakeItem(target.itemStack(), xItemStart, yRow + 1);
-                        guiGraphics.drawString(
-                                this.font,
-                                this.font.plainSubstrByWidth(target.displayName(), maxTextWidth),
-                                xTextStart,
-                                yRow + 6,
-                                ARGB_SCROLL_BUTTON_LABEL,
-                                true);
-                        yRow += SCROLLBOX_ROW_HEIGHT;
-                    }
-                    o++;
-                }
-
-                for (ExperienceScrollBoxButton button : this.targetButtons) {
-                    button.visible = button.getIndex() < syncedTargets.size();
-                }
-                */
             }
         }
     }
 
-    private void renderTargetScroller(GuiGraphics guiGraphics, int i, int j, int numTargets) {
-        int m = numTargets + 1 - SCROLLBOX_ROWS;
-        int xScroller = this.leftPos + SCROLL_BAR_X;
-        int yScrollbarTop = this.topPos + SCROLL_BAR_TOP_Y;
-        if (m > 1) {
-            int n = 139 - (27 + (m - 1) * 139 / m);
-            int o = 1 + n / m + 139 / m;
-            int p = 113;
-            int q = Math.min(113, this.targetsScrolledOff * o);
-            if (this.targetsScrolledOff == m - 1) {
-                q = 113;
-            }
-            int s = yScrollbarTop + q;
+    private void renderTargetScroller(GuiGraphics guiGraphics, int mouseX, int mouseY, int numTargets) {
+        int scrollSteps = numTargets - SCROLLBOX_ROWS;
+        int scrollerX = this.leftPos + SCROLLER_TRACK_X;
+        int trackTopY = this.topPos + SCROLLER_TRACK_TOP_Y;
 
-            guiGraphics.blitSprite(RenderPipelines.GUI_TEXTURED, SCROLLER_SPRITE, xScroller, s, SCROLLER_WIDTH, SCROLLER_HEIGHT);
-            if (i >= xScroller && i < xScroller + SCROLLER_WIDTH && j >= s && j <= s + SCROLLER_HEIGHT) {
-                guiGraphics.requestCursor(this.isScrolling ? CursorTypes.RESIZE_NS : CursorTypes.POINTING_HAND);
-            }
+        // If we can't scroll because everything fits, draw a disabled scroller at the top.
+        if (scrollSteps <= 0) {
+            guiGraphics.blitSprite(
+                    RenderPipelines.GUI_TEXTURED,
+                    SCROLLER_DISABLED_SPRITE,
+                    scrollerX,
+                    trackTopY,
+                    SCROLLER_WIDTH,
+                    SCROLLER_HEIGHT
+            );
+            return;
+        }
+
+        // Compute how far the scroller can travel.
+        int maxScrollerOffset = SCROLLER_TRACK_LENGTH - SCROLLER_HEIGHT;
+
+        // Compute the actual scroller travel.
+        int scrollerOffset = 0;
+
+        // Check for the simple case.
+        if (this.targetsScrolledOff == scrollSteps) {
+            scrollerOffset = maxScrollerOffset;
         } else {
-            guiGraphics.blitSprite(RenderPipelines.GUI_TEXTURED, SCROLLER_DISABLED_SPRITE, xScroller, yScrollbarTop, SCROLLER_WIDTH, SCROLLER_HEIGHT);
+            // Distribute the track height across all scroll steps.
+            float pixelsPerStep = (float) maxScrollerOffset / scrollSteps;
+
+            // Compute the scroller's offset based on how many rows have been scrolled off.
+            scrollerOffset = Math.round(pixelsPerStep * this.targetsScrolledOff);
+        }
+
+        // Draw the scroller in the correct position.
+        int scrollerY = trackTopY + scrollerOffset;
+        guiGraphics.blitSprite(
+                RenderPipelines.GUI_TEXTURED,
+                SCROLLER_SPRITE,
+                scrollerX,
+                scrollerY,
+                SCROLLER_WIDTH,
+                SCROLLER_HEIGHT
+        );
+
+        // Update cursor when hovering over the scroller.
+        boolean mouseOverScroller =
+            mouseX >= scrollerX &&
+            mouseX < (scrollerX + SCROLLER_WIDTH) &&
+            mouseY >= scrollerY &&
+            mouseY <= (scrollerY + SCROLLER_HEIGHT);
+        if (mouseOverScroller) {
+            guiGraphics.requestCursor(this.isScrolling ? CursorTypes.RESIZE_NS : CursorTypes.POINTING_HAND);
         }
     }
 
@@ -457,17 +468,17 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
         switch (this.selectedTab) {
             case STATUS -> {
                 guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, ARGB_SCREEN_TEXT, false);
-                guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, ARGB_SCREEN_TEXT, false);
                 this.renderStatusLabels(guiGraphics, i, j);
             }
             case TARGETS -> {
                 this.renderTargetLabels(guiGraphics, i, j);
             }
             case PRICING -> {
-                guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, ARGB_SCREEN_TEXT, false);
                 this.renderPricingLabels(guiGraphics, i, j);
             }
         }
+
+        guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, ARGB_SCREEN_TEXT, false);
     }
 
     private void renderStatusLabels(@NonNull GuiGraphics guiGraphics, int i, int j) {
@@ -523,17 +534,19 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     }
 
     private void renderTargetLabels(@NonNull GuiGraphics guiGraphics, int i, int j) {
-        int targetsLabelWidth = this.font.width(TARGETS_SCREEN_TITLE);
+        int numTargets = this.menu.getSyncedTargets().size();
+        Component targetsTitle = TARGETS_SCREEN_TITLE.copy().append(" (" + numTargets + ")");
+        int targetsLabelWidth = this.font.width(targetsTitle);
         guiGraphics.drawString(
                 this.font,
-                TARGETS_SCREEN_TITLE,
+                targetsTitle,
                 SCROLLBOX_ROW_X + ((SCROLLBOX_WIDTH - targetsLabelWidth) / 2),
                 SCROLLBOX_LABEL_Y,
                 ARGB_SCREEN_TEXT,
                 false
         );
 
-        if (this.selectedTargetIndex >= 0 && this.selectedTargetIndex < this.menu.getSyncedTargets().size()) {
+        if (this.selectedTargetIndex >= 0 && this.selectedTargetIndex < numTargets) {
             TargetView targetView = this.menu.getSyncedTargets().get(this.selectedTargetIndex);
             String targetDetails = targetView.displayName() + " @ " + targetView.pos().toShortString();
             guiGraphics.drawString(
@@ -557,10 +570,12 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     }
 
     private void renderPricingLabels(@NonNull GuiGraphics guiGraphics, int i, int j) {
-        int pricingLabelWidth = this.font.width(PRICING_SCREEN_TITLE);
+        int numPricings = 0; // this.menu.getSyncedPricings().size();
+        Component pricingsTitle = PRICING_SCREEN_TITLE.copy().append(" (" + numPricings + ")");
+        int pricingLabelWidth = this.font.width(pricingsTitle);
         guiGraphics.drawString(
                 this.font,
-                PRICING_SCREEN_TITLE,
+                pricingsTitle,
                 SCROLLBOX_ROW_X + ((SCROLLBOX_WIDTH - pricingLabelWidth) / 2),
                 SCROLLBOX_LABEL_Y,
                 ARGB_SCREEN_TEXT,
@@ -574,10 +589,6 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
             case TARGETS -> this.menu.getSyncedTargets().size() > SCROLLBOX_ROWS;
             case PRICING -> false;
         };
-    }
-
-    private boolean canScroll(int i) {
-        return this.selectedTab.canScroll() && i > SCROLLBOX_ROWS;
     }
 
     private boolean checkTabClicked(TabDisplay tab, double x, double y) {
@@ -598,10 +609,10 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     }
 
     private boolean isInsideScrollbar(double x, double y) {
-        return x >= SCROLL_BAR_X &&
-                x < SCROLL_BAR_X + SCROLLER_WIDTH &&
-                y >= SCROLL_BAR_TOP_Y &&
-                y <= SCROLL_BAR_BOTTOM_Y;
+        return x >= SCROLLER_TRACK_X &&
+                x < SCROLLER_TRACK_X + SCROLLER_WIDTH &&
+                y >= SCROLLER_TRACK_TOP_Y &&
+                y <= SCROLLER_TRACK_BOTTOM_Y;
     }
 
     @Override
@@ -663,8 +674,8 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
             return true;
         }
 
-        int yScrollBarTop = this.topPos + SCROLL_BAR_TOP_Y;
-        float scrollableTrackLength = SCROLL_BAR_BOTTOM_Y - SCROLL_BAR_TOP_Y - SCROLLER_HEIGHT;
+        int yScrollBarTop = this.topPos + SCROLLER_TRACK_TOP_Y;
+        float scrollableTrackLength = SCROLLER_TRACK_LENGTH - SCROLLER_HEIGHT;
         float scrollerCenterY = (float)mouseButtonEvent.y() - yScrollBarTop - ((float) SCROLLER_HEIGHT / 2.0F);
 
         // Convert the mouse's Y position on the scrollbar into a number from 0 to maxScrolledOff.
@@ -706,11 +717,6 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
         return false;
     }
 
-    private void selectPricingRow(int selectedRow) {
-        this.selectedPricingIndex = selectedRow + this.pricingScrolledOff;
-        this.updateRowFocusForSelectedPricing();
-    }
-
     private void selectTab(TabDisplay tab) {
         this.selectedTab = tab;
         this.menu.setSelectedTab(tab.getMenuTab());
@@ -731,9 +737,9 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
         }
     }
 
-    private void selectTargetRow(int selectedRow) {
-        this.selectedTargetIndex = selectedRow + this.targetsScrolledOff;
-        this.updateRowFocusForSelectedTarget();
+    private void selectPricingRow(int selectedRow) {
+        this.selectedPricingIndex = selectedRow + this.pricingScrolledOff;
+        this.updateRowFocusForSelectedPricing();
     }
 
     private void updateRowFocusForSelectedPricing() {
@@ -758,6 +764,11 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
 
         int visibleRow = this.selectedPricingIndex - firstVisible;
         this.pricingButtons[visibleRow].setFocused(true);
+    }
+
+    private void selectTargetRow(int selectedRow) {
+        this.selectedTargetIndex = selectedRow + this.targetsScrolledOff;
+        this.updateRowFocusForSelectedTarget();
     }
 
     private void updateRowFocusForSelectedTarget() {
