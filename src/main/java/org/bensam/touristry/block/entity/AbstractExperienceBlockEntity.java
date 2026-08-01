@@ -14,9 +14,13 @@ import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.entity.BaseContainerBlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.ChestType;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import org.bensam.touristry.ModComponents;
@@ -215,11 +219,22 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         this.pruneInvalidTargets(serverLevel);
         List<TargetView> targetView = new ArrayList<>();
         for (ExperienceTarget target : this.targets) {
+            // Get ItemStack representation of target for rendering in target list.
             ItemStack targetItemStack = target.getItemStack(serverLevel);
             if (targetItemStack == ItemStack.EMPTY) {
-                targetItemStack = new ItemStack(Items.CHEST);
+                targetItemStack = new ItemStack(Items.AIR);
             }
-            targetView.add(new TargetView(target.pos(), targetItemStack, target.getDisplayName(serverLevel).getString()));
+
+            // Determine if the target is the "wide chest" special case, which doesn't render as a wide chest from its ItemStack.
+            // Setting a boolean value here flags this special case for rendering a special texture.
+            boolean isWideChest = false;
+            BlockEntity blockEntity = serverLevel.getBlockEntity(target.pos());
+            if (blockEntity instanceof ChestBlockEntity) {
+                BlockState blockState = serverLevel.getBlockState(target.pos());
+                isWideChest = blockState.getValue(ChestBlock.TYPE) != ChestType.SINGLE;
+            }
+
+            targetView.add(new TargetView(target.pos(), targetItemStack, isWideChest, target.getDisplayName(serverLevel).getString()));
         }
         return targetView;
     }

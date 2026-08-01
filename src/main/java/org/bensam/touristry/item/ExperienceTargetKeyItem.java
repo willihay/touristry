@@ -9,7 +9,14 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.entity.BedBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BedPart;
+import net.minecraft.world.level.block.state.properties.ChestType;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import org.bensam.touristry.ModComponents;
@@ -36,6 +43,22 @@ public class ExperienceTargetKeyItem extends Item {
         }
 
         BlockPos blockPos = hitResult.getBlockPos();
+        BlockEntity blockEntity = serverLevel.getBlockEntity(blockPos);
+        BlockState blockState = serverLevel.getBlockState(blockPos);
+
+        // If the block entity is part of a double-wide connection (e.g. chest, bed), always store the BlockPos of the LEFT/HEAD half.
+        // This way, players can click on either half and the object will be stored as a single target using a consistent BlockPos.
+        if (blockEntity instanceof ChestBlockEntity) {
+            ChestType chestType = blockState.getValue(ChestBlock.TYPE);
+            if (chestType == ChestType.RIGHT) {
+                blockPos = ChestBlock.getConnectedBlockPos(blockPos, blockState);
+            }
+        } else if (blockEntity instanceof BedBlockEntity) {
+            BedPart bedPart = blockState.getValue(BedBlock.PART);
+            if (bedPart == BedPart.FOOT) {
+                blockPos = blockPos.relative(BedBlock.getConnectedDirection(blockState));
+            }
+        }
 
         if (player.isShiftKeyDown()) {
             // Remove target from experience.
@@ -61,7 +84,6 @@ public class ExperienceTargetKeyItem extends Item {
                 }
 
                 // Check if target is also an experience block, in which case it will become a child experience.
-                BlockEntity blockEntity = serverLevel.getBlockEntity(blockPos);
                 UUID childUUID = blockEntity instanceof AbstractExperienceBlockEntity childExperience ? childExperience.getUUID() : null;
 
                 // Get the player's facing direction so that it can be stored in the target, so that pathfinding goals can

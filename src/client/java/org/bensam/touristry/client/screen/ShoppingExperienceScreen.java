@@ -44,8 +44,9 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
             Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tab_top_selected_3")
     };
 
-    // Sprite textures
+    // Sprites and textures
     private static final Identifier ON_OFF_SLIDER_TEXTURE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "textures/gui/on_off_slider.png");
+    private static final Identifier WIDE_CHEST_TEXTURE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "textures/gui/wide_chest.png");
     private static final Identifier SCROLLER_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "scroller");
     private static final Identifier SCROLLER_DISABLED_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "scroller_disabled");
     private static final Identifier MOVE_UP_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "move_up");
@@ -450,7 +451,20 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                         this.targetButtons[row].visible = true;
 
                         TargetView target = syncedTargets.get(targetIndex);
-                        guiGraphics.renderFakeItem(target.itemStack(), xItemStart, yRow + 1);
+                        if (target.isWideChest()) {
+                            guiGraphics.blit(
+                                    RenderPipelines.GUI_TEXTURED,
+                                    WIDE_CHEST_TEXTURE,
+                                    xItemStart, yRow + 1,
+                                    0, 0,
+                                    16, 16,
+                                    256, 256,
+                                    256, 256
+                            );
+                        } else {
+                            guiGraphics.renderFakeItem(target.itemStack(), xItemStart, yRow + 1);
+                        }
+
                         guiGraphics.drawString(
                                 this.font,
                                 this.font.plainSubstrByWidth(target.displayName(), maxTextWidth),
@@ -611,7 +625,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
         if (this.selectedTargetIndex >= 0 && this.selectedTargetIndex < numTargets) {
             TargetView targetView = this.menu.getSyncedTargets().get(this.selectedTargetIndex);
             String targetDetails = (this.selectedTargetIndex + 1) + ") " + targetView.displayName() + " @ " + targetView.pos().toShortString();
-            int maxDetailWidth = this.width - TARGET_DETAILS_LABEL_X - 5;
+            int maxDetailWidth = this.imageWidth - TARGET_DETAILS_LABEL_X - 5;
             guiGraphics.drawString(
                     this.font,
                     this.font.plainSubstrByWidth(targetDetails, maxDetailWidth),
