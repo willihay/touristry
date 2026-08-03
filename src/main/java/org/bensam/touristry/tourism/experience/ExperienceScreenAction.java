@@ -8,6 +8,8 @@ import net.minecraft.network.codec.StreamCodec;
 public enum ExperienceScreenAction {
     REQUEST_TARGETS,
     MOVE_TARGET,
+    REMOVE_TARGET,
+    REMOVE_ALL_TARGETS,
     SET_ORDERED_TARGETS;
 
     public static final StreamCodec<RegistryFriendlyByteBuf, ExperienceScreenAction> STREAM_CODEC =

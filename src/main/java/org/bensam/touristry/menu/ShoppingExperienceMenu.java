@@ -295,6 +295,16 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
                     }
                 }
 
+                case REMOVE_TARGET -> {
+                    shoppingExperienceBlockEntity.removeTarget(payload.primary());
+                    this.syncTargets(serverPlayer, serverLevel, shoppingExperienceBlockEntity);
+                }
+
+                case REMOVE_ALL_TARGETS -> {
+                    shoppingExperienceBlockEntity.removeAllTargets();
+                    this.syncTargets(serverPlayer, serverLevel, shoppingExperienceBlockEntity);
+                }
+
                 case SET_ORDERED_TARGETS -> {
                     shoppingExperienceBlockEntity.setOrderedTargets(payload.primary() != 0);
                     this.syncTargets(serverPlayer, serverLevel, shoppingExperienceBlockEntity);

@@ -4,6 +4,8 @@ import com.mojang.blaze3d.platform.cursor.CursorTypes;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.ImageButton;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.components.WidgetSprites;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -53,6 +55,10 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     private static final Identifier MOVE_UP_HIGHLIGHTED_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "move_up_highlighted");
     private static final Identifier MOVE_DOWN_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "move_down");
     private static final Identifier MOVE_DOWN_HIGHLIGHTED_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "move_down_highlighted");
+    private static final Identifier REMOVE_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "trash");
+    private static final Identifier REMOVE_SPRITE_HIGHLIGHTED = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "trash_selected");
+    private static final Identifier REMOVE_ALL_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "sweep");
+    private static final Identifier REMOVE_ALL_SPRITE_HIGHLIGHTED = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "sweep_selected");
 
     // Common constants
     private static final int ARGB_SCREEN_TEXT = 0xFF404040;
@@ -60,6 +66,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     private static final int BG_TEXTURE_WIDTH = 512;
     private static final int BG_TEXTURE_HEIGHT = 256;
     private static final int BG_SCREEN_WIDTH = 276;
+    private static final int BG_SCREEN_HEIGHT = 166;
     private static final int TAB_WIDTH = 26;
     private static final int TAB_HEIGHT = 32;
     private static final int SCROLLBOX_WIDTH = 96;
@@ -98,17 +105,23 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
 
     // Targets screen constants
     private static final Component TARGETS_SCREEN_TITLE = Component.translatable("screen.touristry.tourist_block.tab.targets");
+    private static final Component TARGET_ORDERED_LABEL = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.targets.ordered_button.label");
     private static final Component TARGET_MOVE_UP_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.target.move_up.tooltip");
     private static final Component TARGET_MOVE_DOWN_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.target.move_down.tooltip");
-    private static final Component TARGET_ORDERED_LABEL = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.targets.ordered_button.label");
+    private static final Component TARGET_REMOVE_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.target.remove.tooltip");
+    private static final Component TARGET_REMOVE_ALL_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.targets.remove_all.tooltip");
     private static final int TARGET_ORDERED_LABEL_X = 127;
     private static final int TARGET_ORDERED_LABEL_Y = SCROLLBOX_TOP_Y + 5;
     private static final int TARGET_ORDERED_BUTTON_X = 193;
     private static final int TARGET_ORDERED_BUTTON_Y = SCROLLBOX_TOP_Y;
-    private static final int TARGET_DETAILS_LABEL_X = 127;
-    private static final int TARGET_DETAILS_LABEL_Y = 50;
     private static final int TARGET_CHANGE_ORDER_BUTTON_X = 107;
     private static final int TARGET_CHANGE_ORDER_BUTTON_Y = 44;
+    private static final int TARGET_DETAILS_LABEL_X = 127;
+    private static final int TARGET_DETAILS_LABEL_Y = 50;
+    private static final int TARGET_REMOVE_BUTTON_X = BG_SCREEN_WIDTH - 22;
+    private static final int TARGET_REMOVE_BUTTON_Y = TARGET_DETAILS_LABEL_Y + 8;
+    private static final int TARGET_REMOVE_ALL_BUTTON_X = BG_SCREEN_WIDTH - 22;
+    private static final int TARGET_REMOVE_ALL_BUTTON_Y = BG_SCREEN_HEIGHT - 22;
 
     // Pricing screen constants
     private static final Component PRICING_SCREEN_TITLE = Component.translatable("screen.touristry.tourist_block.tab.pricing");
@@ -180,9 +193,11 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     private int selectedTargetIndex;
     private int targetsScrolledOff;
     private final ExperienceScrollBoxButton[] targetButtons = new ExperienceScrollBoxButton[SCROLLBOX_ROWS];
+    private TargetOrderedButton targetOrderedToggleButton;
     private MoveTargetOrderButton targetOrderUpButton;
     private MoveTargetOrderButton targetOrderDownButton;
-    private TargetOrderedButton targetOrderedToggleButton;
+    private ImageButton targetRemoveButton;
+    private ImageButton targetRemoveAllButton;
 
     // Pricing screen fields
     private int selectedPricingIndex;
@@ -254,6 +269,30 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
         // Set the focus if there already is one.
         this.updateRowFocusForSelectedTarget();
 
+        // Add target order toggle button.
+        buttonX = this.leftPos + TARGET_ORDERED_BUTTON_X;
+        buttonY = this.topPos + TARGET_ORDERED_BUTTON_Y;
+        this.targetOrderedToggleButton = this.addRenderableWidget(new TargetOrderedButton(
+                this.menu.getSyncedOrderedTargets(),
+                buttonX,
+                buttonY,
+                button -> {
+                    if (button instanceof TargetOrderedButton orderedButton) {
+                        boolean isOrdered = !this.menu.getSyncedOrderedTargets();
+                        orderedButton.setOrdered(isOrdered);
+                        button.setFocused(false);
+                        this.updateRowFocusForSelectedTarget();
+
+                        ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
+                                this.menu.getContainerId(),
+                                ExperienceScreenAction.SET_ORDERED_TARGETS,
+                                isOrdered ? 1 : 0,
+                                -1
+                        ));
+                    }
+                }
+        ));
+
         // Add target move up button.
         buttonX = this.leftPos + TARGET_CHANGE_ORDER_BUTTON_X;
         buttonY = this.topPos + TARGET_CHANGE_ORDER_BUTTON_Y;
@@ -302,29 +341,57 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                 TARGET_MOVE_DOWN_TOOLTIP
         ));
 
-        // Add target order toggle button.
-        buttonX = this.leftPos + TARGET_ORDERED_BUTTON_X;
-        buttonY = this.topPos + TARGET_ORDERED_BUTTON_Y;
-        this.targetOrderedToggleButton = this.addRenderableWidget(new TargetOrderedButton(
-                this.menu.getSyncedOrderedTargets(),
-                buttonX,
-                buttonY,
+        buttonX = this.leftPos + TARGET_REMOVE_BUTTON_X;
+        buttonY = this.topPos + TARGET_REMOVE_BUTTON_Y;
+        this.targetRemoveButton = this.addRenderableWidget(new ImageButton(
+                buttonX, buttonY,
+                16, 16,
+                new WidgetSprites(REMOVE_SPRITE, REMOVE_SPRITE_HIGHLIGHTED),
                 button -> {
-                    if (button instanceof TargetOrderedButton orderedButton) {
-                        boolean isOrdered = !this.menu.getSyncedOrderedTargets();
-                        orderedButton.setOrdered(isOrdered);
-                        button.setFocused(false);
-                        this.updateRowFocusForSelectedTarget();
-
-                        ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
-                                this.menu.getContainerId(),
-                                ExperienceScreenAction.SET_ORDERED_TARGETS,
-                                isOrdered ? 1 : 0,
-                                -1
-                        ));
+                    int numTargets = this.menu.getSyncedTargets().size();
+                    if (this.selectedTargetIndex < 0 || this.selectedTargetIndex >= numTargets) {
+                        // Selected target index is invalid.
+                        this.selectTargetIndex(-1);
+                        return;
                     }
+                    ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
+                            this.menu.getContainerId(),
+                            ExperienceScreenAction.REMOVE_TARGET,
+                            this.selectedTargetIndex,
+                            -1
+                    ));
+                    // Adjust scroll position as needed.
+                    numTargets--;
+                    if (numTargets - this.targetsScrolledOff < SCROLLBOX_ROWS) {
+                        this.targetsScrolledOff = Math.max(0, this.targetsScrolledOff - 1);
+                    }
+                    this.selectTargetIndex(-1);
                 }
         ));
+        this.targetRemoveButton.setTooltip(Tooltip.create(TARGET_REMOVE_TOOLTIP));
+
+        buttonX = this.leftPos + TARGET_REMOVE_ALL_BUTTON_X;
+        buttonY = this.topPos + TARGET_REMOVE_ALL_BUTTON_Y;
+        this.targetRemoveAllButton = this.addRenderableWidget(new ImageButton(
+                buttonX, buttonY,
+                16, 16,
+                new WidgetSprites(REMOVE_ALL_SPRITE, REMOVE_ALL_SPRITE_HIGHLIGHTED),
+                button -> {
+                    if (this.menu.getSyncedTargets().isEmpty()) {
+                        // No targets to remove.
+                        return;
+                    }
+                    ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
+                            this.menu.getContainerId(),
+                            ExperienceScreenAction.REMOVE_ALL_TARGETS,
+                            -1,
+                            -1
+                    ));
+                    this.targetsScrolledOff = 0;
+                    this.selectTargetIndex(-1);
+                }
+        ));
+        this.targetRemoveAllButton.setTooltip(Tooltip.create(TARGET_REMOVE_ALL_TOOLTIP));
     }
 
     private void removeTargetButtons() {
@@ -340,9 +407,11 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
         }
         Arrays.fill(this.targetButtons, null);
 
+        this.removeWidget(this.targetOrderedToggleButton);
         this.removeWidget(this.targetOrderUpButton);
         this.removeWidget(this.targetOrderDownButton);
-        this.removeWidget(this.targetOrderedToggleButton);
+        this.removeWidget(this.targetRemoveButton);
+        this.removeWidget(this.targetRemoveAllButton);
     }
 
     private void addPricingButtons() {
@@ -443,54 +512,61 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
             if (this.targetOrderDownButton != null) {
                 this.targetOrderDownButton.visible = this.selectedTargetIndex >= 0;
             }
+            if (this.targetRemoveButton != null) {
+                this.targetRemoveButton.visible = this.selectedTargetIndex >= 0;
+            }
 
+            // Render scroller in correct position or disabled.
             List<TargetView> syncedTargets = this.menu.getSyncedTargets();
-            if (!syncedTargets.isEmpty()) {
-                int yRow = this.topPos + SCROLLBOX_TOP_Y;
-                int xItemStart = this.leftPos + 10;
-                int xTextStart = this.leftPos + 30;
-                int maxTextWidth = SCROLLBOX_ROW_WIDTH - 30;
-                this.renderTargetScroller(guiGraphics, x, y, syncedTargets.size());
+            this.renderScroller(guiGraphics, x, y, syncedTargets.size(), this.targetsScrolledOff);
 
-                for (int row = 0; row < SCROLLBOX_ROWS; row++) {
-                    int targetIndex = this.targetsScrolledOff + row;
-                    if (targetIndex < syncedTargets.size()) {
-                        this.targetButtons[row].visible = true;
+            // Render target buttons for visible targets.
+            int yRow = this.topPos + SCROLLBOX_TOP_Y;
+            int xItemStart = this.leftPos + 10;
+            int xTextStart = this.leftPos + 30;
+            int maxTextWidth = SCROLLBOX_ROW_WIDTH - 30;
 
-                        TargetView target = syncedTargets.get(targetIndex);
-                        if (target.isWideChest()) {
-                            guiGraphics.blit(
-                                    RenderPipelines.GUI_TEXTURED,
-                                    WIDE_CHEST_TEXTURE,
-                                    xItemStart, yRow + 1,
-                                    0, 0,
-                                    16, 16,
-                                    256, 256,
-                                    256, 256
-                            );
-                        } else {
-                            guiGraphics.renderFakeItem(target.itemStack(), xItemStart, yRow + 1);
-                        }
+            for (int row = 0; row < SCROLLBOX_ROWS; row++) {
+                int targetIndex = this.targetsScrolledOff + row;
+                if (targetIndex < syncedTargets.size()) {
+                    this.targetButtons[row].visible = true;
 
-                        guiGraphics.drawString(
-                                this.font,
-                                this.font.plainSubstrByWidth(target.displayName(), maxTextWidth),
-                                xTextStart,
-                                yRow + 6,
-                                ARGB_SCROLL_BUTTON_LABEL,
-                                true);
+                    TargetView target = syncedTargets.get(targetIndex);
+                    if (target.isWideChest()) {
+                        guiGraphics.blit(
+                                RenderPipelines.GUI_TEXTURED,
+                                WIDE_CHEST_TEXTURE,
+                                xItemStart, yRow + 1,
+                                0, 0,
+                                16, 16,
+                                256, 256,
+                                256, 256
+                        );
                     } else {
-                        this.targetButtons[row].visible = false;
+                        guiGraphics.renderFakeItem(target.itemStack(), xItemStart, yRow + 1);
                     }
 
-                    yRow += SCROLLBOX_ROW_HEIGHT;
+                    guiGraphics.drawString(
+                            this.font,
+                            this.font.plainSubstrByWidth(target.displayName(), maxTextWidth),
+                            xTextStart,
+                            yRow + 6,
+                            ARGB_SCROLL_BUTTON_LABEL,
+                            true);
+                } else {
+                    this.targetButtons[row].visible = false;
                 }
+
+                yRow += SCROLLBOX_ROW_HEIGHT;
             }
+        } else if (this.selectedTab == TabDisplay.PRICING) {
+            // Render scroller in correct position or disabled.
+            this.renderScroller(guiGraphics, x, y, 0, this.pricingScrolledOff);
         }
     }
 
-    private void renderTargetScroller(GuiGraphics guiGraphics, int mouseX, int mouseY, int numTargets) {
-        int scrollSteps = numTargets - SCROLLBOX_ROWS;
+    private void renderScroller(GuiGraphics guiGraphics, int mouseX, int mouseY, int numRows, int rowsScrolledOff) {
+        int scrollSteps = numRows - SCROLLBOX_ROWS;
         int scrollerX = this.leftPos + SCROLLER_TRACK_X;
         int trackTopY = this.topPos + SCROLLER_TRACK_TOP_Y;
 
@@ -514,14 +590,14 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
         int scrollerOffset = 0;
 
         // Check for the simple case.
-        if (this.targetsScrolledOff == scrollSteps) {
+        if (rowsScrolledOff == scrollSteps) {
             scrollerOffset = maxScrollerOffset;
         } else {
             // Distribute the track height across all scroll steps.
             float pixelsPerStep = (float) maxScrollerOffset / scrollSteps;
 
             // Compute the scroller's offset based on how many rows have been scrolled off.
-            scrollerOffset = Math.round(pixelsPerStep * this.targetsScrolledOff);
+            scrollerOffset = Math.round(pixelsPerStep * rowsScrolledOff);
         }
 
         // Draw the scroller in the correct position.

@@ -143,6 +143,15 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         this.setChanged();
     }
 
+    public void clearParentExperience(ExperienceTarget target) {
+        TouristExperience childExperience = TourismManager.getTouristExperienceById(target.childExperienceUUID());
+        if (childExperience instanceof AbstractExperienceBlockEntity childBE &&
+                this.uuid.equals(childBE.getParentExperienceUUID())) {
+            childBE.setParent(null);
+            childBE.setChanged();
+        }
+    }
+
     @Override
     public void clearRemoved() {
         super.clearRemoved();
@@ -335,17 +344,27 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         this.setChanged();
     }
 
+    public void removeTarget(int index) {
+        if (index < 0 || index >= this.targets.size()) {
+            return;
+        }
+        
+        ExperienceTarget target = this.targets.remove(index);
+
+        // Clear parent relationship if removing a child experience.
+        if (target != null && target.isChildExperience()) {
+            this.clearParentExperience(target);
+        }
+
+        this.setChanged();
+    }
+
     @Override
     public boolean removeTarget(ServerLevel serverLevel, BlockPos pos) {
         // Clear parent relationship if removing a child experience.
         for (ExperienceTarget target : this.targets) {
             if (target.pos().equals(pos) && target.isChildExperience()) {
-                TouristExperience childExperience = TourismManager.getTouristExperienceById(target.childExperienceUUID());
-                if (childExperience instanceof AbstractExperienceBlockEntity childBE && 
-                    this.uuid.equals(childBE.getParentExperienceUUID())) {
-                    childBE.setParent(null);
-                }
-                break;
+                this.clearParentExperience(target);
             }
         }
         
@@ -356,6 +375,18 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         return removed;
     }
 
+    public void removeAllTargets() {
+        // Clear all parent relationships in child experience targets.
+        for (ExperienceTarget target : this.targets) {
+            if (target.isChildExperience()) {
+                this.clearParentExperience(target);
+            }
+        }
+
+        this.targets.clear();
+        this.setChanged();
+    }
+    
     @Override
     public boolean removeEntityTargetById(ServerLevel serverLevel, UUID entityUUID) {
         boolean removed = this.targets.removeIf(target -> entityUUID.equals(target.entityUUID()));
