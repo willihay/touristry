@@ -450,22 +450,22 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, int i, int j, float f) {
-        super.render(guiGraphics, i, j, f);
+    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float a) {
+        super.render(guiGraphics, mouseX, mouseY, a);
 
         for (TabDisplay tab : TabDisplay.values()) {
-            this.checkTabHovering(guiGraphics, tab, i, j);
+            this.checkTabHovering(guiGraphics, tab, mouseX, mouseY);
         }
 
-        this.renderTooltip(guiGraphics, i, j);
+        this.renderTooltip(guiGraphics, mouseX, mouseY);
     }
 
     @Override
-    protected void renderBg(GuiGraphics guiGraphics, float f, int i, int j) {
+    protected void renderBg(GuiGraphics guiGraphics, float a, int mouseX, int mouseY) {
         // Render unselected tabs.
         for (TabDisplay tab : TabDisplay.values()) {
             if (tab != this.selectedTab) {
-                this.renderTabButton(guiGraphics, i, j, tab);
+                this.renderTabButton(guiGraphics, mouseX, mouseY, tab);
             }
         }
         // Render background.
@@ -483,16 +483,16 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
         );
 
         // Render selected tab.
-        this.renderTabButton(guiGraphics, i, j, this.selectedTab);
+        this.renderTabButton(guiGraphics, mouseX, mouseY, this.selectedTab);
     }
 
-    private void renderTabButton(GuiGraphics guiGraphics, int x, int y, TabDisplay tab) {
+    private void renderTabButton(GuiGraphics guiGraphics, int mouseX, int mouseY, TabDisplay tab) {
         boolean isSelectedTab = tab == this.selectedTab;
         int xTab = this.leftPos + tab.getTabX();
         int yTab = this.topPos + tab.getTabY();
         guiGraphics.blitSprite(RenderPipelines.GUI_TEXTURED, tab.getTexture(this.selectedTab), xTab, yTab, 26, 32);
 
-        if (!isSelectedTab && x > xTab && y > yTab && x < xTab + TAB_WIDTH && y < yTab + TAB_HEIGHT) {
+        if (!isSelectedTab && mouseX > xTab && mouseY > yTab && mouseX < xTab + TAB_WIDTH && mouseY < yTab + TAB_HEIGHT) {
             guiGraphics.requestCursor(CursorTypes.POINTING_HAND);
         }
 
@@ -502,66 +502,13 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     }
 
     @Override
-    public void renderContents(@NonNull GuiGraphics guiGraphics, int x, int y, float f) {
-        super.renderContents(guiGraphics, x, y, f);
+    public void renderContents(@NonNull GuiGraphics guiGraphics, int mouseX, int mouseY, float a) {
+        super.renderContents(guiGraphics, mouseX, mouseY, a);
 
         if (this.selectedTab == TabDisplay.TARGETS) {
-            if (this.targetOrderUpButton != null) {
-                this.targetOrderUpButton.visible = this.selectedTargetIndex >= 0;
-            }
-            if (this.targetOrderDownButton != null) {
-                this.targetOrderDownButton.visible = this.selectedTargetIndex >= 0;
-            }
-            if (this.targetRemoveButton != null) {
-                this.targetRemoveButton.visible = this.selectedTargetIndex >= 0;
-            }
-
-            // Render scroller in correct position or disabled.
-            List<TargetView> syncedTargets = this.menu.getSyncedTargets();
-            this.renderScroller(guiGraphics, x, y, syncedTargets.size(), this.targetsScrolledOff);
-
-            // Render target buttons for visible targets.
-            int yRow = this.topPos + SCROLLBOX_TOP_Y;
-            int xItemStart = this.leftPos + 10;
-            int xTextStart = this.leftPos + 30;
-            int maxTextWidth = SCROLLBOX_ROW_WIDTH - 30;
-
-            for (int row = 0; row < SCROLLBOX_ROWS; row++) {
-                int targetIndex = this.targetsScrolledOff + row;
-                if (targetIndex < syncedTargets.size()) {
-                    this.targetButtons[row].visible = true;
-
-                    TargetView target = syncedTargets.get(targetIndex);
-                    if (target.isWideChest()) {
-                        guiGraphics.blit(
-                                RenderPipelines.GUI_TEXTURED,
-                                WIDE_CHEST_TEXTURE,
-                                xItemStart, yRow + 1,
-                                0, 0,
-                                16, 16,
-                                256, 256,
-                                256, 256
-                        );
-                    } else {
-                        guiGraphics.renderFakeItem(target.itemStack(), xItemStart, yRow + 1);
-                    }
-
-                    guiGraphics.drawString(
-                            this.font,
-                            this.font.plainSubstrByWidth(target.displayName(), maxTextWidth),
-                            xTextStart,
-                            yRow + 6,
-                            ARGB_SCROLL_BUTTON_LABEL,
-                            true);
-                } else {
-                    this.targetButtons[row].visible = false;
-                }
-
-                yRow += SCROLLBOX_ROW_HEIGHT;
-            }
+            this.renderTargetsScrollBox(guiGraphics, mouseX, mouseY);
         } else if (this.selectedTab == TabDisplay.PRICING) {
-            // Render scroller in correct position or disabled.
-            this.renderScroller(guiGraphics, x, y, 0, this.pricingScrolledOff);
+            this.renderPricingScrollBox(guiGraphics, mouseX, mouseY);
         }
     }
 
@@ -622,25 +569,86 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
         }
     }
 
+    protected void renderTargetsScrollBox(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        if (this.targetOrderUpButton != null) {
+            this.targetOrderUpButton.visible = this.selectedTargetIndex >= 0;
+        }
+        if (this.targetOrderDownButton != null) {
+            this.targetOrderDownButton.visible = this.selectedTargetIndex >= 0;
+        }
+        if (this.targetRemoveButton != null) {
+            this.targetRemoveButton.visible = this.selectedTargetIndex >= 0;
+        }
+
+        // Render scroller in correct position or disabled.
+        List<TargetView> syncedTargets = this.menu.getSyncedTargets();
+        this.renderScroller(guiGraphics, mouseX, mouseY, syncedTargets.size(), this.targetsScrolledOff);
+
+        // Render target buttons for visible targets.
+        int yRow = this.topPos + SCROLLBOX_TOP_Y;
+        int xItemStart = this.leftPos + 10;
+        int xTextStart = this.leftPos + 30;
+        int maxTextWidth = SCROLLBOX_ROW_WIDTH - 30;
+
+        for (int row = 0; row < SCROLLBOX_ROWS; row++) {
+            int targetIndex = this.targetsScrolledOff + row;
+            if (targetIndex < syncedTargets.size()) {
+                this.targetButtons[row].visible = true;
+
+                TargetView target = syncedTargets.get(targetIndex);
+                if (target.isWideChest()) {
+                    guiGraphics.blit(
+                            RenderPipelines.GUI_TEXTURED,
+                            WIDE_CHEST_TEXTURE,
+                            xItemStart, yRow + 1,
+                            0, 0,
+                            16, 16,
+                            256, 256,
+                            256, 256
+                    );
+                } else {
+                    guiGraphics.renderFakeItem(target.itemStack(), xItemStart, yRow + 1);
+                }
+
+                guiGraphics.drawString(
+                        this.font,
+                        this.font.plainSubstrByWidth(target.displayName(), maxTextWidth),
+                        xTextStart,
+                        yRow + 6,
+                        ARGB_SCROLL_BUTTON_LABEL,
+                        true);
+            } else {
+                this.targetButtons[row].visible = false;
+            }
+
+            yRow += SCROLLBOX_ROW_HEIGHT;
+        }
+    }
+
+    protected void renderPricingScrollBox(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        // Render scroller in correct position or disabled.
+        this.renderScroller(guiGraphics, mouseX, mouseY, 0, this.pricingScrolledOff);
+    }
+
     @Override
-    protected void renderLabels(@NonNull GuiGraphics guiGraphics, int i, int j) {
+    protected void renderLabels(@NonNull GuiGraphics guiGraphics, int x, int y) {
         switch (this.selectedTab) {
             case STATUS -> {
                 guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, ARGB_SCREEN_TEXT, false);
-                this.renderStatusLabels(guiGraphics, i, j);
+                this.renderStatusLabels(guiGraphics);
                 guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, ARGB_SCREEN_TEXT, false);
             }
             case TARGETS -> {
-                this.renderTargetLabels(guiGraphics, i, j);
+                this.renderTargetLabels(guiGraphics);
             }
             case PRICING -> {
-                this.renderPricingLabels(guiGraphics, i, j);
+                this.renderPricingLabels(guiGraphics);
                 guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, ARGB_SCREEN_TEXT, false);
             }
         }
     }
 
-    private void renderStatusLabels(@NonNull GuiGraphics guiGraphics, int i, int j) {
+    protected void renderStatusLabels(@NonNull GuiGraphics guiGraphics) {
         Component reputationLabel = Component.translatable(
                 "screen." + Touristry.MOD_ID + ".tourist_block.reputation",
                 String.format("%.2f", this.menu.getReputation())
@@ -692,7 +700,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
         );
     }
 
-    private void renderTargetLabels(@NonNull GuiGraphics guiGraphics, int i, int j) {
+    protected void renderTargetLabels(@NonNull GuiGraphics guiGraphics) {
         int numTargets = this.menu.getSyncedTargets().size();
         Component targetsTitle = TARGETS_SCREEN_TITLE.copy().append(" (" + numTargets + ")");
         int targetsLabelWidth = this.font.width(targetsTitle);
@@ -738,7 +746,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
         );
     }
 
-    private void renderPricingLabels(@NonNull GuiGraphics guiGraphics, int i, int j) {
+    protected void renderPricingLabels(@NonNull GuiGraphics guiGraphics) {
         int numPricings = 0; // this.menu.getSyncedPricings().size();
         Component pricingsTitle = PRICING_SCREEN_TITLE.copy().append(" (" + numPricings + ")");
         int pricingLabelWidth = this.font.width(pricingsTitle);
@@ -766,11 +774,11 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
         return x >= tabX && x <= tabX + TAB_WIDTH && y >= tabY && y <= tabY + TAB_HEIGHT;
     }
 
-    private boolean checkTabHovering(GuiGraphics guiGraphics, TabDisplay tab, int i, int j) {
+    private boolean checkTabHovering(GuiGraphics guiGraphics, TabDisplay tab, int mouseX, int mouseY) {
         int tabX = tab.getTabX();
         int tabY = tab.getTabY();
-        if (this.isHovering(tabX + 3, tabY + 3, TAB_WIDTH - 5, TAB_HEIGHT - 5, i, j)) {
-            guiGraphics.setTooltipForNextFrame(this.font, tab.getTitle(), i, j);
+        if (this.isHovering(tabX + 3, tabY + 3, TAB_WIDTH - 5, TAB_HEIGHT - 5, mouseX, mouseY)) {
+            guiGraphics.setTooltipForNextFrame(this.font, tab.getTitle(), mouseX, mouseY);
             return true;
         } else {
             return false;
@@ -785,7 +793,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent mouseButtonEvent, boolean bl) {
+    public boolean mouseClicked(MouseButtonEvent mouseButtonEvent, boolean doubleClick) {
         if (mouseButtonEvent.button() == 0) {
             double relativeX = mouseButtonEvent.x() - this.leftPos;
             double relativeY = mouseButtonEvent.y() - this.topPos;
@@ -802,7 +810,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
             }
         }
 
-        return super.mouseClicked(mouseButtonEvent, bl);
+        return super.mouseClicked(mouseButtonEvent, doubleClick);
     }
 
     @Override
@@ -825,9 +833,9 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     }
 
     @Override
-    public boolean mouseDragged(MouseButtonEvent mouseButtonEvent, double d, double e) {
+    public boolean mouseDragged(MouseButtonEvent mouseButtonEvent, double dx, double dy) {
         if (!this.isScrolling) {
-            return super.mouseDragged(mouseButtonEvent, d, e);
+            return super.mouseDragged(mouseButtonEvent, dx, dy);
         }
 
         int totalRows = this.selectedTab == TabDisplay.TARGETS ? this.menu.getSyncedTargets().size() : 0;
@@ -863,8 +871,8 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     }
 
     @Override
-    public boolean mouseScrolled(double d, double e, double f, double scrollDelta) {
-        if (super.mouseScrolled(d, e, f, scrollDelta)) {
+    public boolean mouseScrolled(double x, double y, double scrollX, double scrollY) {
+        if (super.mouseScrolled(x, y, scrollX, scrollY)) {
             return true;
         }
 
@@ -872,12 +880,12 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
             if (this.selectedTab == TabDisplay.TARGETS) {
                 int totalRows = this.menu.getSyncedTargets().size();
                 int maxScrolledOff = totalRows - SCROLLBOX_ROWS;
-                this.targetsScrolledOff = Mth.clamp((int)(this.targetsScrolledOff - scrollDelta), 0, maxScrolledOff);
+                this.targetsScrolledOff = Mth.clamp((int)(this.targetsScrolledOff - scrollY), 0, maxScrolledOff);
                 this.updateRowFocusForSelectedTarget();
             } else if (this.selectedTab == TabDisplay.PRICING) {
                 int totalRows = 0;
                 int maxScrolledOff = totalRows - SCROLLBOX_ROWS;
-                this.pricingScrolledOff = Mth.clamp((int)(this.pricingScrolledOff - scrollDelta), 0, maxScrolledOff);
+                this.pricingScrolledOff = Mth.clamp((int)(this.pricingScrolledOff - scrollY), 0, maxScrolledOff);
                 this.updateRowFocusForSelectedPricing();
             }
             return true;
