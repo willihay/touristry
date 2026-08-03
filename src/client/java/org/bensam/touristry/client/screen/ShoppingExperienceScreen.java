@@ -101,14 +101,14 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     private static final Component TARGET_MOVE_UP_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.target.move_up.tooltip");
     private static final Component TARGET_MOVE_DOWN_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.target.move_down.tooltip");
     private static final Component TARGET_ORDERED_LABEL = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.targets.ordered_button.label");
-    private static final int TARGET_DETAILS_LABEL_X = 107;
-    private static final int TARGET_DETAILS_LABEL_Y = SCROLLBOX_TOP_Y;
-    private static final int TARGET_CHANGE_ORDER_BUTTON_X = TARGET_DETAILS_LABEL_X;
-    private static final int TARGET_CHANGE_ORDER_BUTTON_Y = 39;
-    private static final int TARGET_ORDERED_LABEL_X = 135;
-    private static final int TARGET_ORDERED_LABEL_Y = 45;
+    private static final int TARGET_ORDERED_LABEL_X = 127;
+    private static final int TARGET_ORDERED_LABEL_Y = SCROLLBOX_TOP_Y + 5;
     private static final int TARGET_ORDERED_BUTTON_X = 193;
-    private static final int TARGET_ORDERED_BUTTON_Y = 40;
+    private static final int TARGET_ORDERED_BUTTON_Y = SCROLLBOX_TOP_Y;
+    private static final int TARGET_DETAILS_LABEL_X = 127;
+    private static final int TARGET_DETAILS_LABEL_Y = 50;
+    private static final int TARGET_CHANGE_ORDER_BUTTON_X = 107;
+    private static final int TARGET_CHANGE_ORDER_BUTTON_Y = 44;
 
     // Pricing screen constants
     private static final Component PRICING_SCREEN_TITLE = Component.translatable("screen.touristry.tourist_block.tab.pricing");
@@ -180,9 +180,9 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     private int selectedTargetIndex;
     private int targetsScrolledOff;
     private final ExperienceScrollBoxButton[] targetButtons = new ExperienceScrollBoxButton[SCROLLBOX_ROWS];
-    private GuiEventListener targetOrderUpButton;
-    private GuiEventListener targetOrderDownButton;
-    private GuiEventListener targetOrderedToggleButton;
+    private MoveTargetOrderButton targetOrderUpButton;
+    private MoveTargetOrderButton targetOrderDownButton;
+    private TargetOrderedButton targetOrderedToggleButton;
 
     // Pricing screen fields
     private int selectedPricingIndex;
@@ -437,6 +437,13 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
         super.renderContents(guiGraphics, x, y, f);
 
         if (this.selectedTab == TabDisplay.TARGETS) {
+            if (this.targetOrderUpButton != null) {
+                this.targetOrderUpButton.visible = this.selectedTargetIndex >= 0;
+            }
+            if (this.targetOrderDownButton != null) {
+                this.targetOrderDownButton.visible = this.selectedTargetIndex >= 0;
+            }
+
             List<TargetView> syncedTargets = this.menu.getSyncedTargets();
             if (!syncedTargets.isEmpty()) {
                 int yRow = this.topPos + SCROLLBOX_TOP_Y;
@@ -545,16 +552,16 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
             case STATUS -> {
                 guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, ARGB_SCREEN_TEXT, false);
                 this.renderStatusLabels(guiGraphics, i, j);
+                guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, ARGB_SCREEN_TEXT, false);
             }
             case TARGETS -> {
                 this.renderTargetLabels(guiGraphics, i, j);
             }
             case PRICING -> {
                 this.renderPricingLabels(guiGraphics, i, j);
+                guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, ARGB_SCREEN_TEXT, false);
             }
         }
-
-        guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, ARGB_SCREEN_TEXT, false);
     }
 
     private void renderStatusLabels(@NonNull GuiGraphics guiGraphics, int i, int j) {
@@ -624,13 +631,22 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
 
         if (this.selectedTargetIndex >= 0 && this.selectedTargetIndex < numTargets) {
             TargetView targetView = this.menu.getSyncedTargets().get(this.selectedTargetIndex);
-            String targetDetails = (this.selectedTargetIndex + 1) + ") " + targetView.displayName() + " @ " + targetView.pos().toShortString();
+            String targetDetails = (this.selectedTargetIndex + 1) + ") " + targetView.displayName();
             int maxDetailWidth = this.imageWidth - TARGET_DETAILS_LABEL_X - 5;
             guiGraphics.drawString(
                     this.font,
                     this.font.plainSubstrByWidth(targetDetails, maxDetailWidth),
                     TARGET_DETAILS_LABEL_X,
                     TARGET_DETAILS_LABEL_Y,
+                    ARGB_SCREEN_TEXT,
+                    false
+            );
+
+            guiGraphics.drawString(
+                    this.font,
+                    "@ " + targetView.pos().toShortString(),
+                    TARGET_DETAILS_LABEL_X + 20,
+                    TARGET_DETAILS_LABEL_Y + 11,
                     ARGB_SCREEN_TEXT,
                     false
             );
