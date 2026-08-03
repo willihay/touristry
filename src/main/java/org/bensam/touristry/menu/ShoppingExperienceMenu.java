@@ -102,11 +102,26 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
                 EXPERIENCE_TARGET_KEY_SLOT_Y,
                 menu -> menu.isSelectedTab(Tab.STATUS)) {
             @Override
-            public boolean mayPlace(ItemStack stack) { return false; }
+            public boolean mayPlace(ItemStack itemStack) {
+                boolean match = ItemStack.isSameItemSameComponents(itemStack, this.getItem());
+                return match;
+            }
 
             @Override
-            public void onTake(Player player, ItemStack stack) {
-                ShoppingExperienceMenu.this.onKeyTake(player, stack);
+            public void onTake(Player player, ItemStack itemStack) {
+                ShoppingExperienceMenu.this.onKeyTake(player, itemStack);
+            }
+
+            @Override
+            public ItemStack safeInsert(ItemStack itemStack, int amount) {
+                if (!this.mayPlace(itemStack)) {
+                    return itemStack;
+                }
+
+                // If the target keys are exactly the same, swallow the placed key out of convenience to the player
+                // instead of increasing the count here, since this block entity provides infinite target keys.
+                itemStack.shrink(itemStack.getCount());
+                return itemStack;
             }
         });
 
