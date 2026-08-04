@@ -103,8 +103,7 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
                 menu -> menu.isSelectedTab(Tab.STATUS)) {
             @Override
             public boolean mayPlace(ItemStack itemStack) {
-                boolean match = ItemStack.isSameItemSameComponents(itemStack, this.getItem());
-                return match;
+                return ItemStack.isSameItemSameComponents(itemStack, this.getItem());
             }
 
             @Override
@@ -338,7 +337,7 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
                 new SyncTargetViewS2CPayload(
                         this.containerId,
                         experienceBlockEntity.isTargetListOrdered(),
-                        experienceBlockEntity.getTargetView(serverLevel)
+                        experienceBlockEntity.getTargetViews(serverLevel)
                 )
         );
     }

@@ -48,6 +48,7 @@ public class ExperienceTargetKeyItem extends Item {
 
         // If the block entity is part of a double-wide connection (e.g. chest, bed), always store the BlockPos of the LEFT/HEAD half.
         // This way, players can click on either half and the object will be stored as a single target using a consistent BlockPos.
+        // Note that the LEFT half of a chest is the opposite of what you'd think as a player looking at the front of the chest...
         if (blockEntity instanceof ChestBlockEntity) {
             ChestType chestType = blockState.getValue(ChestBlock.TYPE);
             if (chestType == ChestType.RIGHT) {

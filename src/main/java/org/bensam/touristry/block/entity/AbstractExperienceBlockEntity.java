@@ -224,7 +224,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         return targetList;
     }
 
-    public List<TargetView> getTargetView(ServerLevel serverLevel) {
+    public List<TargetView> getTargetViews(ServerLevel serverLevel) {
         this.pruneInvalidTargets(serverLevel);
         List<TargetView> targetView = new ArrayList<>();
         for (ExperienceTarget target : this.targets) {
@@ -313,6 +313,12 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         this.targets.add(toIndex, targetToMove);
         this.setChanged();
         return true;
+    }
+
+    protected void pruneInvalidTargets() {
+        if (this.level instanceof ServerLevel serverLevel) {
+            this.pruneInvalidTargets(serverLevel);
+        }
     }
 
     protected void pruneInvalidTargets(ServerLevel serverLevel) {
@@ -497,6 +503,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         valueInput.read("Statistics", TouristLocationStats.CODEC).ifPresent(statistics -> { this.statistics = statistics; });
         this.inventory = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
         ContainerHelper.loadAllItems(valueInput, this.inventory);
+
         this.setItem(this.getTargetKeySlotIndex(), this.createTargetKey());
         
         // Registration happens in clearRemoved() after level is set, not here (level is still null).
@@ -544,6 +551,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         );
 
         this.setItem(this.getTargetKeySlotIndex(), this.createTargetKey());
+        this.pruneInvalidTargets();
         this.syncTourismRegistration();
     }
 
