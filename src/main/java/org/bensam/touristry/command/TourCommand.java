@@ -43,6 +43,7 @@ public final class TourCommand {
     }
 
     public static TouristBeaconBlockEntity requireBeacon(CommandSourceStack source, BlockPos blockPos) throws CommandSyntaxException {
+        requireOverworld(source);
         if (source.getServer().overworld().getBlockEntity(blockPos) instanceof TouristBeaconBlockEntity beaconBlockEntity) {
             return beaconBlockEntity;
         }
@@ -51,6 +52,7 @@ public final class TourCommand {
     }
 
     public static TouristBeaconBlockEntity requireNearestBeacon(CommandSourceStack source) throws CommandSyntaxException {
+        requireOverworld(source);
         ServerPlayer serverPlayer = source.getPlayer();
         if (serverPlayer == null) {
             throw new SimpleCommandExceptionType(Component.literal("No player position available")).create();
@@ -65,6 +67,7 @@ public final class TourCommand {
     }
 
     public static AbstractExperienceBlockEntity requireExperience(CommandSourceStack source, BlockPos blockPos) throws CommandSyntaxException {
+        requireOverworld(source);
         if (source.getServer().overworld().getBlockEntity(blockPos) instanceof AbstractExperienceBlockEntity experienceBlockEntity) {
             return experienceBlockEntity;
         }
@@ -73,6 +76,7 @@ public final class TourCommand {
     }
 
     public static AbstractExperienceBlockEntity requireNearestExperience(CommandSourceStack source) throws CommandSyntaxException {
+        requireOverworld(source);
         ServerPlayer serverPlayer = source.getPlayer();
         if (serverPlayer == null) {
             throw new SimpleCommandExceptionType(Component.literal("No player position available")).create();
@@ -84,5 +88,11 @@ public final class TourCommand {
         }
 
         return experienceBlockEntity;
+    }
+
+    private static void requireOverworld(CommandSourceStack source) throws CommandSyntaxException {
+        if (source.getLevel() != source.getServer().overworld()) {
+            throw new SimpleCommandExceptionType(Component.literal("Tourism commands can only be used in the overworld")).create();
+        }
     }
 }

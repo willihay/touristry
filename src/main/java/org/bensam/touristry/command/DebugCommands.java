@@ -82,6 +82,11 @@ public final class DebugCommands {
     }
 
     private static int spawnBeaconTourist(CommandSourceStack source, @NonNull TouristBeaconBlockEntity beaconBlockEntity) {
+        if (source.getLevel() != source.getLevel().getServer().overworld()) {
+            source.sendFailure(Component.literal("Tourists will only spawn in the overworld"));
+            return -1;
+        }
+
         if (TourismManager.trySpawnTouristForBeacon(source.getLevel(), null, beaconBlockEntity)) {
             Component message = Component.literal("Spawned tourist for ")
                     .append(beaconBlockEntity.getName().copy());
@@ -94,6 +99,11 @@ public final class DebugCommands {
     }
 
     private static int spawnBeaconTouristHere(CommandSourceStack source, @NonNull TouristBeaconBlockEntity beaconBlockEntity) {
+        if (source.getLevel() != source.getLevel().getServer().overworld()) {
+            source.sendFailure(Component.literal("Tourists will only spawn in the overworld"));
+            return -1;
+        }
+
         ServerPlayer serverPlayer = source.getPlayer();
         if (serverPlayer == null) {
             source.sendFailure(Component.literal("No player position available"));

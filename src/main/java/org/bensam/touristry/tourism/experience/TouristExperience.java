@@ -29,9 +29,9 @@ public interface TouristExperience {
     int getMaxApproachDistance();
     int getMaxRangeToTarget();
     List<ExperienceTarget> getTargets(ServerLevel serverLevel);
+    List<TargetOverlayView> getTargetOverlayViews(ServerLevel serverLevel);
     boolean hasTarget(BlockPos blockPos);
     boolean isOpenForBusiness();
-    boolean isTargetValid(ServerLevel serverLevel, ExperienceTarget target);
     boolean removeTarget(ServerLevel serverLevel, BlockPos pos);
     boolean removeEntityTargetById(ServerLevel serverLevel, UUID entityUUID);
     boolean tryDepositPayment(ItemStack itemStack);

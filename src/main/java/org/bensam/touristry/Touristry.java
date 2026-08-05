@@ -8,13 +8,18 @@ import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import org.bensam.touristry.block.TouristBeaconBlock;
+import org.bensam.touristry.block.TouristExperienceBlock;
 import org.bensam.touristry.command.TourCommand;
 import org.bensam.touristry.config.ModServerConfigManager;
 import org.bensam.touristry.config.ModServerConfigSync;
 import org.bensam.touristry.config.SyncedClientConfig;
 import org.bensam.touristry.item.ExperienceTargetKeyItem;
 import org.bensam.touristry.network.ExperienceServerPackets;
+import org.bensam.touristry.tourism.ExperienceTargetOverlaySyncManager;
 import org.bensam.touristry.tourism.TourismManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,6 +56,7 @@ public class Touristry implements ModInitializer {
 		// Register server-side player connection event handlers and packet receiver handlers.
 		SyncedClientConfig.initialize();
 		ExperienceServerPackets.registerServerReceivers();
+		ExperienceTargetOverlaySyncManager.initialize();
 
 		ServerWorldEvents.LOAD.register((server, serverLevel) -> {
 			if (serverLevel == server.overworld()) {
@@ -67,6 +73,7 @@ public class Touristry implements ModInitializer {
 
 		ServerTickEvents.START_SERVER_TICK.register(server -> {
 			TourismManager.tick(server.overworld());
+			ExperienceTargetOverlaySyncManager.tick(server.overworld());
 		});
 
 		/*
@@ -88,6 +95,14 @@ public class Touristry implements ModInitializer {
 
 		UseBlockCallback.EVENT.register((player, level, hand, hitResult) -> {
 			ItemStack itemStack = player.getItemInHand(hand);
+
+			if (!level.isClientSide()
+					&& level.dimension() != Level.OVERWORLD
+					&& itemStack.getItem() instanceof BlockItem blockItem
+					&& (blockItem.getBlock() instanceof TouristBeaconBlock || blockItem.getBlock() instanceof TouristExperienceBlock)) {
+				player.displayClientMessage(net.minecraft.network.chat.Component.literal("Tourism blocks can only be placed in the overworld"), true);
+				return InteractionResult.FAIL;
+			}
 
 			if (!(itemStack.getItem() instanceof ExperienceTargetKeyItem experienceTargetKeyItem)) {
 				return InteractionResult.PASS;

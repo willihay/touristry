@@ -3,6 +3,7 @@ package org.bensam.touristry.block;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
@@ -23,6 +24,14 @@ public abstract class TouristExperienceBlock extends BaseEntityBlock {
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(OPEN_FOR_BUSINESS);
+    }
+
+    @Override
+    public @Nullable BlockState getStateForPlacement(BlockPlaceContext context) {
+        if (context.getLevel().dimension() != Level.OVERWORLD) {
+            return null;
+        }
+        return super.getStateForPlacement(context);
     }
 
     @Override

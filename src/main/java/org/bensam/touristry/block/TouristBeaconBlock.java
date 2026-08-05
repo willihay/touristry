@@ -7,6 +7,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
@@ -45,6 +46,14 @@ public class TouristBeaconBlock extends BaseEntityBlock {
     }
 
     @Override
+    public @Nullable BlockState getStateForPlacement(BlockPlaceContext context) {
+        if (context.getLevel().dimension() != Level.OVERWORLD) {
+            return null;
+        }
+        return super.getStateForPlacement(context);
+    }
+
+    @Override
     protected int getAnalogOutputSignal(@NonNull BlockState blockState, Level level, @NonNull BlockPos blockPos, @NonNull Direction direction) {
         if (level.getBlockEntity(blockPos) instanceof TouristBeaconBlockEntity touristBeaconBlockEntity) {
             return touristBeaconBlockEntity.isOpenForBusiness() ? 15 : 0;
@@ -64,8 +73,14 @@ public class TouristBeaconBlock extends BaseEntityBlock {
 
     @Override
     protected @NonNull InteractionResult useWithoutItem(@NonNull BlockState blockState, Level level, @NonNull BlockPos blockPos, @NonNull Player player, @NonNull BlockHitResult blockHitResult) {
-        if (!level.isClientSide() && level.getBlockEntity(blockPos) instanceof TouristBeaconBlockEntity beaconBlockEntity) {
-            player.openMenu(beaconBlockEntity);
+        if (!level.isClientSide()) {
+            if (level.dimension() != Level.OVERWORLD) {
+                player.displayClientMessage(net.minecraft.network.chat.Component.literal("Tourism blocks can only be used in the overworld"), true);
+                return InteractionResult.FAIL;
+            }
+            if (level.getBlockEntity(blockPos) instanceof TouristBeaconBlockEntity beaconBlockEntity) {
+                player.openMenu(beaconBlockEntity);
+            }
         }
 
         return InteractionResult.SUCCESS;

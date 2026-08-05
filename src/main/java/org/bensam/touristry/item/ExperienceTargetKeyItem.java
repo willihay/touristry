@@ -6,9 +6,11 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.entity.BedBlockEntity;
@@ -21,6 +23,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import org.bensam.touristry.ModComponents;
 import org.bensam.touristry.block.entity.AbstractExperienceBlockEntity;
+import org.bensam.touristry.tourism.ExperienceTargetOverlaySyncManager;
 import org.bensam.touristry.tourism.TourismManager;
 import org.bensam.touristry.tourism.experience.TouristExperience;
 
@@ -31,11 +34,20 @@ public class ExperienceTargetKeyItem extends Item {
         super(properties);
     }
 
+    @Override
+    public boolean canDestroyBlock(ItemStack itemStack, BlockState blockState, Level level, BlockPos blockPos, LivingEntity livingEntity) {
+        return false;
+    }
+
     public UUID getLinkedExperienceUUID(ItemStack itemStack) {
         return itemStack.getOrDefault(ModComponents.TOURIST_EXPERIENCE_KEY_UUID, new UUID(0, 0));
     }
 
     public InteractionResult useOnBlock(ServerLevel serverLevel, Player player, ItemStack key, BlockHitResult hitResult) {
+        if (!validateLevel(serverLevel, player)) {
+            return InteractionResult.FAIL;
+        }
+
         TouristExperience experience = this.validateKeyAndGetExperience(player, key);
         if (experience == null)
         {
@@ -64,6 +76,9 @@ public class ExperienceTargetKeyItem extends Item {
         if (player.isShiftKeyDown()) {
             // Remove target from experience.
             boolean removed = experience.removeTarget(serverLevel, blockPos);
+            if (removed) {
+                ExperienceTargetOverlaySyncManager.refreshPlayersHolding(serverLevel, experience.getUUID());
+            }
             this.displayLinkRemovalMessage(player, experience, removed);
             return InteractionResult.SUCCESS;
         } else {
@@ -99,6 +114,9 @@ public class ExperienceTargetKeyItem extends Item {
                     success = experience.addChildExperienceTarget(serverLevel, blockPos, playerFacing, childUUID);
                 }
 
+                if (success) {
+                    ExperienceTargetOverlaySyncManager.refreshPlayersHolding(serverLevel, experience.getUUID());
+                }
                 this.displayLinkAdditionMessage(player, experience, success);
                 return success ? InteractionResult.SUCCESS : InteractionResult.FAIL;
             }
@@ -113,6 +131,10 @@ public class ExperienceTargetKeyItem extends Item {
     }
 
     public InteractionResult useOnEntity(ServerLevel serverLevel, Player player, ItemStack key, Entity entity, EntityHitResult hitResult) {
+        if (!validateLevel(serverLevel, player)) {
+            return InteractionResult.FAIL;
+        }
+
         TouristExperience experience = this.validateKeyAndGetExperience(player, key);
         if (experience == null)
         {
@@ -124,6 +146,9 @@ public class ExperienceTargetKeyItem extends Item {
         if (player.isShiftKeyDown()) {
             // Remove target from experience.
             boolean removed = experience.removeEntityTargetById(serverLevel, entity.getUUID());
+            if (removed) {
+                ExperienceTargetOverlaySyncManager.refreshPlayersHolding(serverLevel, experience.getUUID());
+            }
             this.displayLinkRemovalMessage(player, experience, removed);
             return InteractionResult.SUCCESS;
         } else {
@@ -150,6 +175,9 @@ public class ExperienceTargetKeyItem extends Item {
 
                 // Try to add target to experience.
                 boolean success = experience.addEntityTarget(serverLevel, entityPos, playerFacing, entity.getUUID());
+                if (success) {
+                    ExperienceTargetOverlaySyncManager.refreshPlayersHolding(serverLevel, experience.getUUID());
+                }
                 this.displayLinkAdditionMessage(player, experience, success);
                 return success ? InteractionResult.SUCCESS : InteractionResult.FAIL;
             }
@@ -224,6 +252,17 @@ public class ExperienceTargetKeyItem extends Item {
         }
 
         return experience;
+    }
+
+    private boolean validateLevel(ServerLevel serverLevel, Player player) {
+        if (serverLevel != serverLevel.getServer().overworld()) {
+            player.displayClientMessage(
+                    Component.literal("Keys only work in the overworld"),
+                    true
+            );
+            return false;
+        }
+        return true;
     }
 
     private boolean validateTargetDistance(Player player, TouristExperience experience, BlockPos targetPos) {

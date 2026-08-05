@@ -9,26 +9,35 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import org.bensam.touristry.menu.ShoppingExperienceMenu;
+import org.bensam.touristry.tourism.experience.TargetView;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
+import org.bensam.touristry.ModComponents;
+import org.bensam.touristry.item.ExperienceTargetKeyItem;
+import org.bensam.touristry.tourism.experience.TargetOverlayView;
 
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 @Environment(EnvType.CLIENT)
 public final class ExperienceTargetOverlayRenderer {
-    private static final List<BlockPos> TEST_POSITIONS = List.of(
-            new BlockPos(-33, 69, -129),
-            new BlockPos(-32, 70, -123),
-            new BlockPos(-30, 69, -123),
-            new BlockPos(-29, 70, -123)
-    );
+    private static final UUID UNLINKED_KEY_UUID = new UUID(0, 0);
     private static final float TEXT_SCALE = 0.025F;
     private static final double VERTICAL_OFFSET = 0.9D;
     private static final double MAX_RENDER_DISTANCE = 48.0D;
-    private static final int TEXT_COLOR = 0xFFFFFFFF;
+    private static final int[] TEXT_COLORS = { 0xFFFFFFFF, 0xFF0F77FF };
     private static final int BACKGROUND_COLOR = 0x40000000;
     private static final int FULL_BRIGHT_LIGHT = 0xF000F0;
+    private static final Map<UUID, List<TargetOverlayView>> targetsByExperience = new HashMap<>();
 
     private ExperienceTargetOverlayRenderer() {}
 
@@ -36,23 +45,99 @@ public final class ExperienceTargetOverlayRenderer {
         WorldRenderEvents.AFTER_ENTITIES.register(context -> {
             PoseStack poseStack = context.matrices();
             Minecraft minecraft = Minecraft.getInstance();
-            if (minecraft.player == null) {
+            if (minecraft.player == null || minecraft.level == null || minecraft.level.dimension() != Level.OVERWORLD) {
                 return;
             }
 
             CameraRenderState cameraRS = context.worldState().cameraRenderState;
             Vec3 cameraPosition = cameraRS.pos;
             Quaternionf cameraRotation = cameraRS.orientation;
-            for (int index = 0; index < TEST_POSITIONS.size(); index++) {
-                BlockPos blockPos = TEST_POSITIONS.get(index);
-                Vec3 labelPosition = Vec3.atCenterOf(blockPos).add(0.0D, VERTICAL_OFFSET, 0.0D);
-                if (minecraft.player.distanceToSqr(labelPosition) > MAX_RENDER_DISTANCE * MAX_RENDER_DISTANCE) {
-                    continue;
-                }
 
-                renderNumber(poseStack, context, cameraPosition, cameraRotation, labelPosition, Integer.toString(index + 1));
+            // Draw targets for the player if they have an experience block UI open.
+            if (minecraft.player.hasContainerOpen() && minecraft.player.containerMenu instanceof ShoppingExperienceMenu menu) {
+                List<TargetView> syncedTargets = menu.getSyncedTargets();
+                if (syncedTargets.isEmpty()) {
+                    return;
+                }
+                for (int i = 0; i < syncedTargets.size(); i++) {
+                    TargetView target = syncedTargets.get(i);
+                    Vec3 labelPosition = getLabelPosition(minecraft, target);
+                    if (minecraft.player.distanceToSqr(labelPosition) <= MAX_RENDER_DISTANCE * MAX_RENDER_DISTANCE) {
+                        renderNumber(
+                                poseStack,
+                                context,
+                                cameraPosition,
+                                cameraRotation,
+                                labelPosition,
+                                Integer.toString(i + 1),
+                                TEXT_COLORS[0]);
+                    }
+                }
+                return;
+            }
+
+            // If no experience block UI is open, draw targets for the player if they are holding an experience block's target key.
+            boolean isFirstUUID = true;
+            for (UUID experienceUUID : getHeldKeyUUIDs(minecraft.player.getMainHandItem(), minecraft.player.getOffhandItem())) {
+                int textColor = isFirstUUID ? TEXT_COLORS[0] : TEXT_COLORS[1];
+                for (TargetOverlayView target : targetsByExperience.getOrDefault(experienceUUID, List.of())) {
+                    Vec3 labelPosition = getLabelPosition(minecraft, target);
+                    if (minecraft.player.distanceToSqr(labelPosition) <= MAX_RENDER_DISTANCE * MAX_RENDER_DISTANCE) {
+                        renderNumber(
+                                poseStack,
+                                context,
+                                cameraPosition,
+                                cameraRotation,
+                                labelPosition,
+                                Integer.toString(target.targetNumber()),
+                                textColor);
+                    }
+                }
+                isFirstUUID = false;
             }
         });
+    }
+
+    public static void setTargets(UUID experienceUUID, List<TargetOverlayView> targets) {
+        targetsByExperience.put(experienceUUID, List.copyOf(targets));
+    }
+
+    private static Set<UUID> getHeldKeyUUIDs(ItemStack mainHandItem, ItemStack offhandItem) {
+        Set<UUID> experienceUUIDs = new HashSet<>(2);
+        addLinkedExperienceUUID(mainHandItem, experienceUUIDs);
+        addLinkedExperienceUUID(offhandItem, experienceUUIDs);
+        return experienceUUIDs;
+    }
+
+    private static void addLinkedExperienceUUID(ItemStack itemStack, Set<UUID> experienceUUIDs) {
+        if (itemStack.getItem() instanceof ExperienceTargetKeyItem) {
+            UUID experienceUUID = itemStack.getOrDefault(ModComponents.TOURIST_EXPERIENCE_KEY_UUID, UNLINKED_KEY_UUID);
+            if (!UNLINKED_KEY_UUID.equals(experienceUUID)) {
+                experienceUUIDs.add(experienceUUID);
+            }
+        }
+    }
+
+    private static Vec3 getLabelPosition(Minecraft minecraft, TargetView target) {
+        if (target.entityUUID() == null) {
+            Entity entity = minecraft.level.getEntity(target.entityUUID());
+            if (entity != null) {
+                return entity.position().add(0.0D, entity.getBbHeight() + VERTICAL_OFFSET, 0.0D);
+            }
+        }
+        BlockPos blockPos = target.pos();
+        return Vec3.atCenterOf(blockPos).add(0.0D, VERTICAL_OFFSET, 0.0D);
+    }
+
+    private static Vec3 getLabelPosition(Minecraft minecraft, TargetOverlayView target) {
+        if (target.entityUUID() != null) {
+            Entity entity = minecraft.level.getEntity(target.entityUUID());
+            if (entity != null) {
+                return entity.position().add(0.0D, entity.getBbHeight() + VERTICAL_OFFSET, 0.0D);
+            }
+        }
+        BlockPos blockPos = target.pos();
+        return Vec3.atCenterOf(blockPos).add(0.0D, VERTICAL_OFFSET, 0.0D);
     }
 
     private static void renderNumber(
@@ -61,7 +146,8 @@ public final class ExperienceTargetOverlayRenderer {
             Vec3 cameraPosition,
             Quaternionf cameraRotation,
             Vec3 labelPosition,
-            String number
+            String number,
+            int textColor
     ) {
         Font font = Minecraft.getInstance().font;
         float textX = -font.width(number) / 2.0F;
@@ -85,7 +171,7 @@ public final class ExperienceTargetOverlayRenderer {
                 number,
                 textX,
                 0.0F,
-                TEXT_COLOR,
+                textColor,
                 true, // font shadow
                 matrix,
                 context.consumers(),

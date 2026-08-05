@@ -121,7 +121,7 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
     }
 
     @Override
-    public boolean isTargetValid(ServerLevel serverLevel, ExperienceTarget target) {
+    protected boolean isTargetValid(ServerLevel serverLevel, ExperienceTarget target) {
         // Check child experiences.
         if (target.isChildExperience()) {
             return this.isTargetChildExperienceValid(target.childExperienceUUID());

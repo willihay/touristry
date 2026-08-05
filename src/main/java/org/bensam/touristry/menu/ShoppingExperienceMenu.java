@@ -15,6 +15,7 @@ import org.bensam.touristry.block.entity.AbstractExperienceBlockEntity;
 import org.bensam.touristry.block.entity.ShoppingExperienceBlockEntity;
 import org.bensam.touristry.network.ExperienceScreenActionC2SPayload;
 import org.bensam.touristry.network.SyncTargetViewS2CPayload;
+import org.bensam.touristry.tourism.ExperienceTargetOverlaySyncManager;
 import org.bensam.touristry.tourism.experience.TargetView;
 import org.jspecify.annotations.NonNull;
 
@@ -290,17 +291,20 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
 
                 case MOVE_TARGET -> {
                     if (shoppingExperienceBlockEntity.moveTarget(payload.primary(), payload.secondary())) {
+                        ExperienceTargetOverlaySyncManager.refreshPlayersHolding(serverLevel, shoppingExperienceBlockEntity.getUUID());
                         this.syncTargets(serverPlayer, serverLevel, shoppingExperienceBlockEntity);
                     }
                 }
 
                 case REMOVE_TARGET -> {
                     shoppingExperienceBlockEntity.removeTarget(payload.primary());
+                    ExperienceTargetOverlaySyncManager.refreshPlayersHolding(serverLevel, shoppingExperienceBlockEntity.getUUID());
                     this.syncTargets(serverPlayer, serverLevel, shoppingExperienceBlockEntity);
                 }
 
                 case REMOVE_ALL_TARGETS -> {
                     shoppingExperienceBlockEntity.removeAllTargets();
+                    ExperienceTargetOverlaySyncManager.refreshPlayersHolding(serverLevel, shoppingExperienceBlockEntity.getUUID());
                     this.syncTargets(serverPlayer, serverLevel, shoppingExperienceBlockEntity);
                 }
 

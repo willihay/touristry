@@ -50,6 +50,10 @@ public class TourismManager {
 
     private TourismManager() {}
 
+    private static boolean isOverworld(ServerLevel serverLevel) {
+        return serverLevel == serverLevel.getServer().overworld();
+    }
+
     private static void resetThresholds() {
         lastDayThreshold = -1;
         lastHourThreshold = -1;
@@ -210,11 +214,19 @@ public class TourismManager {
     }
 
     public static List<TouristExperience> getTouristExperiences(ServerLevel serverLevel) {
+        if (!isOverworld(serverLevel)) {
+            return List.of();
+        }
+
         pruneInvalidTouristExperiences(serverLevel);
         return List.copyOf(loadedExperiences.values());
     }
 
     public static List<TouristExperience> getTouristExperiencesNearBeacon(ServerLevel serverLevel, TouristBeaconBlockEntity beaconBlockEntity) {
+        if (!isOverworld(serverLevel)) {
+            return List.of();
+        }
+
         BlockPos beaconPos = beaconBlockEntity.getBlockPos();
         double radius = ModServerConfigManager.getConfig().tourismManagerConfig().getMaxExperienceDistanceToBeacon();
         double radiusSq = radius * radius;
@@ -229,6 +241,10 @@ public class TourismManager {
     }
 
     public static void pruneInvalidTouristExperiences(ServerLevel serverLevel) {
+        if (!isOverworld(serverLevel)) {
+            return;
+        }
+
         loadedExperiences.entrySet().removeIf(entry -> {
             TouristExperience experience = entry.getValue();
             BlockEntity blockEntity = serverLevel.getBlockEntity(experience.getBlockPos());
@@ -305,6 +321,9 @@ public class TourismManager {
         if (level == null || pos == null) {
             return null;
         }
+        if (level instanceof ServerLevel serverLevel && !isOverworld(serverLevel)) {
+            return null;
+        }
 
         if (level.getBlockEntity(pos) instanceof TouristBeaconBlockEntity beaconBlockEntity) {
             return beaconBlockEntity;
@@ -314,6 +333,10 @@ public class TourismManager {
     }
 
     public static List<TouristBeaconBlockEntity> getTouristBeacons(ServerLevel serverLevel) {
+        if (!isOverworld(serverLevel)) {
+            return List.of();
+        }
+
         pruneInvalidTouristBeacons(serverLevel);
         return List.copyOf(loadedTouristBeacons.values());
     }
@@ -327,6 +350,10 @@ public class TourismManager {
             BlockPos pos,
             Predicate<TouristBeaconBlockEntity> filter
     ) {
+        if (!isOverworld(serverLevel)) {
+            return List.of();
+        }
+
         pruneInvalidTouristBeacons(serverLevel);
         return loadedTouristBeacons.values().stream()
                 .filter(filter)
@@ -335,6 +362,10 @@ public class TourismManager {
     }
 
     private static void pruneInvalidTouristBeacons(ServerLevel serverLevel) {
+        if (!isOverworld(serverLevel)) {
+            return;
+        }
+
         loadedTouristBeacons.entrySet().removeIf(entry -> {
             TouristBeaconBlockEntity beaconBlockEntity = entry.getValue();
             return beaconBlockEntity.isRemoved()
@@ -393,6 +424,10 @@ public class TourismManager {
     //endregion
 
     public static void tick(ServerLevel serverLevel) {
+        if (!isOverworld(serverLevel)) {
+            return;
+        }
+
         long dayCount = serverLevel.getDayCount();
         long dayTime = serverLevel.getDayTime();
         int tickTimeOfDay = (int)(dayTime % 24000L);
@@ -569,6 +604,10 @@ public class TourismManager {
     }
 
     public static boolean trySpawnTouristForBeacon(ServerLevel serverLevel, @Nullable BlockPos requestedSpawnPoint, @NonNull TouristBeaconBlockEntity beaconBlockEntity) {
+        if (!isOverworld(serverLevel) || beaconBlockEntity.getLevel() != serverLevel) {
+            return false;
+        }
+
         TouristEntity tourist = ModEntities.TOURIST.get().create(serverLevel, EntitySpawnReason.COMMAND);
         if (tourist == null) {
             return false;
@@ -601,6 +640,11 @@ public class TourismManager {
     }
 
     public static @Nullable BlockPos getSpawnPoint(ServerLevel serverLevel, BlockPos beaconPos, Entity touristEntity) {
+        if (serverLevel != serverLevel.getServer().overworld()) {
+            // Tourists only spawn in the overworld.
+            return null;
+        }
+
         RandomSource random = serverLevel.getRandom();
         int minSpawnDistanceToBeacon = Math.max(0, ModServerConfigManager.getConfig().tourismManagerConfig().getMinSpawnDistanceToBeacon());
         int spawnDistanceRangeDelta = Math.max(0, ModServerConfigManager.getConfig().tourismManagerConfig().getMaxSpawnDistanceToBeacon() - minSpawnDistanceToBeacon);

@@ -29,14 +29,12 @@ import org.bensam.touristry.block.TouristExperienceBlock;
 import org.bensam.touristry.tourism.TourismManager;
 import org.bensam.touristry.tourism.TouristReview;
 import org.bensam.touristry.tourism.VisitResult;
-import org.bensam.touristry.tourism.experience.TargetView;
-import org.bensam.touristry.tourism.experience.TouristLocationStats;
-import org.bensam.touristry.tourism.experience.ExperienceTarget;
-import org.bensam.touristry.tourism.experience.TouristExperience;
+import org.bensam.touristry.tourism.experience.*;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import java.util.*;
+import java.util.stream.IntStream;
 
 public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEntity implements TouristExperience {
     public static final int DATA_REPUTATION = 0;
@@ -90,7 +88,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         this.setItem(this.getTargetKeySlotIndex(), this.createTargetKey());
     }
 
-    public boolean addTarget(ServerLevel serverLevel, ExperienceTarget target) {
+    protected boolean addTarget(ServerLevel serverLevel, ExperienceTarget target) {
         if (this.isTargetValid(serverLevel, target)) {
             this.targets.add(target);
             this.setChanged();
@@ -101,6 +99,10 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
 
     @Override
     public boolean addBlockTarget(ServerLevel serverLevel, BlockPos blockPos, Direction playerFacing) {
+        if (serverLevel != serverLevel.getServer().overworld()) {
+            return false;
+        }
+
         long timeAdded = serverLevel.getDayTime();
         ExperienceTarget target = new ExperienceTarget(blockPos, playerFacing, null, null, timeAdded);
         return this.addTarget(serverLevel, target);
@@ -108,6 +110,10 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
 
     @Override
     public boolean addChildExperienceTarget(ServerLevel serverLevel, BlockPos blockPos, Direction playerFacing, UUID childUUID) {
+        if (serverLevel != serverLevel.getServer().overworld()) {
+            return false;
+        }
+
         // Check if child experience already has a different parent.
         TouristExperience childExperience = TourismManager.getTouristExperienceById(childUUID);
         if (childExperience != null) {
@@ -132,6 +138,10 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
 
     @Override
     public boolean addEntityTarget(ServerLevel serverLevel, BlockPos entityPos, Direction playerFacing, UUID entityUUID) {
+        if (serverLevel != serverLevel.getServer().overworld()) {
+            return false;
+        }
+
         long timeAdded = serverLevel.getDayTime();
         ExperienceTarget target = new ExperienceTarget(entityPos, playerFacing, null, entityUUID, timeAdded);
         return this.addTarget(serverLevel, target);
@@ -216,6 +226,10 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
 
     @Override
     public List<ExperienceTarget> getTargets(ServerLevel serverLevel) {
+        if (serverLevel != serverLevel.getServer().overworld()) {
+            return Collections.emptyList();
+        }
+
         this.pruneInvalidTargets(serverLevel);
         List<ExperienceTarget> targetList = new ArrayList<>(this.targets);
         if (!this.orderedTargets) {
@@ -225,6 +239,10 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
     }
 
     public List<TargetView> getTargetViews(ServerLevel serverLevel) {
+        if (serverLevel != serverLevel.getServer().overworld()) {
+            return Collections.emptyList();
+        }
+
         this.pruneInvalidTargets(serverLevel);
         List<TargetView> targetView = new ArrayList<>();
         for (ExperienceTarget target : this.targets) {
@@ -243,9 +261,30 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
                 isWideChest = blockState.getValue(ChestBlock.TYPE) != ChestType.SINGLE;
             }
 
-            targetView.add(new TargetView(target.pos(), targetItemStack, isWideChest, target.getDisplayName(serverLevel).getString()));
+            targetView.add(new TargetView(
+                    target.pos(),
+                    target.entityUUID(),
+                    targetItemStack,
+                    isWideChest,
+                    target.getDisplayName(serverLevel).getString()));
         }
         return targetView;
+    }
+
+    @Override
+    public List<TargetOverlayView> getTargetOverlayViews(ServerLevel serverLevel) {
+        if (serverLevel != serverLevel.getServer().overworld()) {
+            return Collections.emptyList();
+        }
+
+        this.pruneInvalidTargets(serverLevel);
+        List<TargetOverlayView> targetOverlays = new ArrayList<>();
+        IntStream.range(0, this.targets.size())
+                .forEach(i -> {
+                    ExperienceTarget target = this.targets.get(i);
+                    targetOverlays.add(new TargetOverlayView(target.pos(), target.entityUUID(), i + 1));
+                });
+        return targetOverlays;
     }
 
     @Override
@@ -299,6 +338,8 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         return this.orderedTargets;
     }
 
+    protected abstract boolean isTargetValid(ServerLevel serverLevel, ExperienceTarget target);
+
     public boolean moveTarget(int fromIndex, int toIndex) {
         int lastIndex = this.targets.size() - 1;
         if (fromIndex < 0 || fromIndex > lastIndex || toIndex < 0 || toIndex > lastIndex) {
@@ -317,12 +358,16 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
 
     protected void pruneInvalidTargets() {
         if (this.level instanceof ServerLevel serverLevel) {
+            if (serverLevel != serverLevel.getServer().overworld()) {
+                return;
+            }
             this.pruneInvalidTargets(serverLevel);
         }
     }
 
     protected void pruneInvalidTargets(ServerLevel serverLevel) {
-        boolean changed = this.targets.removeIf(target -> !isTargetValid(serverLevel, target));
+        boolean changed = this.targets.removeIf(target ->
+                serverLevel.hasChunkAt(target.pos()) && !isTargetValid(serverLevel, target));
         if (changed) {
             this.setChanged();
         }

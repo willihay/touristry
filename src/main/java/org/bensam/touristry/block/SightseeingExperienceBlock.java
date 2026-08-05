@@ -53,8 +53,14 @@ public class SightseeingExperienceBlock extends TouristExperienceBlock {
 
     @Override
     protected InteractionResult useWithoutItem(BlockState blockState, Level level, BlockPos blockPos, Player player, BlockHitResult blockHitResult) {
-        if (!level.isClientSide() && level.getBlockEntity(blockPos) instanceof SightseeingExperienceBlockEntity sightseeingExperienceBlockEntity) {
-            player.openMenu(sightseeingExperienceBlockEntity);
+        if (!level.isClientSide()) {
+            if (level.dimension() != Level.OVERWORLD) {
+                player.displayClientMessage(net.minecraft.network.chat.Component.literal("Tourism blocks can only be used in the overworld"), true);
+                return InteractionResult.FAIL;
+            }
+            if (level.getBlockEntity(blockPos) instanceof SightseeingExperienceBlockEntity sightseeingExperienceBlockEntity) {
+                player.openMenu(sightseeingExperienceBlockEntity);
+            }
         }
 
         return InteractionResult.SUCCESS;
