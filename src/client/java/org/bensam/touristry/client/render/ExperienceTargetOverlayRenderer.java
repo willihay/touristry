@@ -9,9 +9,11 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.core.BlockPos;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.bensam.touristry.menu.ShoppingExperienceMenu;
 import org.bensam.touristry.tourism.experience.TargetView;
@@ -119,25 +121,37 @@ public final class ExperienceTargetOverlayRenderer {
     }
 
     private static Vec3 getLabelPosition(Minecraft minecraft, TargetView target) {
-        if (target.entityUUID() == null) {
-            Entity entity = minecraft.level.getEntity(target.entityUUID());
-            if (entity != null) {
-                return entity.position().add(0.0D, entity.getBbHeight() + VERTICAL_OFFSET, 0.0D);
-            }
-        }
-        BlockPos blockPos = target.pos();
-        return Vec3.atCenterOf(blockPos).add(0.0D, VERTICAL_OFFSET, 0.0D);
+        return getLabelPosition(minecraft, target.entityUUID(), target.pos(), target.alternateOverlayDisplayPos());
     }
 
     private static Vec3 getLabelPosition(Minecraft minecraft, TargetOverlayView target) {
-        if (target.entityUUID() != null) {
-            Entity entity = minecraft.level.getEntity(target.entityUUID());
+        return getLabelPosition(minecraft, target.entityUUID(), target.pos(), target.alternateOverlayDisplayPos());
+    }
+
+    private static Vec3 getLabelPosition(Minecraft minecraft, UUID entityUUID, BlockPos blockPos, BlockPos alternatePos) {
+        if (entityUUID != null) {
+            Entity entity = minecraft.level.getEntity(entityUUID);
             if (entity != null) {
-                return entity.position().add(0.0D, entity.getBbHeight() + VERTICAL_OFFSET, 0.0D);
+                Vec3 labelPos = entity.position().add(0.0D, entity.getBbHeight() + VERTICAL_OFFSET, 0.0D);
+                return getNonOccludingPosOrAlternate(minecraft, labelPos, alternatePos);
             }
         }
-        BlockPos blockPos = target.pos();
-        return Vec3.atCenterOf(blockPos).add(0.0D, VERTICAL_OFFSET, 0.0D);
+        Vec3 labelPos = Vec3.atCenterOf(blockPos).add(0.0D, VERTICAL_OFFSET, 0.0D);
+        return getNonOccludingPosOrAlternate(minecraft, labelPos, alternatePos);
+    }
+
+    private static Vec3 getNonOccludingPosOrAlternate(Minecraft minecraft, Vec3 labelPos, BlockPos alternatePos) {
+        if (!isOccluding(minecraft, labelPos)) {
+            return labelPos;
+        } else {
+            return Vec3.atCenterOf(alternatePos).add(0.0D, 0.5D, 0.0D);
+        }
+    }
+
+    private static boolean isOccluding(Minecraft minecraft, Vec3 pos) {
+        BlockPos blockPos = new BlockPos(Mth.floor(pos.x), Mth.floor(pos.y), Mth.floor(pos.z));
+        BlockState blockState = minecraft.level.getBlockState(blockPos);
+        return blockState.isSolidRender();
     }
 
     private static void renderNumber(

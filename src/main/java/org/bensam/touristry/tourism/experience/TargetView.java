@@ -13,6 +13,7 @@ import java.util.UUID;
 
 public record TargetView(
         BlockPos pos,
+        BlockPos alternateOverlayDisplayPos,
         @Nullable UUID entityUUID,
         ItemStack itemStack,
         boolean isWideChest,
@@ -20,11 +21,12 @@ public record TargetView(
 ) {
     public static final StreamCodec<RegistryFriendlyByteBuf, TargetView> STREAM_CODEC = StreamCodec.composite(
             BlockPos.STREAM_CODEC, TargetView::pos,
+            BlockPos.STREAM_CODEC, TargetView::alternateOverlayDisplayPos,
             ByteBufCodecs.optional(UUIDUtil.STREAM_CODEC), target -> Optional.ofNullable(target.entityUUID()),
             ItemStack.STREAM_CODEC, TargetView::itemStack,
             ByteBufCodecs.BOOL, TargetView::isWideChest,
             ByteBufCodecs.STRING_UTF8, TargetView::displayName,
-            (pos, entityUUID, itemStack, isWideChest, displayName) ->
-                    new TargetView(pos, entityUUID.orElse(null), itemStack, isWideChest, displayName)
+            (pos, alternatePos, entityUUID, itemStack, isWideChest, displayName) ->
+                    new TargetView(pos, alternatePos, entityUUID.orElse(null), itemStack, isWideChest, displayName)
     );
 }

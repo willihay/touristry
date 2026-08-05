@@ -61,8 +61,7 @@ public final class PlayerCommands {
                 .executes(ctx -> showNextSpawn(ctx.getSource())));
 
         root.then(Commands.literal("now")
-                .executes(ctx -> showTimeAndDay(ctx.getSource()))
-        );
+                .executes(ctx -> showTimeAndDay(ctx.getSource())));
     }
 
     private static void showStats(CommandSourceStack source, TouristLocationStats stats, boolean showFailedSpawns) {

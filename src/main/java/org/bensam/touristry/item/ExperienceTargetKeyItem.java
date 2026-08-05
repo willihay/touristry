@@ -193,7 +193,7 @@ public class ExperienceTargetKeyItem extends Item {
 
     private void displayLinkedToDifferentExperienceMessage(Player player, TouristExperience otherExperience) {
         player.displayClientMessage(
-                Component.literal("Unable to link - already linked to ")
+                Component.literal("Unable to link - currently linked to ")
                         .append(otherExperience.getDisplayName()),
                 true
         );

@@ -263,6 +263,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
 
             targetView.add(new TargetView(
                     target.pos(),
+                    getBlockPosInFront(target.pos(), target.playerFacing()),
                     target.entityUUID(),
                     targetItemStack,
                     isWideChest,
@@ -282,9 +283,17 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         IntStream.range(0, this.targets.size())
                 .forEach(i -> {
                     ExperienceTarget target = this.targets.get(i);
-                    targetOverlays.add(new TargetOverlayView(target.pos(), target.entityUUID(), i + 1));
+                    targetOverlays.add(new TargetOverlayView(
+                            target.pos(),
+                            getBlockPosInFront(target.pos(), target.playerFacing()),
+                            target.entityUUID(),
+                            i + 1));
                 });
         return targetOverlays;
+    }
+
+    private static BlockPos getBlockPosInFront(BlockPos blockPos, Direction playerFacing) {
+        return blockPos.relative(playerFacing.getOpposite());
     }
 
     @Override
