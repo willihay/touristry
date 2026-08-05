@@ -169,11 +169,6 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
 
                 return Optional.empty(); // destroy removed stack instead of giving it to the player
             }
-
-            @Override
-            public void onTake(Player player, ItemStack itemStack) {
-                this.setChanged();
-            }
         });
 
         // Add the player inventory slots.

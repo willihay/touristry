@@ -130,7 +130,7 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
         // Check entity targets (paintings, item frames).
         if (target.isEntity()) {
             Entity entity = serverLevel.getEntity(target.entityUUID());
-            return entity != null && this.isShoppingEntity(entity);
+            return this.isShoppingEntity(entity);
         }
 
         // Check if block still exists and is valid for shopping.

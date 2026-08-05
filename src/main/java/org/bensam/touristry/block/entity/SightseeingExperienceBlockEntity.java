@@ -177,7 +177,7 @@ public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEnt
         // Check entity targets (paintings, item frames).
         if (target.isEntity()) {
             Entity entity = serverLevel.getEntity(target.entityUUID());
-            return entity != null && this.isSightseeingEntity(entity);
+            return this.isSightseeingEntity(entity);
         }
 
         // Check if block still exists and is valid for sightseeing.

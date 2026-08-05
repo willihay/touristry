@@ -107,7 +107,7 @@ public class ExperienceTargetKeyItem extends Item {
                 Direction playerFacing = player.getDirection();
 
                 // Try to add target to experience.
-                boolean success = false;
+                boolean success;
                 if (childUUID == null) {
                     success = experience.addBlockTarget(serverLevel, blockPos, playerFacing);
                 } else {

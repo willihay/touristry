@@ -376,7 +376,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
 
     protected void pruneInvalidTargets(ServerLevel serverLevel) {
         boolean changed = this.targets.removeIf(target ->
-                serverLevel.hasChunkAt(target.pos()) && !isTargetValid(serverLevel, target));
+                serverLevel.isLoaded(target.pos()) && !isTargetValid(serverLevel, target));
         if (changed) {
             this.setChanged();
         }
@@ -549,12 +549,12 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
     @Override
     protected void loadAdditional(ValueInput valueInput) {
         super.loadAdditional(valueInput);
-        valueInput.read("UUID", UUIDUtil.CODEC).ifPresent(UUID -> { this.uuid = UUID; });
-        valueInput.read("ParentExperienceUUID", UUIDUtil.CODEC).ifPresent(UUID -> { this.parentExperienceUUID = UUID; });
+        valueInput.read("UUID", UUIDUtil.CODEC).ifPresent(UUID -> this.uuid = UUID);
+        valueInput.read("ParentExperienceUUID", UUIDUtil.CODEC).ifPresent(UUID -> this.parentExperienceUUID = UUID);
         this.setOpenForBusiness(valueInput.getBooleanOr("OpenForBusiness", false));
         this.setOrderedTargets(valueInput.getBooleanOr("OrderedTargets", true));
         this.targets = new ArrayList<>(valueInput.read("Targets", ExperienceTarget.CODEC.listOf()).orElse(List.of()));
-        valueInput.read("Statistics", TouristLocationStats.CODEC).ifPresent(statistics -> { this.statistics = statistics; });
+        valueInput.read("Statistics", TouristLocationStats.CODEC).ifPresent(statistics -> this.statistics = statistics);
         this.inventory = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
         ContainerHelper.loadAllItems(valueInput, this.inventory);
 
