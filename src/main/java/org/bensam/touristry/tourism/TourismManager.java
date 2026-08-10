@@ -18,7 +18,6 @@ import org.bensam.touristry.config.ModServerConfigManager;
 import org.bensam.touristry.config.Verbosity;
 import org.bensam.touristry.entity.TouristEntity;
 import org.bensam.touristry.tourism.experience.TouristExperience;
-import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import java.util.*;
@@ -603,9 +602,15 @@ public class TourismManager {
         serverLevel.addFreshEntity(tourist);
     }
 
-    public static boolean trySpawnTouristForBeacon(ServerLevel serverLevel, @Nullable BlockPos requestedSpawnPoint, @NonNull TouristBeaconBlockEntity beaconBlockEntity) {
-        if (!isOverworld(serverLevel) || beaconBlockEntity.getLevel() != serverLevel) {
+    public static boolean trySpawnTourist(ServerLevel serverLevel, @Nullable BlockPos requestedSpawnPoint, @Nullable TouristBeaconBlockEntity beaconBlockEntity, boolean worldOverride) {
+        if (requestedSpawnPoint == null && beaconBlockEntity == null) {
             return false;
+        }
+
+        if (!worldOverride) {
+            if (!isOverworld(serverLevel) || (beaconBlockEntity != null && beaconBlockEntity.getLevel() != serverLevel)) {
+                return false;
+            }
         }
 
         TouristEntity tourist = ModEntities.TOURIST.get().create(serverLevel, EntitySpawnReason.COMMAND);
@@ -623,16 +628,25 @@ public class TourismManager {
             return false;
         }
 
-        logActivity(Verbosity.MAJOR_EVENTS,
-                "Spawning tourist at {} for {} at {} by command",
-                spawnPoint,
-                beaconBlockEntity.getPlainTextName(),
-                beaconBlockEntity.getBlockPos()
-        );
+        if (beaconBlockEntity == null) {
+            logActivity(Verbosity.MAJOR_EVENTS,
+                    "Spawning tourist at {} by command",
+                    spawnPoint
+            );
+        } else {
+            logActivity(Verbosity.MAJOR_EVENTS,
+                    "Spawning tourist at {} for {} at {} by command",
+                    spawnPoint,
+                    beaconBlockEntity.getPlainTextName(),
+                    beaconBlockEntity.getBlockPos()
+            );
+        }
 
         tourist.snapTo(spawnPoint, serverLevel.random.nextFloat() * 360.0F, 0.0F);
         tourist.getMind().postInitialize();
-        tourist.getMind().prepareForJourney(beaconBlockEntity.getBlockPos());
+        if (beaconBlockEntity != null) {
+            tourist.getMind().prepareForJourney(beaconBlockEntity.getBlockPos());
+        }
         tourist.finalizeSpawn(serverLevel, serverLevel.getCurrentDifficultyAt(tourist.blockPosition()), EntitySpawnReason.COMMAND, null);
         tourist.setCustomName(Component.literal("Tassian Candor"));
         serverLevel.addFreshEntity(tourist);

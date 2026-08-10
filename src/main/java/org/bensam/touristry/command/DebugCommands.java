@@ -32,10 +32,13 @@ public final class DebugCommands {
                 .then(Commands.literal("tourismManager")
                         .then(Commands.literal("clearSchedule")
                                 .executes(ctx -> clearSpawnSchedule(ctx.getSource())))
-                        .then(Commands.literal("despawnAllTourists")
-                                .executes(ctx -> despawnAllTourists(ctx.getSource())))
                         .then(Commands.literal("remakeSchedule")
                                 .executes(ctx -> remakeSpawnSchedule(ctx.getSource()))))
+                .then(Commands.literal("tourist")
+                        .then(Commands.literal("despawnAll")
+                                .executes(ctx -> despawnAllTourists(ctx.getSource())))
+                        .then(Commands.literal("spawnHere")
+                                .executes(ctx -> spawnTourist(ctx.getSource()))))
         );
     }
 
@@ -87,7 +90,7 @@ public final class DebugCommands {
             return -1;
         }
 
-        if (TourismManager.trySpawnTouristForBeacon(source.getLevel(), null, beaconBlockEntity)) {
+        if (TourismManager.trySpawnTourist(source.getLevel(), null, beaconBlockEntity, false)) {
             Component message = Component.literal("Spawned tourist for ")
                     .append(beaconBlockEntity.getName().copy());
             source.sendSuccess(() -> message, false);
@@ -114,7 +117,7 @@ public final class DebugCommands {
         Vec3 horizonLookAngle = new Vec3(lookAngle.x(), 0, lookAngle.z());
         BlockPos spawnPos = BlockPos.containing(serverPlayer.position().add(horizonLookAngle.normalize().scale(2.0)));
 
-        if (TourismManager.trySpawnTouristForBeacon(source.getLevel(), spawnPos, beaconBlockEntity)) {
+        if (TourismManager.trySpawnTourist(source.getLevel(), spawnPos, beaconBlockEntity, false)) {
             Component message = Component.literal("Spawned tourist for ")
                     .append(beaconBlockEntity.getName().copy())
                     .append(Component.literal(" found @ " + beaconBlockEntity.getBlockPos().toShortString()));
@@ -132,15 +135,34 @@ public final class DebugCommands {
         return 1;
     }
 
+    private static int remakeSpawnSchedule(CommandSourceStack source) {
+        source.sendSuccess(() -> Component.literal("Resetting and recalculating today's tourist schedule..."), true);
+        TourismManager.resetSpawnSchedule();
+        return 1;
+    }
+
     private static int despawnAllTourists(CommandSourceStack source) {
         source.sendSuccess(() -> Component.literal("Instructing all tourists to despawn..."), true);
         TourismManager.setForceDespawnAll();
         return 1;
     }
 
-    private static int remakeSpawnSchedule(CommandSourceStack source) {
-        source.sendSuccess(() -> Component.literal("Resetting and recalculating today's tourist schedule..."), true);
-        TourismManager.resetSpawnSchedule();
-        return 1;
+    private static int spawnTourist(CommandSourceStack source) {
+        ServerPlayer serverPlayer = source.getPlayer();
+        if (serverPlayer == null) {
+            source.sendFailure(Component.literal("No player position available"));
+            return -1;
+        }
+
+        Vec3 lookAngle = serverPlayer.getLookAngle();
+        Vec3 horizonLookAngle = new Vec3(lookAngle.x(), 0, lookAngle.z());
+        BlockPos spawnPos = BlockPos.containing(serverPlayer.position().add(horizonLookAngle.normalize().scale(2.0)));
+
+        if (TourismManager.trySpawnTourist(source.getLevel(), spawnPos, null, true)) {
+            return 1;
+        } else {
+            source.sendFailure(Component.literal("Unable to spawn tourist"));
+            return -1;
+        }
     }
 }

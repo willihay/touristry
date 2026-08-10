@@ -4,6 +4,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
@@ -41,6 +44,8 @@ import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 public class TouristEntity extends AbstractVillager {
+    private static final EntityDataAccessor<Boolean> DATA_WAVING = SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.BOOLEAN);
+
     private final TouristMind mind;
     private boolean registeredWithTourismManager;
 
@@ -68,13 +73,35 @@ public class TouristEntity extends AbstractVillager {
     }
 
     @Override
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(DATA_WAVING, false);
+    }
+
+    public boolean isWaving() {
+        return this.entityData.get(DATA_WAVING);
+    }
+
+    protected void setWaving(boolean waving) {
+        this.entityData.set(DATA_WAVING, waving);
+    }
+
+    public void setWavingAtEntity(Entity entity, boolean wave) {
+        this.mind.setWavingAtEntity(entity, wave);
+    }
+
+    public static boolean wouldWaveAt(Entity entity) {
+        return entity instanceof Player || entity instanceof AbstractVillager;
+    }
+
+    @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(1, new MoveToTargetGoal(this)); // MOVE
         this.goalSelector.addGoal(2, new OpenDoorGoal(this, true));
         this.goalSelector.addGoal(4, new TouristRandomStrollGoal(this, 0.6)); // MOVE
-        this.goalSelector.addGoal(4, new TouristLookAtEntityGoal(this, Player.class, 12.0f, 0.02f)); // LOOK
-        this.goalSelector.addGoal(5, new TouristLookAtEntityGoal(this, AbstractVillager.class, 8.0f, 0.02f)); // LOOK
+        this.goalSelector.addGoal(4, new TouristLookAtEntityGoal(this, Player.class, 18.0f, 0.02f)); // LOOK
+        this.goalSelector.addGoal(5, new TouristLookAtEntityGoal(this, AbstractVillager.class, 20.0f, 0.02f)); // LOOK
         this.goalSelector.addGoal(6, new TouristLookAtEntityGoal(this, Animal.class, 8.0f, 0.01f)); // LOOK
         this.goalSelector.addGoal(7, new TouristRandomLookAroundGoal(this)); // LOOK
     }

@@ -8,6 +8,7 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -42,6 +43,8 @@ public final class TouristMind {
     private static final long MIN_TICKS_BEFORE_MAP_TOGGLE = 20;
     private static final int MIN_WAIT_AFTER_ARRIVAL_TICKS = 40;
     private static final int MAX_WAIT_AFTER_ARRIVAL_TICKS = 80;
+    private static final int MAX_WAVE_COUNT = 3;
+    private static final int MIN_WAVE_AT_ENTITY_INTERVAL_TICKS = 20 * 30; // 30 game seconds
     //endregion
 
     //region Fields
@@ -62,6 +65,7 @@ public final class TouristMind {
     private boolean reportedHurtEnRoute;
     private boolean reportedHurtOnPremises;
     private int waitTicks;
+    private final Map<UUID, WaveRecord> waveMemory = new HashMap<>(); // (not persisted)
 
     // Beacon-related
     private BlockPos beaconPos;
@@ -80,6 +84,8 @@ public final class TouristMind {
     private int currentTargetIndex;
     private int ticksAtCurrentTarget;
     //endregion
+
+    private record WaveRecord(int count, int lastWaveTick) {}
 
     public TouristMind(TouristEntity tourist) {
         this.tourist = tourist;
@@ -121,6 +127,8 @@ public final class TouristMind {
         this.reportedHurtEnRoute = false;
         this.reportedHurtOnPremises = false;
         this.ticksAtCurrentTarget = 0;
+        this.tourist.setUnhappyCounter(0);
+        this.waveMemory.clear();
     }
 
     /**
@@ -328,6 +336,29 @@ public final class TouristMind {
         this.consecutiveFailedProgressChecks = consecutiveFailedProgressChecks;
     }
 
+    public void setWavingAtEntity(Entity entity, boolean wave) {
+        if (!wave) {
+            this.tourist.setWaving(false);
+            TouristEntity.logActivity(Verbosity.LEVEL_1_DIAGNOSTICS, "[TouristMind] Stopped waving at {}, UUID={}",
+                    entity == null ? "no one" : entity.getDisplayName().getString(),
+                    entity == null ? "N/A" : entity.getUUID().toString());
+            return;
+        }
+
+        if (TouristEntity.wouldWaveAt(entity)) {
+            WaveRecord waveRecord = this.waveMemory.getOrDefault(entity.getUUID(), new WaveRecord(0, -1));
+            int tickTimeOfDay = (int) (entity.level().getDayTime() % 24000L);
+            if (waveRecord.count() < MAX_WAVE_COUNT &&
+                    tickTimeOfDay > (waveRecord.lastWaveTick() + MIN_WAVE_AT_ENTITY_INTERVAL_TICKS)
+            ) {
+                waveRecord = new WaveRecord(waveRecord.count() + 1, tickTimeOfDay);
+                this.waveMemory.put(entity.getUUID(), waveRecord);
+                this.tourist.setWaving(true);
+                TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[TouristMind] Waving at {}, count={}, UUID={}", entity.getDisplayName().getString(), waveRecord.count(), entity.getUUID().toString());
+            }
+        }
+    }
+
     public void updateMood(VisitResult result) {
         double positiveNormalized = Math.max(0.0, this.mood) / (MAX_MOOD + 1.0);
         double negativeNormalized = Math.max(0.0, -this.mood) / MAX_MOOD;
@@ -343,6 +374,7 @@ public final class TouristMind {
         };
 
         this.mood = Mth.clamp(this.mood + change, MIN_MOOD, MAX_MOOD);
+        this.tourist.setUnhappyCounter(this.mood < 0 ? 1 : 0);
     }
 
     public void tick(ServerLevel serverLevel) {
@@ -590,9 +622,15 @@ public final class TouristMind {
             }
 
             if (beaconBlockEntity == null) {
-                TouristEntity.logActivity(Verbosity.GAMEPLAY_WARNINGS, "[TouristMind] Cannot transition to {} - beacon not available", newState);
-                this.transitionTo(TouristState.WANDERING_WORLD); // fallback
-                return;
+                beaconBlockEntity = TourismManager.findClosestBeaconEntity(this.tourist.blockPosition());
+                if (beaconBlockEntity != null) {
+                    this.beaconPos = beaconBlockEntity.getBlockPos();
+                    TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[TouristMind] Set beacon position to {}", this.beaconPos.toShortString());
+                } else {
+                    TouristEntity.logActivity(Verbosity.GAMEPLAY_WARNINGS, "[TouristMind] Cannot transition to {} - no beacon available", newState);
+                    this.transitionTo(TouristState.WANDERING_WORLD); // fallback
+                    return;
+                }
             }
 
             beaconName = beaconBlockEntity.getDisplayName().getString();
@@ -1314,6 +1352,7 @@ public final class TouristMind {
         this.reportedHurtEnRoute = valueInput.getBooleanOr("ReportedHurtEnRoute", false);
         this.reportedHurtOnPremises = valueInput.getBooleanOr("ReportedHurtOnPremises", false);
         this.mood = valueInput.getDoubleOr("Mood", this.mood);
+        this.tourist.setUnhappyCounter(this.mood < 0 ? 1 : 0);
         this.goodExperiencesToday = valueInput.getIntOr("GoodExperiencesToday", 0);
         this.eveningDespawnTimeTicks = valueInput.getIntOr("DespawnTimeTicks", this.eveningDespawnTimeTicks);
         this.isHungry = valueInput.getBooleanOr("IsHungry", false);

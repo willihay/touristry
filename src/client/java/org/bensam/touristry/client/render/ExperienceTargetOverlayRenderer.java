@@ -9,26 +9,20 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.core.BlockPos;
-import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
+import org.bensam.touristry.ModComponents;
+import org.bensam.touristry.item.ExperienceTargetKeyItem;
 import org.bensam.touristry.menu.ShoppingExperienceMenu;
+import org.bensam.touristry.tourism.experience.TargetOverlayView;
 import org.bensam.touristry.tourism.experience.TargetView;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
-import org.bensam.touristry.ModComponents;
-import org.bensam.touristry.item.ExperienceTargetKeyItem;
-import org.bensam.touristry.tourism.experience.TargetOverlayView;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 @Environment(EnvType.CLIENT)
 public final class ExperienceTargetOverlayRenderer {
@@ -149,8 +143,7 @@ public final class ExperienceTargetOverlayRenderer {
     }
 
     private static boolean isOccluding(Minecraft minecraft, Vec3 pos) {
-        BlockPos blockPos = new BlockPos(Mth.floor(pos.x), Mth.floor(pos.y), Mth.floor(pos.z));
-        BlockState blockState = minecraft.level.getBlockState(blockPos);
+        BlockState blockState = minecraft.level.getBlockState(BlockPos.containing(pos));
         return blockState.isSolidRender();
     }
 
