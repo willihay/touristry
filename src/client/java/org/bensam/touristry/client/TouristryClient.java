@@ -1,13 +1,12 @@
 package org.bensam.touristry.client;
 
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.rendering.v1.EntityModelLayerRegistry;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.renderer.entity.EntityRenderers;
 import org.bensam.touristry.ModEntities;
 import org.bensam.touristry.ModMenus;
-import org.bensam.touristry.client.model.entity.TouristModel;
 import org.bensam.touristry.client.config.ModClientConfigManager;
+import org.bensam.touristry.client.model.ModModelLayers;
 import org.bensam.touristry.client.network.ConfigClientPackets;
 import org.bensam.touristry.client.network.ExperienceClientPackets;
 import org.bensam.touristry.client.render.ExperienceTargetOverlayRenderer;
@@ -33,18 +32,16 @@ public class TouristryClient implements ClientModInitializer {
 		ConfigClientPackets.registerClientReceivers();
 		ExperienceClientPackets.registerClientReceivers();
 
+		// Register model layers.
+		ModModelLayers.initialize();
+
 		// Register screens.
 		MenuScreens.register(ModMenus.TOURIST_BEACON_MENU.get(), TouristBeaconScreen::new);
 		MenuScreens.register(ModMenus.SHOPPING_EXPERIENCE_MENU.get(), ShoppingExperienceScreen::new);
 		MenuScreens.register(ModMenus.SIGHTSEEING_EXPERIENCE_MENU.get(), SightseeingExperienceScreen::new);
 
 		// Register renderers.
-		EntityModelLayerRegistry.registerModelLayer(TouristModel.LAYER, TouristModel::createBodyLayer);
-		EntityModelLayerRegistry.registerModelLayer(TouristModel.BABY_LAYER, TouristModel::createBabyBodyLayer);
 		EntityRenderers.register(ModEntities.TOURIST.get(), TouristRenderer::new);
 		ExperienceTargetOverlayRenderer.initialize();
-
-		// Initialize models.
-		//ModModelLayers.initialize();
 	}
 }
