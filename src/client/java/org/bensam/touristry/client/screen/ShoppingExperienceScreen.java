@@ -539,11 +539,12 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                 9, 9,
                 new WidgetSprites(CANCEL_SPRITE, CANCEL_HIGHLIGHTED_SPRITE),
                 button -> {
-                    if (this.selectedItemPriceIndex < 0 || this.selectedItemPriceIndex >= this.menu.getSyncedItemPrices().size()) {
-                        // Selected item price index is invalid.
-                        this.selectPricingIndex(-1);
-                        return;
-                    }
+                    ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
+                            this.menu.getContainerId(),
+                            ExperienceScreenAction.CLEAR_ITEM_PRICE,
+                            -1,
+                            -1
+                    ));
                     this.selectPricingIndex(-1);
                     this.isSelectedItemPriceDirty = false;
                 }
@@ -832,7 +833,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                     ItemStack defaultCost = this.menu.getSlot(ShoppingExperienceMenu.SHOPPING_DEFAULT_COST_SLOT).getItem();
 
                     // Render parentheses before and after default cost to indicate this cost is from the default cost slot.
-                    guiGraphics.drawString(this.font, "(", xItemCost - 4, yItem + 5, ARGB_SCROLLBOX_BUTTON_TEXT_COLOR);
+                    guiGraphics.drawString(this.font, "(", xItemCost - 5, yItem + 5, ARGB_SCROLLBOX_BUTTON_TEXT_COLOR);
 
                     if (defaultCost.isEmpty()) {
                         guiGraphics.blitSprite(
@@ -848,7 +849,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                     }
 
                     // Render parentheses before and after default cost to indicate this cost is from the default cost slot.
-                    guiGraphics.drawString(this.font, ")", xItemCost + 19, yItem + 5, ARGB_SCROLLBOX_BUTTON_TEXT_COLOR);
+                    guiGraphics.drawString(this.font, ")", xItemCost + 18, yItem + 5, ARGB_SCROLLBOX_BUTTON_TEXT_COLOR);
                 } else if (itemPrice.cost() == ItemStack.EMPTY) {
                     guiGraphics.blitSprite(
                             RenderPipelines.GUI_TEXTURED,

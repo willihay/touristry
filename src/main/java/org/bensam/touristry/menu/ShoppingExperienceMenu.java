@@ -82,7 +82,7 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
 
         @Override
         public boolean mayPlace(ItemStack itemStack) {
-            return this.getItem().isEmpty() || ItemStack.isSameItemSameComponents(itemStack, this.getItem());
+            return !itemStack.isEmpty();
         }
 
         @Override
@@ -92,22 +92,22 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
             }
 
             int copiedCount = Math.min(amount, itemStack.getMaxStackSize());
-            this.set(itemStack.copyWithCount(copiedCount));
+            this.set(createUndamagedCopy(itemStack, copiedCount));
             return itemStack; // unchanged - player's stack is not consumed
         }
 
         @Override
         public Optional<ItemStack> tryRemove(int amount, int maxAmount, Player player) {
-            ItemStack current = this.getItem();
-            if (current.isEmpty()) {
+            ItemStack target = this.getItem();
+            if (target.isEmpty()) {
                 return Optional.empty();
             }
 
-            int removedCount = Math.min(amount, current.getCount());
-            if (removedCount >= current.getCount()) {
+            int removedCount = Math.min(amount, target.getCount());
+            if (removedCount >= target.getCount()) {
                 this.set(ItemStack.EMPTY);
             } else {
-                this.set(current.copyWithCount(current.getCount() - removedCount));
+                this.set(target.copyWithCount(target.getCount() - removedCount));
             }
 
             return Optional.empty(); // destroy removed stack instead of giving it to the player
@@ -278,6 +278,68 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
     }
 
     @Override
+    public void clicked(int slotId, int button, ClickType clickType, Player player) {
+        if (slotId >= 0 && slotId < this.slots.size()) {
+            Slot slot = this.slots.get(slotId);
+
+            if (slot instanceof ShoppingSlot shoppingSlot) {
+                if (clickType == ClickType.PICKUP && (button == 0 || button == 1)) {
+                    this.handleShoppingPickup(shoppingSlot, button, player);
+                    return;
+                }
+
+                if (clickType == ClickType.SWAP && ((button >= 0 && button < 9) || button == 40 /* 40 = offhand slot */)) {
+                    this.handleShoppingSwap(shoppingSlot, button, player);
+                    return;
+                }
+            }
+        }
+        super.clicked(slotId, button, clickType, player);
+    }
+
+    private void handleShoppingPickup(ShoppingSlot shoppingSlot, int button, Player player) {
+        ItemStack carried = this.getCarried();
+        ItemStack target = shoppingSlot.getItem();
+
+        // Placing / replacing from cursor: clone into slot, do not consume cursor stack.
+        if (!carried.isEmpty()) {
+            if (shoppingSlot.mayPlace(carried)) {
+                int count = (button == 0) ? Math.min(carried.getCount(), shoppingSlot.getMaxStackSize(carried)) : 1;
+                shoppingSlot.setByPlayer(createUndamagedCopy(carried, count));
+                shoppingSlot.setChanged();
+            }
+            return;
+        }
+
+        // Empty cursor + click on occupied slot = delete from slot.
+        if (!target.isEmpty() && shoppingSlot.mayPickup(player)) {
+            if (button == 0 || target.getCount() <= 1) {
+                shoppingSlot.setByPlayer(ItemStack.EMPTY);
+            } else {
+                shoppingSlot.setByPlayer(target.copyWithCount(target.getCount() - 1));
+            }
+            shoppingSlot.setChanged();
+        }
+    }
+
+    private void handleShoppingSwap(ShoppingSlot shoppingSlot, int button, Player player) {
+        Inventory inventory = player.getInventory();
+        ItemStack source = inventory.getItem(button);
+        ItemStack target = shoppingSlot.getItem();
+
+        // Allow "delete from slot" if the swap source is empty.
+        if (source.isEmpty()) {
+            if (!target.isEmpty() && shoppingSlot.mayPickup(player)) {
+                shoppingSlot.setByPlayer(ItemStack.EMPTY);
+                shoppingSlot.setChanged();
+            }
+            return;
+        }
+
+        // Otherwise, block number-key / offhand placement into dummy slots.
+    }
+
+    @Override
     public boolean clickMenuButton(@NonNull Player player, int buttonId) {
         if (buttonId == BUTTON_TOGGLE_OPEN_FOR_BUSINESS) {
             if (!player.level().isClientSide()) {
@@ -302,6 +364,14 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
         }
 
         return false;
+    }
+
+    private static ItemStack createUndamagedCopy(ItemStack itemStack, int count) {
+        ItemStack copy = itemStack.copyWithCount(count);
+        if (copy.isDamageableItem()) {
+            copy.setDamageValue(0);
+        }
+        return copy;
     }
 
     public int getContainerId() {
@@ -368,6 +438,7 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
                 case IMPORT_ITEMS_FROM_TARGETS -> {
                     int numAdded = shoppingExperienceBlockEntity.importItemsFromTargets(serverLevel);
                     this.syncItemPrices(serverPlayer, shoppingExperienceBlockEntity);
+                    this.clearItemPriceSlots();
                     serverPlayer.displayClientMessage(
                             Component.literal("Imported " + numAdded + " new items from target containers"),
                             false
@@ -377,14 +448,7 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
                 case SELECT_ITEM_PRICE -> {
                     ItemPrice itemPrice = shoppingExperienceBlockEntity.getItemPrice(payload.primary());
                     if (itemPrice != null) {
-                        int newStateId = this.incrementStateId();
-
-                        this.setItem(SHOPPING_ITEM_FOR_SALE_SLOT, newStateId, itemPrice.itemForSale().copy());
-                        if (itemPrice.cost() == null) {
-                            this.setItem(SHOPPING_COST_SLOT, newStateId, this.getSlot(SHOPPING_DEFAULT_COST_SLOT).getItem().copy());
-                        } else {
-                            this.setItem(SHOPPING_COST_SLOT, newStateId, itemPrice.cost().copy());
-                        }
+                        this.setItemPriceSlots(itemPrice);
                     }
                 }
 
@@ -397,7 +461,12 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
                         );
                         shoppingExperienceBlockEntity.updateItemPrice(itemPrice);
                         this.syncItemPrices(serverPlayer, shoppingExperienceBlockEntity);
+                        this.clearItemPriceSlots();
                     }
+                }
+
+                case CLEAR_ITEM_PRICE -> {
+                    this.clearItemPriceSlots();
                 }
 
                 case REMOVE_ITEM_PRICE -> {
@@ -406,15 +475,36 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
                         ItemPrice itemPrice = shoppingExperienceBlockEntity.getItemPrices().get(index);
                         shoppingExperienceBlockEntity.removeItemPrice(itemPrice);
                         this.syncItemPrices(serverPlayer, shoppingExperienceBlockEntity);
+                        this.clearItemPriceSlots();
                     }
                 }
 
                 case REMOVE_ALL_ITEM_PRICES -> {
                     shoppingExperienceBlockEntity.removeAllItemPrices();
                     this.syncItemPrices(serverPlayer, shoppingExperienceBlockEntity);
+                    this.clearItemPriceSlots();
                 }
             }
         });
+    }
+
+    // server-side screen action helpers
+    protected void clearItemPriceSlots() {
+        int newStateId = this.incrementStateId();
+
+        this.setItem(SHOPPING_ITEM_FOR_SALE_SLOT, newStateId, ItemStack.EMPTY);
+        this.setItem(SHOPPING_COST_SLOT, newStateId, ItemStack.EMPTY);
+    }
+
+    protected void setItemPriceSlots(ItemPrice itemPrice) {
+        int newStateId = this.incrementStateId();
+
+        this.setItem(SHOPPING_ITEM_FOR_SALE_SLOT, newStateId, itemPrice.itemForSale().copy());
+        if (itemPrice.cost() == null) {
+            this.setItem(SHOPPING_COST_SLOT, newStateId, this.getSlot(SHOPPING_DEFAULT_COST_SLOT).getItem().copy());
+        } else {
+            this.setItem(SHOPPING_COST_SLOT, newStateId, itemPrice.cost().copy());
+        }
     }
 
     public boolean isDefaultCostFree() {

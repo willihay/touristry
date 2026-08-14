@@ -159,9 +159,11 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
                         while (it.hasNext()) {
                             ItemStack itemInContainer = it.next();
                             if (!itemInContainer.isEmpty()) {
-                                itemInContainer.setCount(1);
-                                // null cost means "use default price" (which is equivalent to item not being in itemPrices list).
-                                ItemPrice itemPrice = new ItemPrice(itemInContainer.copy(), null);
+                                ItemStack copyOfItem = itemInContainer.copyWithCount(1);
+                                if (copyOfItem.isDamageableItem()) {
+                                    copyOfItem.setDamageValue(0);
+                                }
+                                ItemPrice itemPrice = new ItemPrice(copyOfItem, this.defaultCost.copy());
                                 if (this.itemPrices.add(itemPrice)) {
                                     numAdded++;
                                 }
