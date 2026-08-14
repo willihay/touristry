@@ -336,7 +336,6 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                     if (button instanceof TargetOrderedButton orderedButton) {
                         boolean isOrdered = !this.menu.getSyncedOrderedTargets();
                         orderedButton.setOrdered(isOrdered);
-                        button.setFocused(false);
                         this.updateRowFocusForSelectedTarget();
 
                         ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
@@ -428,7 +427,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
 
         buttonX = this.leftPos + TARGET_REMOVE_ALL_BUTTON_X;
         buttonY = this.topPos + TARGET_REMOVE_ALL_BUTTON_Y;
-        this.targetRemoveAllButton = this.addRenderableWidget(new ImageButton(
+        this.targetRemoveAllButton = this.addRenderableWidget(new NoFocusImageButton(
                 buttonX, buttonY,
                 16, 16,
                 new WidgetSprites(SWEEP_SPRITE, SWEEP_HIGHLIGHTED_SPRITE),
@@ -492,7 +491,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
 
         buttonX = this.leftPos + PRICING_IMPORT_BUTTON_X;
         buttonY = this.topPos + PRICING_IMPORT_BUTTON_Y;
-        this.itemImportButton = this.addRenderableWidget(new ImageButton(
+        this.itemImportButton = this.addRenderableWidget(new NoFocusImageButton(
                 buttonX, buttonY,
                 32, 16,
                 new WidgetSprites(IMPORT_FROM_CONTAINER_SPRITE, IMPORT_FROM_CONTAINER_HIGHLIGHTED_SPRITE),
@@ -511,7 +510,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
 
         buttonX = this.leftPos + PRICING_ACCEPT_BUTTON_X;
         buttonY = this.topPos + PRICING_ACCEPT_BUTTON_Y;
-        this.itemPriceAcceptButton = this.addRenderableWidget(new ImageButton(
+        this.itemPriceAcceptButton = this.addRenderableWidget(new NoFocusImageButton(
                 buttonX, buttonY,
                 9, 9,
                 new WidgetSprites(ACCEPT_SPRITE, ACCEPT_HIGHLIGHTED_SPRITE),
@@ -533,7 +532,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
 
         buttonX = this.leftPos + PRICING_CANCEL_BUTTON_X;
         buttonY = this.topPos + PRICING_CANCEL_BUTTON_Y;
-        this.itemPriceCancelButton = this.addRenderableWidget(new ImageButton(
+        this.itemPriceCancelButton = this.addRenderableWidget(new NoFocusImageButton(
                 buttonX, buttonY,
                 9, 9,
                 new WidgetSprites(CANCEL_SPRITE, CANCEL_HIGHLIGHTED_SPRITE),
@@ -551,7 +550,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
 
         buttonX = this.leftPos + PRICING_REMOVE_BUTTON_X;
         buttonY = this.topPos + PRICING_REMOVE_BUTTON_Y;
-        this.itemPriceRemoveButton = this.addRenderableWidget(new ImageButton(
+        this.itemPriceRemoveButton = this.addRenderableWidget(new NoFocusImageButton(
                 buttonX, buttonY,
                 12, 12,
                 new WidgetSprites(TRASH_SPRITE, TRASH_HIGHLIGHTED_SPRITE),
@@ -580,7 +579,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
 
         buttonX = this.leftPos + PRICING_REMOVE_ALL_BUTTON_X;
         buttonY = this.topPos + PRICING_REMOVE_ALL_BUTTON_Y;
-        this.itemPriceRemoveAllButton = this.addRenderableWidget(new ImageButton(
+        this.itemPriceRemoveAllButton = this.addRenderableWidget(new NoFocusImageButton(
                 buttonX, buttonY,
                 32, 16,
                 new WidgetSprites(REMOVE_ALL_SPRITE, REMOVE_ALL_HIGHLIGHTED_SPRITE),
@@ -692,7 +691,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
             // Render trash can for remove all button.
             guiGraphics.blitSprite(
                     RenderPipelines.GUI_TEXTURED,
-                    this.itemPriceRemoveAllButton.isHoveredOrFocused() ? TRASH_HIGHLIGHTED_SPRITE : TRASH_SPRITE,
+                    this.itemPriceRemoveAllButton.isHovered() ? TRASH_HIGHLIGHTED_SPRITE : TRASH_SPRITE,
                     this.leftPos + PRICING_REMOVE_ALL_BUTTON_X + 18,
                     this.topPos + PRICING_REMOVE_ALL_BUTTON_Y,
                     12, 12

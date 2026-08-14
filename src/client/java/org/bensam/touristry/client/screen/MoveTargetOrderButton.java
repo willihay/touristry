@@ -26,17 +26,10 @@ public class MoveTargetOrderButton extends ImageButton {
     }
 
     @Override
-    public void onPress(InputWithModifiers inputWithModifiers) {
-        super.onPress(inputWithModifiers);
-        this.setFocused(false);
-    }
-
-    @Override
     public void renderContents(GuiGraphics guiGraphics, int i, int j, float f) {
-        Identifier identifier = this.sprites.get(this.isActive(), this.isHoveredOrFocused());
         guiGraphics.blitSprite(
                 RenderPipelines.GUI_TEXTURED,
-                identifier,
+                this.sprites.get(this.isActive(), this.isHovered()),
                 TEXTURE_WIDTH,
                 TEXTURE_HEIGHT,
                 this.u,

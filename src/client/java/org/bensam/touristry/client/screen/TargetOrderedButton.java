@@ -7,13 +7,22 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.components.WidgetSprites;
 import net.minecraft.client.input.InputWithModifiers;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.ARGB;
 import org.bensam.touristry.Touristry;
 
 @Environment(EnvType.CLIENT)
 public class TargetOrderedButton extends Button {
+    private static final WidgetSprites SPRITES = new WidgetSprites(
+            Identifier.withDefaultNamespace("widget/button"),
+            Identifier.withDefaultNamespace("widget/button_disabled"),
+            Identifier.withDefaultNamespace("widget/button_highlighted")
+    );
     private static final int BUTTON_WIDTH = 76;
     private static final int BUTTON_HEIGHT = 18;
     private static final Component BUTTON_LABEL_ORDERED = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.targets.ordered_button.label.ordered");
@@ -41,14 +50,16 @@ public class TargetOrderedButton extends Button {
     }
 
     @Override
-    public void onPress(InputWithModifiers inputWithModifiers) {
-        super.onPress(inputWithModifiers);
-        this.setFocused(false);
-    }
-
-    @Override
     protected void renderContents(GuiGraphics guiGraphics, int i, int j, float f) {
-        this.renderDefaultSprite(guiGraphics);
+        guiGraphics.blitSprite(
+                RenderPipelines.GUI_TEXTURED,
+                SPRITES.get(this.isActive(), this.isHovered()),
+                this.getX(),
+                this.getY(),
+                this.getWidth(),
+                this.getHeight(),
+                ARGB.white(this.alpha)
+        );
 
         Component label = this.isOrdered ? BUTTON_LABEL_ORDERED : BUTTON_LABEL_RANDOMIZED;
         int labelWidth = this.font.width(label);
