@@ -80,6 +80,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     // Common constants
     private static final int ARGB_SCREEN_TEXT_COLOR = 0xFF404040;
     private static final int ARGB_SCROLLBOX_BUTTON_TEXT_COLOR = 0xFFFFFFFF;
+    private static final int ARGB_DIRTY_MARKER_COLOR = 0xFFFF0000;
     private static final int BG_TEXTURE_WIDTH = 512;
     private static final int BG_TEXTURE_HEIGHT = 256;
     private static final int BG_SCREEN_WIDTH = 276;
@@ -244,7 +245,6 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     // Pricing screen fields
     private int defaultItemPriceLabelWidth;
     private int selectedItemPriceIndex;
-    private boolean isSelectedItemPriceDirty;
     private int pricesScrolledOff;
     private final ExperienceScrollBoxButton[] itemPriceButtons = new ExperienceScrollBoxButton[SCROLLBOX_ROWS];
     private ImageButton itemImportButton;
@@ -527,7 +527,6 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                             this.selectedItemPriceIndex,
                             -1
                     ));
-                    this.isSelectedItemPriceDirty = false;
                 }
         ));
         this.itemPriceAcceptButton.setTooltip(Tooltip.create(PRICING_ACCEPT_TOOLTIP));
@@ -546,7 +545,6 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                             -1
                     ));
                     this.selectPricingIndex(-1);
-                    this.isSelectedItemPriceDirty = false;
                 }
         ));
         this.itemPriceCancelButton.setTooltip(Tooltip.create(PRICING_CANCEL_TOOLTIP));
@@ -712,9 +710,11 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
             }
 
             // Render FREE item costs.
-            if (this.selectedItemPriceIndex >= 0 && this.selectedItemPriceIndex < this.menu.getSyncedItemPrices().size() &&
-                    ((this.menu.getSyncedItemPrices().get(this.selectedItemPriceIndex).cost() == null && this.menu.isDefaultCostFree()) ||
-                            this.menu.getSyncedItemPrices().get(this.selectedItemPriceIndex).cost() == ItemStack.EMPTY)
+            if (!this.menu.getSlot(ShoppingExperienceMenu.SHOPPING_COST_SLOT).hasItem() &&
+                    this.menu.getSlot(ShoppingExperienceMenu.SHOPPING_ITEM_FOR_SALE_SLOT).hasItem() &&
+                    !(this.selectedItemPriceIndex >= 0 && this.selectedItemPriceIndex < this.menu.getSyncedItemPrices().size() &&
+                            this.menu.getSyncedItemPrices().get(this.selectedItemPriceIndex).cost() == null &&
+                            !this.menu.isDefaultCostFree())
             ) {
                 guiGraphics.blitSprite(
                         RenderPipelines.GUI_TEXTURED,
@@ -801,6 +801,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
         int xItemForSale = this.leftPos + 10;
         int xTradeArrow = this.leftPos + 40;
         int xItemCost = this.leftPos + 63;
+        int xDirtyMarker = this.leftPos + SCROLLER_TRACK_X - 8;
 
         for (int row = 0; row < SCROLLBOX_ROWS; row++) {
             if (this.itemPriceButtons[row] == null) {
@@ -861,6 +862,11 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                 } else {
                     guiGraphics.renderFakeItem(itemPrice.cost(), xItemCost, yItem);
                     guiGraphics.renderItemDecorations(this.font, itemPrice.cost(), xItemCost, yItem);
+                }
+
+                // Render dirty marker if applicable.
+                if (itemPriceIndex == this.selectedItemPriceIndex && this.isSelectedItemPriceDirty()) {
+                    guiGraphics.drawString(this.font, "*", xDirtyMarker, yItem + 2, ARGB_DIRTY_MARKER_COLOR);
                 }
             } else {
                 this.itemPriceButtons[row].visible = false;
@@ -1096,6 +1102,34 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                 x < SCROLLER_TRACK_X + SCROLLER_WIDTH &&
                 y >= SCROLLER_TRACK_TOP_Y &&
                 y <= SCROLLER_TRACK_BOTTOM_Y;
+    }
+
+    private boolean isSelectedItemPriceDirty() {
+        ItemStack slotItemForSale = this.menu.getSlot(ShoppingExperienceMenu.SHOPPING_ITEM_FOR_SALE_SLOT).getItem();
+        ItemPrice selectedItemPrice = (this.selectedItemPriceIndex >= 0 && this.selectedItemPriceIndex < this.menu.getSyncedItemPrices().size())
+                ? this.menu.getSyncedItemPrices().get(this.selectedItemPriceIndex)
+                : null;
+
+        if (selectedItemPrice == null || !ItemStack.isSameItemSameComponents(selectedItemPrice.itemForSale(), slotItemForSale)) {
+            // No selected item or player is working on a different pricing than the selected item. Just ignore.
+            return false;
+        }
+
+        if (selectedItemPrice.itemForSale().getCount() != slotItemForSale.getCount()) {
+            // Player has changed the count of the item for sale.
+            return true;
+        }
+
+        ItemStack selectedItemCost = selectedItemPrice.cost();
+
+        if (selectedItemCost == null) {
+            // Simple case where anything in the item cost slot will be different from a null cost in the selected item price.
+            return true;
+        }
+
+        ItemStack slotItemCost = this.menu.getSlot(ShoppingExperienceMenu.SHOPPING_COST_SLOT).getItem();
+
+        return !ItemStack.isSameItemSameComponents(selectedItemCost, slotItemCost) || selectedItemCost.getCount() != slotItemCost.getCount();
     }
 
     @Override

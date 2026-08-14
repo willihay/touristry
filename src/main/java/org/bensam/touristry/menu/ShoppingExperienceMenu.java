@@ -41,10 +41,10 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
     public static final int SHOPPING_DEFAULT_COST_SLOT = ShoppingExperienceBlockEntity.DEFAULT_COST_INDEX;
     public static final int SHOPPING_DEFAULT_COST_SLOT_X = 220;
     public static final int SHOPPING_DEFAULT_COST_SLOT_Y = 19;
-    private static final int SHOPPING_ITEM_FOR_SALE_SLOT = ShoppingExperienceBlockEntity.TOTAL_INVENTORY_SIZE;
+    public static final int SHOPPING_ITEM_FOR_SALE_SLOT = ShoppingExperienceBlockEntity.TOTAL_INVENTORY_SIZE;
     private static final int SHOPPING_ITEM_FOR_SALE_SLOT_X = 162;
     private static final int SHOPPING_ITEM_FOR_SALE_SLOT_Y = 51;
-    private static final int SHOPPING_COST_SLOT = SHOPPING_ITEM_FOR_SALE_SLOT + 1;
+    public static final int SHOPPING_COST_SLOT = SHOPPING_ITEM_FOR_SALE_SLOT + 1;
     public static final int SHOPPING_COST_SLOT_X = 220;
     public static final int SHOPPING_COST_SLOT_Y = 51;
     private static final int SLOT_SIDE_LENGTH = 18;
@@ -301,17 +301,44 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
         ItemStack carried = this.getCarried();
         ItemStack target = shoppingSlot.getItem();
 
-        // Placing / replacing from cursor: clone into slot, do not consume cursor stack.
+        // Cursor has an item: place / modify without consuming cursor stack.
         if (!carried.isEmpty()) {
+            int maxStack = shoppingSlot.getMaxStackSize(carried);
+
+            // Empty target slot.
+            if (target.isEmpty()) {
+                // Left click places as many as possible to the slot, up to max stack size.
+                // Right click places one.
+                int newCount = button == 0 ? Math.min(carried.getCount(), maxStack) : 1;
+                shoppingSlot.setByPlayer(createUndamagedCopy(carried, newCount));
+                shoppingSlot.setChanged();
+                return;
+            }
+
+            // Same item on cursor as target slot.
+            if (ItemStack.isSameItemSameComponents(carried, target)) {
+                // Left click adds as many as possible to the slot, up to max stack size.
+                // Right click adds exactly 1.
+                int newCount = button == 0
+                        ? Math.min(target.getCount() + carried.getCount(), maxStack)
+                        : Math.min(target.getCount() + 1, maxStack);
+                shoppingSlot.setByPlayer(createUndamagedCopy(carried, newCount));
+                shoppingSlot.setChanged();
+                return;
+            }
+
+            // Different item on cursor.
             if (shoppingSlot.mayPlace(carried)) {
-                int count = (button == 0) ? Math.min(carried.getCount(), shoppingSlot.getMaxStackSize(carried)) : 1;
-                shoppingSlot.setByPlayer(createUndamagedCopy(carried, count));
+                // Left click replaces slot contents with as many as possible of carried item, up to max stack size.
+                // Right click replaces slot contents with exactly one of the carried item.
+                int newCount = (button == 0) ? Math.min(carried.getCount(), maxStack) : 1;
+                shoppingSlot.setByPlayer(createUndamagedCopy(carried, newCount));
                 shoppingSlot.setChanged();
             }
             return;
         }
 
-        // Empty cursor + click on occupied slot = delete from slot.
+        // Empty cursor and non-empty target slot: left click clears, right click decrements / deletes.
         if (!target.isEmpty() && shoppingSlot.mayPickup(player)) {
             if (button == 0 || target.getCount() <= 1) {
                 shoppingSlot.setByPlayer(ItemStack.EMPTY);
