@@ -22,6 +22,7 @@ import org.bensam.touristry.Touristry;
 import org.bensam.touristry.menu.ShoppingExperienceMenu;
 import org.bensam.touristry.network.ExperienceScreenActionC2SPayload;
 import org.bensam.touristry.tourism.experience.ExperienceScreenAction;
+import org.bensam.touristry.tourism.experience.ItemPrice;
 import org.bensam.touristry.tourism.experience.TargetView;
 import org.jspecify.annotations.NonNull;
 
@@ -29,6 +30,7 @@ import java.util.Arrays;
 import java.util.List;
 
 public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingExperienceMenu> {
+    //region Constants: Sprites & Textures
     // Screen textures
     private static final Identifier BG_TEXTURE_STATUS = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "textures/gui/tourist_experience_status.png");
     private static final Identifier BG_TEXTURE_TARGETS = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "textures/gui/tourist_experience_targets.png");
@@ -48,21 +50,36 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
 
     // Sprites and textures
     private static final Identifier ON_OFF_SLIDER_TEXTURE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "textures/gui/on_off_slider.png");
+    private static final Identifier OUT_OF_STOCK_TEXTURE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "textures/gui/out_of_stock.png");
     private static final Identifier WIDE_CHEST_TEXTURE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "textures/gui/wide_chest.png");
-    private static final Identifier SCROLLER_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "scroller");
-    private static final Identifier SCROLLER_DISABLED_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "scroller_disabled");
+    private static final Identifier FREE_COST_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "free_cost");
+    private static final Identifier TRADE_ARROW_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "trade_arrow");
+
+    // Button sprites
+    private static final Identifier ACCEPT_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "accept");
+    private static final Identifier ACCEPT_HIGHLIGHTED_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "accept_highlighted");
+    private static final Identifier CANCEL_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "cancel");
+    private static final Identifier CANCEL_HIGHLIGHTED_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "cancel_highlighted");
+    private static final Identifier IMPORT_FROM_CONTAINER_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "import_from_container");
+    private static final Identifier IMPORT_FROM_CONTAINER_HIGHLIGHTED_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "import_from_container_highlighted");
     private static final Identifier MOVE_UP_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "move_up");
     private static final Identifier MOVE_UP_HIGHLIGHTED_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "move_up_highlighted");
     private static final Identifier MOVE_DOWN_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "move_down");
     private static final Identifier MOVE_DOWN_HIGHLIGHTED_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "move_down_highlighted");
-    private static final Identifier REMOVE_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "trash");
-    private static final Identifier REMOVE_SPRITE_HIGHLIGHTED = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "trash_selected");
-    private static final Identifier REMOVE_ALL_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "sweep");
-    private static final Identifier REMOVE_ALL_SPRITE_HIGHLIGHTED = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "sweep_selected");
+    private static final Identifier REMOVE_ALL_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "take_out");
+    private static final Identifier REMOVE_ALL_HIGHLIGHTED_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "take_out_highlighted");
+    private static final Identifier SCROLLER_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "scroller");
+    private static final Identifier SCROLLER_DISABLED_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "scroller_disabled");
+    private static final Identifier SWEEP_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "sweep");
+    private static final Identifier SWEEP_HIGHLIGHTED_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "sweep_highlighted");
+    private static final Identifier TRASH_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "trash");
+    private static final Identifier TRASH_HIGHLIGHTED_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "trash_highlighted");
+    //endregion
 
+    //region Constants: Common
     // Common constants
-    private static final int ARGB_SCREEN_TEXT = 0xFF404040;
-    private static final int ARGB_SCROLL_BUTTON_LABEL = 0xFFFFFFFF;
+    private static final int ARGB_SCREEN_TEXT_COLOR = 0xFF404040;
+    private static final int ARGB_SCROLLBOX_BUTTON_TEXT_COLOR = 0xFFFFFFFF;
     private static final int BG_TEXTURE_WIDTH = 512;
     private static final int BG_TEXTURE_HEIGHT = 256;
     private static final int BG_SCREEN_WIDTH = 276;
@@ -82,7 +99,9 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     private static final int SCROLLER_TRACK_LENGTH = SCROLLER_TRACK_BOTTOM_Y - SCROLLBOX_TOP_Y + 1;
     private static final int SCROLLER_WIDTH = 6;
     private static final int SCROLLER_HEIGHT = 27;
+    //endregion
 
+    //region Constants: Status Tab
     // Status screen constants
     private static final Component STATUS_SCREEN_TITLE = Component.translatable("screen.touristry.tourist_block.tab.status");
     private static final Component PAYMENTS_LABEL = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.payments.label");
@@ -102,7 +121,9 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     private static final int TARGET_KEY_LABEL_Y = 39;
     private static final int ENTRY_FEE_LABEL_X = STATUS_LABEL_X;
     private static final int ENTRY_FEE_LABEL_Y = 57;
+    //endregion
 
+    //region Constants: Targets Tab
     // Targets screen constants
     private static final Component TARGETS_SCREEN_TITLE = Component.translatable("screen.touristry.tourist_block.tab.targets");
     private static final Component TARGET_ORDERED_LABEL = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.targets.ordered_button.label");
@@ -122,9 +143,30 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     private static final int TARGET_REMOVE_BUTTON_Y = TARGET_DETAILS_LABEL_Y + 8;
     private static final int TARGET_REMOVE_ALL_BUTTON_X = BG_SCREEN_WIDTH - 22;
     private static final int TARGET_REMOVE_ALL_BUTTON_Y = BG_SCREEN_HEIGHT - 22;
+    //endregion
 
+    //region Constants: Pricing Tab
     // Pricing screen constants
     private static final Component PRICING_SCREEN_TITLE = Component.translatable("screen.touristry.tourist_block.tab.pricing");
+    private static final Component PRICING_IMPORT_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.pricing.import.tooltip");
+    private static final Component PRICING_DEFAULT_LABEL = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.pricing.default.label");
+    private static final Component PRICING_REMOVE_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.pricing.remove.tooltip");
+    private static final Component PRICING_ACCEPT_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.pricing.accept.tooltip");
+    private static final Component PRICING_CANCEL_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.pricing.cancel.tooltip");
+    private static final Component PRICING_REMOVE_ALL_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.pricings.remove_all.tooltip");
+    private static final int PRICING_IMPORT_BUTTON_X = 107;
+    private static final int PRICING_IMPORT_BUTTON_Y = SCROLLBOX_TOP_Y;
+    private static final int PRICING_DEFAULT_LABEL_RIGHT_X = 211;
+    private static final int PRICING_DEFAULT_LABEL_Y = 22;
+    private static final int PRICING_ACCEPT_BUTTON_X = 242;
+    private static final int PRICING_ACCEPT_BUTTON_Y = 50;
+    private static final int PRICING_CANCEL_BUTTON_X = 242;
+    private static final int PRICING_CANCEL_BUTTON_Y = 59;
+    private static final int PRICING_REMOVE_BUTTON_X = 254;
+    private static final int PRICING_REMOVE_BUTTON_Y = 53;
+    private static final int PRICING_REMOVE_ALL_BUTTON_X = 107;
+    private static final int PRICING_REMOVE_ALL_BUTTON_Y = 51;
+    //endregion
 
     private enum TabDisplay {
         STATUS(ShoppingExperienceMenu.Tab.STATUS, BG_TEXTURE_STATUS, ModBlocks.SHOPPING_EXPERIENCE.get().asItem(), STATUS_SCREEN_TITLE, false),
@@ -200,15 +242,22 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     private ImageButton targetRemoveAllButton;
 
     // Pricing screen fields
-    private int selectedPricingIndex;
-    private int pricingScrolledOff;
-    private final ExperienceScrollBoxButton[] pricingButtons = new ExperienceScrollBoxButton[SCROLLBOX_ROWS];
+    private int defaultItemPriceLabelWidth;
+    private int selectedItemPriceIndex;
+    private boolean isSelectedItemPriceDirty;
+    private int pricesScrolledOff;
+    private final ExperienceScrollBoxButton[] itemPriceButtons = new ExperienceScrollBoxButton[SCROLLBOX_ROWS];
+    private ImageButton itemImportButton;
+    private ImageButton itemPriceRemoveButton;
+    private ImageButton itemPriceAcceptButton;
+    private ImageButton itemPriceCancelButton;
+    private ImageButton itemPriceRemoveAllButton;
 
     public ShoppingExperienceScreen(ShoppingExperienceMenu container, Inventory inventory, Component title) {
         super(container, inventory, title);
         this.imageWidth = BG_SCREEN_WIDTH;
         this.inventoryLabelX = 107;
-        this.selectedPricingIndex = -1;
+        this.selectedItemPriceIndex = -1;
         this.selectedTargetIndex = -1;
     }
 
@@ -216,9 +265,16 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     protected void init() {
         super.init();
         this.selectTab(this.selectedTab);
+        this.defaultItemPriceLabelWidth = this.font.width(PRICING_DEFAULT_LABEL);
         ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
                 this.menu.getContainerId(),
                 ExperienceScreenAction.REQUEST_TARGETS,
+                -1,
+                -1
+        ));
+        ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
+                this.menu.getContainerId(),
+                ExperienceScreenAction.REQUEST_ITEM_PRICES,
                 -1,
                 -1
         ));
@@ -346,7 +402,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
         this.targetRemoveButton = this.addRenderableWidget(new ImageButton(
                 buttonX, buttonY,
                 16, 16,
-                new WidgetSprites(REMOVE_SPRITE, REMOVE_SPRITE_HIGHLIGHTED),
+                new WidgetSprites(TRASH_SPRITE, TRASH_HIGHLIGHTED_SPRITE),
                 button -> {
                     int numTargets = this.menu.getSyncedTargets().size();
                     if (this.selectedTargetIndex < 0 || this.selectedTargetIndex >= numTargets) {
@@ -375,7 +431,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
         this.targetRemoveAllButton = this.addRenderableWidget(new ImageButton(
                 buttonX, buttonY,
                 16, 16,
-                new WidgetSprites(REMOVE_ALL_SPRITE, REMOVE_ALL_SPRITE_HIGHLIGHTED),
+                new WidgetSprites(SWEEP_SPRITE, SWEEP_HIGHLIGHTED_SPRITE),
                 button -> {
                     if (this.menu.getSyncedTargets().isEmpty()) {
                         // No targets to remove.
@@ -415,7 +471,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     }
 
     private void addPricingButtons() {
-        if (this.pricingButtons[0] != null) {
+        if (this.itemPriceButtons[0] != null) {
             // already populated
             return;
         }
@@ -424,7 +480,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
         int buttonY = this.topPos + SCROLLBOX_TOP_Y;
 
         for (int m = 0; m < SCROLLBOX_ROWS; m++) {
-            this.pricingButtons[m] = this.addRenderableWidget(new ExperienceScrollBoxButton(m, buttonX, buttonY, button -> {
+            this.itemPriceButtons[m] = this.addRenderableWidget(new ExperienceScrollBoxButton(m, buttonX, buttonY, button -> {
                 if (button instanceof ExperienceScrollBoxButton selectedButton) {
                     this.selectPricingRow(selectedButton.getIndex());
                 }
@@ -432,21 +488,139 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
             buttonY += SCROLLBOX_ROW_HEIGHT;
         }
 
-        this.updateRowFocusForSelectedPricing();
+        this.updateRowFocusForSelectedItemPrice();
+
+        buttonX = this.leftPos + PRICING_IMPORT_BUTTON_X;
+        buttonY = this.topPos + PRICING_IMPORT_BUTTON_Y;
+        this.itemImportButton = this.addRenderableWidget(new ImageButton(
+                buttonX, buttonY,
+                32, 16,
+                new WidgetSprites(IMPORT_FROM_CONTAINER_SPRITE, IMPORT_FROM_CONTAINER_HIGHLIGHTED_SPRITE),
+                button -> {
+                    ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
+                            this.menu.getContainerId(),
+                            ExperienceScreenAction.IMPORT_ITEMS_FROM_TARGETS,
+                            -1,
+                            -1
+                    ));
+                    this.pricesScrolledOff = 0;
+                    this.selectPricingIndex(-1);
+                }
+        ));
+        this.itemImportButton.setTooltip(Tooltip.create(PRICING_IMPORT_TOOLTIP));
+
+        buttonX = this.leftPos + PRICING_ACCEPT_BUTTON_X;
+        buttonY = this.topPos + PRICING_ACCEPT_BUTTON_Y;
+        this.itemPriceAcceptButton = this.addRenderableWidget(new ImageButton(
+                buttonX, buttonY,
+                9, 9,
+                new WidgetSprites(ACCEPT_SPRITE, ACCEPT_HIGHLIGHTED_SPRITE),
+                button -> {
+                    if (this.selectedItemPriceIndex < 0 || this.selectedItemPriceIndex >= this.menu.getSyncedItemPrices().size()) {
+                        // Selected item price index is invalid.
+                        this.selectPricingIndex(-1);
+                        return;
+                    }
+                    ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
+                            this.menu.getContainerId(),
+                            ExperienceScreenAction.ACCEPT_ITEM_PRICE,
+                            this.selectedItemPriceIndex,
+                            -1
+                    ));
+                    this.isSelectedItemPriceDirty = false;
+                }
+        ));
+        this.itemPriceAcceptButton.setTooltip(Tooltip.create(PRICING_ACCEPT_TOOLTIP));
+
+        buttonX = this.leftPos + PRICING_CANCEL_BUTTON_X;
+        buttonY = this.topPos + PRICING_CANCEL_BUTTON_Y;
+        this.itemPriceCancelButton = this.addRenderableWidget(new ImageButton(
+                buttonX, buttonY,
+                9, 9,
+                new WidgetSprites(CANCEL_SPRITE, CANCEL_HIGHLIGHTED_SPRITE),
+                button -> {
+                    if (this.selectedItemPriceIndex < 0 || this.selectedItemPriceIndex >= this.menu.getSyncedItemPrices().size()) {
+                        // Selected item price index is invalid.
+                        this.selectPricingIndex(-1);
+                        return;
+                    }
+                    this.selectPricingIndex(-1);
+                    this.isSelectedItemPriceDirty = false;
+                }
+        ));
+        this.itemPriceCancelButton.setTooltip(Tooltip.create(PRICING_CANCEL_TOOLTIP));
+
+        buttonX = this.leftPos + PRICING_REMOVE_BUTTON_X;
+        buttonY = this.topPos + PRICING_REMOVE_BUTTON_Y;
+        this.itemPriceRemoveButton = this.addRenderableWidget(new ImageButton(
+                buttonX, buttonY,
+                12, 12,
+                new WidgetSprites(TRASH_SPRITE, TRASH_HIGHLIGHTED_SPRITE),
+                button -> {
+                    int numPrices = this.menu.getSyncedItemPrices().size();
+                    if (this.selectedItemPriceIndex < 0 || this.selectedItemPriceIndex >= numPrices) {
+                        // Selected item price index is invalid.
+                        this.selectPricingIndex(-1);
+                        return;
+                    }
+                    ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
+                            this.menu.getContainerId(),
+                            ExperienceScreenAction.REMOVE_ITEM_PRICE,
+                            this.selectedItemPriceIndex,
+                            -1
+                    ));
+                    // Adjust scroll position as needed.
+                    numPrices--;
+                    if (numPrices - this.pricesScrolledOff < SCROLLBOX_ROWS) {
+                        this.pricesScrolledOff = Math.max(0, this.pricesScrolledOff - 1);
+                    }
+                    this.selectPricingIndex(-1);
+                }
+        ));
+        this.itemPriceRemoveButton.setTooltip(Tooltip.create(PRICING_REMOVE_TOOLTIP));
+
+        buttonX = this.leftPos + PRICING_REMOVE_ALL_BUTTON_X;
+        buttonY = this.topPos + PRICING_REMOVE_ALL_BUTTON_Y;
+        this.itemPriceRemoveAllButton = this.addRenderableWidget(new ImageButton(
+                buttonX, buttonY,
+                32, 16,
+                new WidgetSprites(REMOVE_ALL_SPRITE, REMOVE_ALL_HIGHLIGHTED_SPRITE),
+                button -> {
+                    if (this.menu.getSyncedItemPrices().isEmpty()) {
+                        // No item prices to remove.
+                        return;
+                    }
+                    ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
+                            this.menu.getContainerId(),
+                            ExperienceScreenAction.REMOVE_ALL_ITEM_PRICES,
+                            -1,
+                            -1
+                    ));
+                    this.pricesScrolledOff = 0;
+                    this.selectPricingIndex(-1);
+                }
+        ));
+        this.itemPriceRemoveAllButton.setTooltip(Tooltip.create(PRICING_REMOVE_ALL_TOOLTIP));
     }
 
     private void removePricingButtons() {
-        if (this.pricingButtons[0] == null) {
+        if (this.itemPriceButtons[0] == null) {
             // already cleared
             return;
         }
 
-        for (var button : this.pricingButtons) {
+        for (var button : this.itemPriceButtons) {
             if (button != null) {
                 this.removeWidget(button);
             }
         }
-        Arrays.fill(this.pricingButtons, null);
+        Arrays.fill(this.itemPriceButtons, null);
+
+        this.removeWidget(this.itemImportButton);
+        this.removeWidget(this.itemPriceAcceptButton);
+        this.removeWidget(this.itemPriceCancelButton);
+        this.removeWidget(this.itemPriceRemoveButton);
+        this.removeWidget(this.itemPriceRemoveAllButton);
     }
 
     @Override
@@ -496,8 +670,8 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
             guiGraphics.requestCursor(CursorTypes.POINTING_HAND);
         }
 
-        int xIcon = xTab + 13 - 8;
-        int yIcon = yTab + 17 - 8;
+        int xIcon = xTab + 5;
+        int yIcon = yTab + 9;
         guiGraphics.renderItem(tab.getIcon(), xIcon, yIcon);
     }
 
@@ -506,9 +680,192 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
         super.renderContents(guiGraphics, mouseX, mouseY, a);
 
         if (this.selectedTab == TabDisplay.TARGETS) {
-            this.renderTargetsScrollBox(guiGraphics, mouseX, mouseY);
+            this.renderTargetsScrollBoxContents(guiGraphics, mouseX, mouseY);
         } else if (this.selectedTab == TabDisplay.PRICING) {
-            this.renderPricingScrollBox(guiGraphics, mouseX, mouseY);
+            this.renderPricingScrollBoxContents(guiGraphics, mouseX, mouseY);
+
+            // Render chest item for import button.
+            guiGraphics.renderFakeItem(
+                    new ItemStack(Items.CHEST),
+                    this.leftPos + PRICING_IMPORT_BUTTON_X + 16,
+                    this.topPos + PRICING_IMPORT_BUTTON_Y);
+
+            // Render trash can for remove all button.
+            guiGraphics.blitSprite(
+                    RenderPipelines.GUI_TEXTURED,
+                    this.itemPriceRemoveAllButton.isHoveredOrFocused() ? TRASH_HIGHLIGHTED_SPRITE : TRASH_SPRITE,
+                    this.leftPos + PRICING_REMOVE_ALL_BUTTON_X + 18,
+                    this.topPos + PRICING_REMOVE_ALL_BUTTON_Y,
+                    12, 12
+            );
+
+            // Render FREE in default slot when applicable.
+            if (this.menu.isDefaultCostFree()) {
+                guiGraphics.blitSprite(
+                        RenderPipelines.GUI_TEXTURED,
+                        FREE_COST_SPRITE,
+                        this.leftPos + ShoppingExperienceMenu.SHOPPING_DEFAULT_COST_SLOT_X,
+                        this.topPos + ShoppingExperienceMenu.SHOPPING_DEFAULT_COST_SLOT_Y,
+                        16, 16
+                );
+            }
+
+            // Render FREE item costs.
+            if (this.selectedItemPriceIndex >= 0 && this.selectedItemPriceIndex < this.menu.getSyncedItemPrices().size() &&
+                    ((this.menu.getSyncedItemPrices().get(this.selectedItemPriceIndex).cost() == null && this.menu.isDefaultCostFree()) ||
+                            this.menu.getSyncedItemPrices().get(this.selectedItemPriceIndex).cost() == ItemStack.EMPTY)
+            ) {
+                guiGraphics.blitSprite(
+                        RenderPipelines.GUI_TEXTURED,
+                        FREE_COST_SPRITE,
+                        this.leftPos + ShoppingExperienceMenu.SHOPPING_COST_SLOT_X,
+                        this.topPos + ShoppingExperienceMenu.SHOPPING_COST_SLOT_Y,
+                        16, 16
+                );
+            }
+        }
+    }
+
+    protected void renderTargetsScrollBoxContents(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        if (this.targetOrderUpButton != null) {
+            this.targetOrderUpButton.visible = this.selectedTargetIndex >= 0;
+        }
+        if (this.targetOrderDownButton != null) {
+            this.targetOrderDownButton.visible = this.selectedTargetIndex >= 0;
+        }
+        if (this.targetRemoveButton != null) {
+            this.targetRemoveButton.visible = this.selectedTargetIndex >= 0;
+        }
+
+        // Render scroller in correct position or disabled.
+        List<TargetView> syncedTargets = this.menu.getSyncedTargets();
+        this.renderScroller(guiGraphics, mouseX, mouseY, syncedTargets.size(), this.targetsScrolledOff);
+
+        // Render target buttons for visible targets.
+        int yItem = this.topPos + SCROLLBOX_TOP_Y + 1;
+        int xItemStart = this.leftPos + 10;
+        int xTextStart = this.leftPos + 30;
+        int maxTextWidth = SCROLLBOX_ROW_WIDTH - 30;
+
+        for (int row = 0; row < SCROLLBOX_ROWS; row++) {
+            if (this.targetButtons[row] == null) {
+                Touristry.LOGGER.error("{}: Button in an experience screen is null", getClass().getSimpleName());
+                break;
+            }
+
+            int targetIndex = this.targetsScrolledOff + row;
+            if (targetIndex < syncedTargets.size()) {
+                this.targetButtons[row].visible = true;
+
+                TargetView target = syncedTargets.get(targetIndex);
+                if (target.isWideChest()) {
+                    guiGraphics.blit(
+                            RenderPipelines.GUI_TEXTURED,
+                            WIDE_CHEST_TEXTURE,
+                            xItemStart, yItem,
+                            0, 0,
+                            16, 16,
+                            256, 256,
+                            256, 256
+                    );
+                } else {
+                    guiGraphics.renderFakeItem(target.itemStack(), xItemStart, yItem);
+                }
+
+                guiGraphics.drawString(
+                        this.font,
+                        this.font.plainSubstrByWidth(target.displayName(), maxTextWidth),
+                        xTextStart,
+                        yItem + 5,
+                        ARGB_SCROLLBOX_BUTTON_TEXT_COLOR,
+                        true);
+            } else {
+                this.targetButtons[row].visible = false;
+            }
+
+            yItem += SCROLLBOX_ROW_HEIGHT;
+        }
+    }
+
+    protected void renderPricingScrollBoxContents(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        // Update target button focus and scrolled off amount to match item stack in "item for sale" slot, if applicable.
+        // TODO...
+
+        // Render scroller in correct position or disabled.
+        List<ItemPrice> itemPrices = this.menu.getSyncedItemPrices();
+        this.renderScroller(guiGraphics, mouseX, mouseY, itemPrices.size(), this.pricesScrolledOff);
+
+        // Render target buttons for visible targets.
+        int yItem = this.topPos + SCROLLBOX_TOP_Y + 1;
+        int xItemForSale = this.leftPos + 10;
+        int xTradeArrow = this.leftPos + 40;
+        int xItemCost = this.leftPos + 63;
+
+        for (int row = 0; row < SCROLLBOX_ROWS; row++) {
+            if (this.itemPriceButtons[row] == null) {
+                Touristry.LOGGER.error("{}: The first button in itemPriceButtons is null", getClass().getSimpleName());
+                break;
+            }
+
+            int itemPriceIndex = this.pricesScrolledOff + row;
+            if (itemPriceIndex < itemPrices.size()) {
+                this.itemPriceButtons[row].visible = true;
+
+                ItemPrice itemPrice = itemPrices.get(itemPriceIndex);
+
+                // Render item for sale.
+                guiGraphics.renderFakeItem(itemPrice.itemForSale(), xItemForSale, yItem);
+                guiGraphics.renderItemDecorations(this.font, itemPrice.itemForSale(), xItemForSale, yItem);
+
+                // Render trade arrow.
+                guiGraphics.blitSprite(
+                        RenderPipelines.GUI_TEXTURED,
+                        TRADE_ARROW_SPRITE,
+                        xTradeArrow,
+                        yItem + 3,
+                        10, 9
+                );
+
+                // Render cost to tourists.
+                if (itemPrice.cost() == null) {
+                    // Use default cost.
+                    ItemStack defaultCost = this.menu.getSlot(ShoppingExperienceMenu.SHOPPING_DEFAULT_COST_SLOT).getItem();
+
+                    // Render parentheses before and after default cost to indicate this cost is from the default cost slot.
+                    guiGraphics.drawString(this.font, "(", xItemCost - 4, yItem + 5, ARGB_SCROLLBOX_BUTTON_TEXT_COLOR);
+
+                    if (defaultCost.isEmpty()) {
+                        guiGraphics.blitSprite(
+                                RenderPipelines.GUI_TEXTURED,
+                                FREE_COST_SPRITE,
+                                xItemCost,
+                                yItem,
+                                16, 16
+                        );
+                    } else {
+                        guiGraphics.renderFakeItem(defaultCost, xItemCost, yItem);
+                        guiGraphics.renderItemDecorations(this.font, defaultCost, xItemCost, yItem);
+                    }
+
+                    // Render parentheses before and after default cost to indicate this cost is from the default cost slot.
+                    guiGraphics.drawString(this.font, ")", xItemCost + 19, yItem + 5, ARGB_SCROLLBOX_BUTTON_TEXT_COLOR);
+                } else if (itemPrice.cost() == ItemStack.EMPTY) {
+                    guiGraphics.blitSprite(
+                            RenderPipelines.GUI_TEXTURED,
+                            FREE_COST_SPRITE,
+                            xItemCost,
+                            yItem,
+                            16, 16
+                    );
+                } else {
+                    guiGraphics.renderFakeItem(itemPrice.cost(), xItemCost, yItem);
+                    guiGraphics.renderItemDecorations(this.font, itemPrice.cost(), xItemCost, yItem);
+                }
+            } else {
+                this.itemPriceButtons[row].visible = false;
+            }
+
+            yItem += SCROLLBOX_ROW_HEIGHT;
         }
     }
 
@@ -560,90 +917,29 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
 
         // Update cursor when hovering over the scroller.
         boolean mouseOverScroller =
-            mouseX >= scrollerX &&
-            mouseX < (scrollerX + SCROLLER_WIDTH) &&
-            mouseY >= scrollerY &&
-            mouseY <= (scrollerY + SCROLLER_HEIGHT);
+                mouseX >= scrollerX &&
+                        mouseX < (scrollerX + SCROLLER_WIDTH) &&
+                        mouseY >= scrollerY &&
+                        mouseY <= (scrollerY + SCROLLER_HEIGHT);
         if (mouseOverScroller) {
             guiGraphics.requestCursor(this.isScrolling ? CursorTypes.RESIZE_NS : CursorTypes.POINTING_HAND);
         }
-    }
-
-    protected void renderTargetsScrollBox(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        if (this.targetOrderUpButton != null) {
-            this.targetOrderUpButton.visible = this.selectedTargetIndex >= 0;
-        }
-        if (this.targetOrderDownButton != null) {
-            this.targetOrderDownButton.visible = this.selectedTargetIndex >= 0;
-        }
-        if (this.targetRemoveButton != null) {
-            this.targetRemoveButton.visible = this.selectedTargetIndex >= 0;
-        }
-
-        // Render scroller in correct position or disabled.
-        List<TargetView> syncedTargets = this.menu.getSyncedTargets();
-        this.renderScroller(guiGraphics, mouseX, mouseY, syncedTargets.size(), this.targetsScrolledOff);
-
-        // Render target buttons for visible targets.
-        int yRow = this.topPos + SCROLLBOX_TOP_Y;
-        int xItemStart = this.leftPos + 10;
-        int xTextStart = this.leftPos + 30;
-        int maxTextWidth = SCROLLBOX_ROW_WIDTH - 30;
-
-        for (int row = 0; row < SCROLLBOX_ROWS; row++) {
-            int targetIndex = this.targetsScrolledOff + row;
-            if (targetIndex < syncedTargets.size()) {
-                this.targetButtons[row].visible = true;
-
-                TargetView target = syncedTargets.get(targetIndex);
-                if (target.isWideChest()) {
-                    guiGraphics.blit(
-                            RenderPipelines.GUI_TEXTURED,
-                            WIDE_CHEST_TEXTURE,
-                            xItemStart, yRow + 1,
-                            0, 0,
-                            16, 16,
-                            256, 256,
-                            256, 256
-                    );
-                } else {
-                    guiGraphics.renderFakeItem(target.itemStack(), xItemStart, yRow + 1);
-                }
-
-                guiGraphics.drawString(
-                        this.font,
-                        this.font.plainSubstrByWidth(target.displayName(), maxTextWidth),
-                        xTextStart,
-                        yRow + 6,
-                        ARGB_SCROLL_BUTTON_LABEL,
-                        true);
-            } else {
-                this.targetButtons[row].visible = false;
-            }
-
-            yRow += SCROLLBOX_ROW_HEIGHT;
-        }
-    }
-
-    protected void renderPricingScrollBox(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        // Render scroller in correct position or disabled.
-        this.renderScroller(guiGraphics, mouseX, mouseY, 0, this.pricingScrolledOff);
     }
 
     @Override
     protected void renderLabels(@NonNull GuiGraphics guiGraphics, int x, int y) {
         switch (this.selectedTab) {
             case STATUS -> {
-                guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, ARGB_SCREEN_TEXT, false);
+                guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, ARGB_SCREEN_TEXT_COLOR, false);
                 this.renderStatusLabels(guiGraphics);
-                guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, ARGB_SCREEN_TEXT, false);
+                guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, ARGB_SCREEN_TEXT_COLOR, false);
             }
             case TARGETS -> {
                 this.renderTargetLabels(guiGraphics);
             }
             case PRICING -> {
                 this.renderPricingLabels(guiGraphics);
-                guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, ARGB_SCREEN_TEXT, false);
+                guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, ARGB_SCREEN_TEXT_COLOR, false);
             }
         }
     }
@@ -668,7 +964,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                 PAYMENTS_LABEL,
                 PAYMENTS_BOX_X + ((PAYMENTS_BOX_WIDTH - paymentsLabelWidth) / 2),
                 PAYMENTS_LABEL_Y,
-                ARGB_SCREEN_TEXT,
+                ARGB_SCREEN_TEXT_COLOR,
                 false
         );
 
@@ -677,7 +973,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                 TARGET_KEY_LABEL,
                 TARGET_KEY_LABEL_X,
                 TARGET_KEY_LABEL_Y,
-                ARGB_SCREEN_TEXT,
+                ARGB_SCREEN_TEXT_COLOR,
                 false
         );
 
@@ -686,7 +982,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                 ENTRY_FEE_LABEL,
                 ENTRY_FEE_LABEL_X,
                 ENTRY_FEE_LABEL_Y,
-                ARGB_SCREEN_TEXT,
+                ARGB_SCREEN_TEXT_COLOR,
                 false
         );
 
@@ -695,7 +991,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                 STATUS_LABEL,
                 STATUS_LABEL_X,
                 STATUS_LABEL_Y,
-                ARGB_SCREEN_TEXT,
+                ARGB_SCREEN_TEXT_COLOR,
                 false
         );
     }
@@ -709,7 +1005,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                 targetsTitle,
                 SCROLLBOX_ROW_X + ((SCROLLBOX_WIDTH - targetsLabelWidth) / 2),
                 SCROLLBOX_LABEL_Y,
-                ARGB_SCREEN_TEXT,
+                ARGB_SCREEN_TEXT_COLOR,
                 false
         );
 
@@ -722,7 +1018,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                     this.font.plainSubstrByWidth(targetDetails, maxDetailWidth),
                     TARGET_DETAILS_LABEL_X,
                     TARGET_DETAILS_LABEL_Y,
-                    ARGB_SCREEN_TEXT,
+                    ARGB_SCREEN_TEXT_COLOR,
                     false
             );
 
@@ -731,7 +1027,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                     "@ " + targetView.pos().toShortString(),
                     TARGET_DETAILS_LABEL_X + 20,
                     TARGET_DETAILS_LABEL_Y + 11,
-                    ARGB_SCREEN_TEXT,
+                    ARGB_SCREEN_TEXT_COLOR,
                     false
             );
         }
@@ -741,21 +1037,30 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                 TARGET_ORDERED_LABEL,
                 TARGET_ORDERED_LABEL_X,
                 TARGET_ORDERED_LABEL_Y,
-                ARGB_SCREEN_TEXT,
+                ARGB_SCREEN_TEXT_COLOR,
                 false
         );
     }
 
     protected void renderPricingLabels(@NonNull GuiGraphics guiGraphics) {
-        int numPricings = 0; // this.menu.getSyncedPricings().size();
-        Component pricingsTitle = PRICING_SCREEN_TITLE.copy().append(" (" + numPricings + ")");
+        int numItemPrices = this.menu.getSyncedItemPrices().size();
+        Component pricingsTitle = PRICING_SCREEN_TITLE.copy().append(" (" + numItemPrices + ")");
         int pricingLabelWidth = this.font.width(pricingsTitle);
         guiGraphics.drawString(
                 this.font,
                 pricingsTitle,
                 SCROLLBOX_ROW_X + ((SCROLLBOX_WIDTH - pricingLabelWidth) / 2),
                 SCROLLBOX_LABEL_Y,
-                ARGB_SCREEN_TEXT,
+                ARGB_SCREEN_TEXT_COLOR,
+                false
+        );
+
+        guiGraphics.drawString(
+                this.font,
+                PRICING_DEFAULT_LABEL,
+                PRICING_DEFAULT_LABEL_RIGHT_X - this.defaultItemPriceLabelWidth,
+                PRICING_DEFAULT_LABEL_Y,
+                ARGB_SCREEN_TEXT_COLOR,
                 false
         );
     }
@@ -845,8 +1150,8 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                 this.targetsScrolledOff = 0;
                 this.updateRowFocusForSelectedTarget();
             } else if (this.selectedTab == TabDisplay.PRICING) {
-                this.pricingScrolledOff = 0;
-                this.updateRowFocusForSelectedPricing();
+                this.pricesScrolledOff = 0;
+                this.updateRowFocusForSelectedItemPrice();
             }
             return true;
         }
@@ -864,8 +1169,8 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
             this.targetsScrolledOff = scrolledOff;
             this.updateRowFocusForSelectedTarget();
         } else if (this.selectedTab == TabDisplay.PRICING) {
-            this.pricingScrolledOff = scrolledOff;
-            this.updateRowFocusForSelectedPricing();
+            this.pricesScrolledOff = scrolledOff;
+            this.updateRowFocusForSelectedItemPrice();
         }
         return true;
     }
@@ -885,8 +1190,8 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
             } else if (this.selectedTab == TabDisplay.PRICING) {
                 int totalRows = 0;
                 int maxScrolledOff = totalRows - SCROLLBOX_ROWS;
-                this.pricingScrolledOff = Mth.clamp((int)(this.pricingScrolledOff - scrollY), 0, maxScrolledOff);
-                this.updateRowFocusForSelectedPricing();
+                this.pricesScrolledOff = Mth.clamp((int)(this.pricesScrolledOff - scrollY), 0, maxScrolledOff);
+                this.updateRowFocusForSelectedItemPrice();
             }
             return true;
         }
@@ -914,33 +1219,46 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
         }
     }
 
-    private void selectPricingRow(int selectedRow) {
-        this.selectedPricingIndex = selectedRow + this.pricingScrolledOff;
-        this.updateRowFocusForSelectedPricing();
+    private void selectPricingIndex(int selectedPricingIndex) {
+        this.selectedItemPriceIndex = selectedPricingIndex;
+        this.updateRowFocusForSelectedItemPrice();
     }
 
-    private void updateRowFocusForSelectedPricing() {
-        for (var button : this.pricingButtons) {
+    private void selectPricingRow(int selectedRow) {
+        this.selectedItemPriceIndex = selectedRow + this.pricesScrolledOff;
+        this.updateRowFocusForSelectedItemPrice();
+        if (this.selectedItemPriceIndex >= 0) {
+            ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
+                    this.menu.getContainerId(),
+                    ExperienceScreenAction.SELECT_ITEM_PRICE,
+                    this.selectedItemPriceIndex,
+                    -1
+            ));
+        }
+    }
+
+    private void updateRowFocusForSelectedItemPrice() {
+        for (var button : this.itemPriceButtons) {
             button.setFocused(false);
         }
 
-        int numPricings = 0; // this.menu.getSyncedPricings().size();
+        int numItemPrices = this.menu.getSyncedItemPrices().size();
 
-        if (this.selectedPricingIndex < 0 || this.selectedPricingIndex >= numPricings) {
-            this.selectedPricingIndex = -1;
+        if (this.selectedItemPriceIndex < 0 || this.selectedItemPriceIndex >= numItemPrices) {
+            this.selectedItemPriceIndex = -1;
             return;
         }
 
-        int visibleRows = Math.min(numPricings, SCROLLBOX_ROWS);
-        int firstVisible = this.pricingScrolledOff;
-        int lastVisible = this.pricingScrolledOff + visibleRows - 1;
+        int visibleRows = Math.min(numItemPrices, SCROLLBOX_ROWS);
+        int firstVisible = this.pricesScrolledOff;
+        int lastVisible = this.pricesScrolledOff + visibleRows - 1;
 
-        if (this.selectedPricingIndex < firstVisible || this.selectedPricingIndex > lastVisible) {
+        if (this.selectedItemPriceIndex < firstVisible || this.selectedItemPriceIndex > lastVisible) {
             return;
         }
 
-        int visibleRow = this.selectedPricingIndex - firstVisible;
-        this.pricingButtons[visibleRow].setFocused(true);
+        int visibleRow = this.selectedItemPriceIndex - firstVisible;
+        this.itemPriceButtons[visibleRow].setFocused(true);
     }
 
     private void selectTargetIndex(int selectedTargetIndex) {

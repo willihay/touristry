@@ -1,6 +1,7 @@
 package org.bensam.touristry.menu;
 
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
@@ -14,8 +15,10 @@ import org.bensam.touristry.ModMenus;
 import org.bensam.touristry.block.entity.AbstractExperienceBlockEntity;
 import org.bensam.touristry.block.entity.ShoppingExperienceBlockEntity;
 import org.bensam.touristry.network.ExperienceScreenActionC2SPayload;
+import org.bensam.touristry.network.SyncItemPricesS2CPayload;
 import org.bensam.touristry.network.SyncTargetViewS2CPayload;
 import org.bensam.touristry.tourism.ExperienceTargetOverlaySyncManager;
+import org.bensam.touristry.tourism.experience.ItemPrice;
 import org.bensam.touristry.tourism.experience.TargetView;
 import org.jspecify.annotations.NonNull;
 
@@ -26,7 +29,7 @@ import java.util.function.Predicate;
 public class ShoppingExperienceMenu extends AbstractContainerMenu implements TourismStatusMenu {
     // Slot layout
     private static final int EXPERIENCE_PAYMENT_SLOT_COUNT = ShoppingExperienceBlockEntity.PAYMENT_SLOT_SIZE;
-    private static final int EXPERIENCE_SLOT_COUNT = ShoppingExperienceBlockEntity.TOTAL_INVENTORY_SIZE;
+    private static final int EXPERIENCE_SLOT_COUNT = ShoppingExperienceBlockEntity.TOTAL_INVENTORY_SIZE + ItemPricingContainer.ITEM_PRICING_SLOTS;
     private static final int EXPERIENCE_PAYMENT_SLOT_START_X = 216;
     private static final int EXPERIENCE_PAYMENT_SLOT_START_Y = 17;
     private static final int EXPERIENCE_TARGET_KEY_SLOT = ShoppingExperienceBlockEntity.TARGET_KEY_INDEX;
@@ -35,6 +38,15 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
     private static final int EXPERIENCE_ENTRY_FEE_SLOT = ShoppingExperienceBlockEntity.ENTRY_FEE_INDEX;
     private static final int EXPERIENCE_ENTRY_FEE_SLOT_X = 180;
     private static final int EXPERIENCE_ENTRY_FEE_SLOT_Y = 53;
+    public static final int SHOPPING_DEFAULT_COST_SLOT = ShoppingExperienceBlockEntity.DEFAULT_COST_INDEX;
+    public static final int SHOPPING_DEFAULT_COST_SLOT_X = 220;
+    public static final int SHOPPING_DEFAULT_COST_SLOT_Y = 19;
+    private static final int SHOPPING_ITEM_FOR_SALE_SLOT = ShoppingExperienceBlockEntity.TOTAL_INVENTORY_SIZE;
+    private static final int SHOPPING_ITEM_FOR_SALE_SLOT_X = 162;
+    private static final int SHOPPING_ITEM_FOR_SALE_SLOT_Y = 51;
+    private static final int SHOPPING_COST_SLOT = SHOPPING_ITEM_FOR_SALE_SLOT + 1;
+    public static final int SHOPPING_COST_SLOT_X = 220;
+    public static final int SHOPPING_COST_SLOT_Y = 51;
     private static final int SLOT_SIDE_LENGTH = 18;
 
     // Player inventory layout
@@ -48,11 +60,11 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
         PRICING
     }
 
-    private class TabbedSlot extends Slot {
+    protected class TabbedSlot extends Slot {
         private final Predicate<ShoppingExperienceMenu> visibleWhen;
 
-        TabbedSlot(Container container, int slot, int x, int y, Predicate<ShoppingExperienceMenu> visibleWhen) {
-            super(container, slot, x, y);
+        TabbedSlot(Container container, int containerSlot, int x, int y, Predicate<ShoppingExperienceMenu> visibleWhen) {
+            super(container, containerSlot, x, y);
             this.visibleWhen = visibleWhen;
         }
 
@@ -62,13 +74,55 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
         }
     }
 
+    protected class ShoppingSlot extends TabbedSlot {
+
+        ShoppingSlot(Container container, int containerSlot, int x, int y, Predicate<ShoppingExperienceMenu> visibleWhen) {
+            super(container, containerSlot, x, y, visibleWhen);
+        }
+
+        @Override
+        public boolean mayPlace(ItemStack itemStack) {
+            return this.getItem().isEmpty() || ItemStack.isSameItemSameComponents(itemStack, this.getItem());
+        }
+
+        @Override
+        public ItemStack safeInsert(ItemStack itemStack, int amount) {
+            if (!this.mayPlace(itemStack)) {
+                return itemStack;
+            }
+
+            int copiedCount = Math.min(amount, itemStack.getMaxStackSize());
+            this.set(itemStack.copyWithCount(copiedCount));
+            return itemStack; // unchanged - player's stack is not consumed
+        }
+
+        @Override
+        public Optional<ItemStack> tryRemove(int amount, int maxAmount, Player player) {
+            ItemStack current = this.getItem();
+            if (current.isEmpty()) {
+                return Optional.empty();
+            }
+
+            int removedCount = Math.min(amount, current.getCount());
+            if (removedCount >= current.getCount()) {
+                this.set(ItemStack.EMPTY);
+            } else {
+                this.set(current.copyWithCount(current.getCount() - removedCount));
+            }
+
+            return Optional.empty(); // destroy removed stack instead of giving it to the player
+        }
+    }
+
+    private final ContainerLevelAccess containerLevelAccess;
     private final Container experienceInventory;
     private final ContainerData experienceContainerData;
-    private final ContainerLevelAccess containerLevelAccess;
+    private final ItemPricingContainer itemPricingContainer;
 
     private Tab selectedTab = Tab.STATUS;
 
     // Client-side snapshot fields:
+    private List<ItemPrice> syncedItemPrices = List.of();
     private boolean syncedOrderedTargets = true;
     private List<TargetView> syncedTargets = List.of();
 
@@ -91,9 +145,10 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
         this.experienceInventory = experienceInventory;
         this.experienceContainerData = data;
         this.containerLevelAccess = access;
+        this.itemPricingContainer = new ItemPricingContainer(this);
 
         // Add payment slots.
-        this.add3x3GridSlots(this.experienceInventory, EXPERIENCE_PAYMENT_SLOT_START_X, EXPERIENCE_PAYMENT_SLOT_START_Y);
+        this.add3x3GridSlots(this.experienceInventory);
 
         // Add target key slot.
         this.addSlot(new TabbedSlot(
@@ -126,93 +181,90 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
         });
 
         // Add entry fee slot.
-        this.addSlot(new TabbedSlot(
+        this.addSlot(new ShoppingSlot(
                 this.experienceInventory,
                 EXPERIENCE_ENTRY_FEE_SLOT,
                 EXPERIENCE_ENTRY_FEE_SLOT_X,
                 EXPERIENCE_ENTRY_FEE_SLOT_Y,
-                menu -> menu.isSelectedTab(Tab.STATUS)) {
-            @Override
-            public boolean mayPlace(ItemStack itemStack) {
-                return !itemStack.isEmpty();
-            }
+                menu -> menu.isSelectedTab(Tab.STATUS)
+        ));
 
+        // Add default cost slot.
+        this.addSlot(new ShoppingSlot(
+                this.experienceInventory,
+                SHOPPING_DEFAULT_COST_SLOT,
+                SHOPPING_DEFAULT_COST_SLOT_X,
+                SHOPPING_DEFAULT_COST_SLOT_Y,
+                menu -> menu.isSelectedTab(Tab.PRICING)
+        ) {
             @Override
-            public int getMaxStackSize(ItemStack itemStack) {
-                return itemStack.getMaxStackSize();
-            }
-
-            @Override
-            public ItemStack safeInsert(ItemStack itemStack, int amount) {
-                if (!this.mayPlace(itemStack)) {
-                    return itemStack;
+            public void setChanged() {
+                super.setChanged();
+                if (ShoppingExperienceMenu.this.experienceInventory instanceof ShoppingExperienceBlockEntity shoppingExperienceBlockEntity) {
+                    shoppingExperienceBlockEntity.setDefaultCost(this.getItem().copy());
                 }
-
-                int copiedCount = Math.min(amount, itemStack.getMaxStackSize());
-                this.set(itemStack.copyWithCount(copiedCount));
-                return itemStack; // unchanged - player's stack is not consumed
-            }
-
-            @Override
-            public Optional<ItemStack> tryRemove(int amount, int maxAmount, Player player) {
-                ItemStack current = this.getItem();
-                if (current.isEmpty()) {
-                    return Optional.empty();
-                }
-
-                int removedCount = Math.min(amount, current.getCount());
-                if (removedCount >= current.getCount()) {
-                    this.set(ItemStack.EMPTY);
-                } else {
-                    this.set(current.copyWithCount(current.getCount() - removedCount));
-                }
-
-                return Optional.empty(); // destroy removed stack instead of giving it to the player
             }
         });
 
+        // Add item pricing slots.
+        this.addSlot(new ShoppingSlot(
+                this.itemPricingContainer,
+                0,
+                SHOPPING_ITEM_FOR_SALE_SLOT_X,
+                SHOPPING_ITEM_FOR_SALE_SLOT_Y,
+                menu -> menu.isSelectedTab(Tab.PRICING)
+        ));
+
+        this.addSlot(new ShoppingSlot(
+                this.itemPricingContainer,
+                1,
+                SHOPPING_COST_SLOT_X,
+                SHOPPING_COST_SLOT_Y,
+                menu -> menu.isSelectedTab(Tab.PRICING)
+        ));
+
         // Add the player inventory slots.
-        this.addPlayerInventorySlots(playerInventory, PLAYER_INVENTORY_ROW_X, PLAYER_INVENTORY_ROW_Y);
+        this.addPlayerInventorySlots(playerInventory);
 
         // Add data slots for data sync.
         this.addDataSlots(this.experienceContainerData);
     }
 
-    protected void add3x3GridSlots(Container container, int firstSlotX, int firstSlotY) {
+    protected void add3x3GridSlots(Container container) {
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 3; col++) {
                 int slotIndex = col + row * 3;
                 this.addSlot(new TabbedSlot(
                         container,
                         slotIndex,
-                        firstSlotX + col * SLOT_SIDE_LENGTH,
-                        firstSlotY + row * SLOT_SIDE_LENGTH,
+                        EXPERIENCE_PAYMENT_SLOT_START_X + col * SLOT_SIDE_LENGTH,
+                        EXPERIENCE_PAYMENT_SLOT_START_Y + row * SLOT_SIDE_LENGTH,
                         menu -> menu.isSelectedTab(Tab.STATUS)));
             }
         }
     }
 
-    protected void addPlayerInventorySlots(Container container, int i, int j) {
-        // Add standard 3-row inventory.
-        for (int k = 0; k < 3; k++) {
-            for (int l = 0; l < 9; l++) {
+    protected void addPlayerInventorySlots(Container container) {
+        // Add standard 9-col, 3-row inventory.
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 9; col++) {
                 this.addSlot(new TabbedSlot(
                         container,
-                        l + (k + 1) * 9,
-                        i + l * 18,
-                        j + k * 18,
+                        col + (row + 1) * 9,
+                        PLAYER_INVENTORY_ROW_X + col * SLOT_SIDE_LENGTH,
+                        PLAYER_INVENTORY_ROW_Y + row * SLOT_SIDE_LENGTH,
                         menu -> menu.isSelectedTab(Tab.STATUS) || menu.isSelectedTab(Tab.PRICING)));
             }
         }
 
-        // Add hotbar inventory.
-        int n = j + 58;
-        for (int m = 0; m < 9; m++) {
+        // Add standard 9-col, 1-row hotbar inventory.
+        int rowY = ShoppingExperienceMenu.PLAYER_INVENTORY_ROW_Y + 58;
+        for (int col = 0; col < 9; col++) {
             this.addSlot(new TabbedSlot(
                     container,
-                    m,
-                    i + m * 18,
-                    n,
+                    col,
+                    ShoppingExperienceMenu.PLAYER_INVENTORY_ROW_X + col * SLOT_SIDE_LENGTH,
+                    rowY,
                     menu -> menu.isSelectedTab(Tab.STATUS) || menu.isSelectedTab(Tab.PRICING)));
         }
     }
@@ -260,12 +312,15 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
         return (double) this.experienceContainerData.get(ShoppingExperienceBlockEntity.DATA_REPUTATION) / 100;
     }
 
-    // client-side getter
+    // client-side getters
+    public List<ItemPrice> getSyncedItemPrices() {
+        return this.syncedItemPrices;
+    }
+
     public boolean getSyncedOrderedTargets() {
         return this.syncedOrderedTargets;
     }
 
-    // client-side getter
     public List<TargetView> getSyncedTargets() {
         return this.syncedTargets;
     }
@@ -307,8 +362,63 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
                     shoppingExperienceBlockEntity.setOrderedTargets(payload.primary() != 0);
                     this.syncTargets(serverPlayer, serverLevel, shoppingExperienceBlockEntity);
                 }
+
+                case REQUEST_ITEM_PRICES -> this.syncItemPrices(serverPlayer, shoppingExperienceBlockEntity);
+
+                case IMPORT_ITEMS_FROM_TARGETS -> {
+                    int numAdded = shoppingExperienceBlockEntity.importItemsFromTargets(serverLevel);
+                    this.syncItemPrices(serverPlayer, shoppingExperienceBlockEntity);
+                    serverPlayer.displayClientMessage(
+                            Component.literal("Imported " + numAdded + " new items from target containers"),
+                            false
+                    );
+                }
+
+                case SELECT_ITEM_PRICE -> {
+                    ItemPrice itemPrice = shoppingExperienceBlockEntity.getItemPrice(payload.primary());
+                    if (itemPrice != null) {
+                        int newStateId = this.incrementStateId();
+
+                        this.setItem(SHOPPING_ITEM_FOR_SALE_SLOT, newStateId, itemPrice.itemForSale().copy());
+                        if (itemPrice.cost() == null) {
+                            this.setItem(SHOPPING_COST_SLOT, newStateId, this.getSlot(SHOPPING_DEFAULT_COST_SLOT).getItem().copy());
+                        } else {
+                            this.setItem(SHOPPING_COST_SLOT, newStateId, itemPrice.cost().copy());
+                        }
+                    }
+                }
+
+                case ACCEPT_ITEM_PRICE -> {
+                    if (this.getSlot(SHOPPING_ITEM_FOR_SALE_SLOT).hasItem()) {
+                        ItemStack itemForSale = this.getSlot(SHOPPING_ITEM_FOR_SALE_SLOT).getItem();
+                        ItemPrice itemPrice = new ItemPrice(
+                                itemForSale.copy(),
+                                this.getSlot(SHOPPING_COST_SLOT).getItem().copy()
+                        );
+                        shoppingExperienceBlockEntity.updateItemPrice(itemPrice);
+                        this.syncItemPrices(serverPlayer, shoppingExperienceBlockEntity);
+                    }
+                }
+
+                case REMOVE_ITEM_PRICE -> {
+                    int index = payload.primary();
+                    if (index >= 0 && index < shoppingExperienceBlockEntity.getItemPrices().size()) {
+                        ItemPrice itemPrice = shoppingExperienceBlockEntity.getItemPrices().get(index);
+                        shoppingExperienceBlockEntity.removeItemPrice(itemPrice);
+                        this.syncItemPrices(serverPlayer, shoppingExperienceBlockEntity);
+                    }
+                }
+
+                case REMOVE_ALL_ITEM_PRICES -> {
+                    shoppingExperienceBlockEntity.removeAllItemPrices();
+                    this.syncItemPrices(serverPlayer, shoppingExperienceBlockEntity);
+                }
             }
         });
+    }
+
+    public boolean isDefaultCostFree() {
+        return !this.getSlot(SHOPPING_DEFAULT_COST_SLOT).hasItem();
     }
 
     public boolean isOpenForBusiness() {
@@ -323,13 +433,27 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
         this.selectedTab = selectedTab;
     }
 
-    // client-side setter
+    // client-side setters
+    public void setSyncedItemPrices(List<ItemPrice> itemPrices) {
+        this.syncedItemPrices = itemPrices;
+    }
+
     public void setSyncedTargets(boolean orderedTargets, List<TargetView> targets) {
         this.syncedOrderedTargets = orderedTargets;
         this.syncedTargets = List.copyOf(targets);
     }
 
-    // server-side sync initiator
+    // server-side sync initiators
+    public void syncItemPrices(ServerPlayer serverPlayer, ShoppingExperienceBlockEntity shoppingExperienceBlockEntity) {
+        ServerPlayNetworking.send(
+                serverPlayer,
+                new SyncItemPricesS2CPayload(
+                        this.containerId,
+                        shoppingExperienceBlockEntity.getItemPrices()
+                )
+        );
+    }
+
     public void syncTargets(ServerPlayer serverPlayer, ServerLevel serverLevel, AbstractExperienceBlockEntity experienceBlockEntity) {
         ServerPlayNetworking.send(
                 serverPlayer,
@@ -384,7 +508,11 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
             return ItemStack.EMPTY;
         }
 
-        if (slotIndex == EXPERIENCE_ENTRY_FEE_SLOT) {
+        if (slotIndex == EXPERIENCE_ENTRY_FEE_SLOT ||
+                slotIndex == SHOPPING_DEFAULT_COST_SLOT ||
+                slotIndex == SHOPPING_ITEM_FOR_SALE_SLOT ||
+                slotIndex == SHOPPING_COST_SLOT
+        ) {
             slot.setByPlayer(ItemStack.EMPTY);
             slot.setChanged();
             return ItemStack.EMPTY;
@@ -396,10 +524,16 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
                 return ItemStack.EMPTY;
             }
         }
-        // Player inventory -> payment slots only
+        // Player inventory -> experience slot
         else {
-            if (!this.moveItemStackTo(sourceStack, 0, EXPERIENCE_PAYMENT_SLOT_COUNT, false)) {
-                return ItemStack.EMPTY;
+            if (this.selectedTab == Tab.STATUS) {
+                if (!this.moveItemStackTo(sourceStack, 0, EXPERIENCE_PAYMENT_SLOT_COUNT, false)) {
+                    return ItemStack.EMPTY;
+                }
+            } else if (this.selectedTab == Tab.PRICING) {
+                if (!this.moveItemStackTo(sourceStack, SHOPPING_ITEM_FOR_SALE_SLOT, SHOPPING_ITEM_FOR_SALE_SLOT, false)) {
+                    return ItemStack.EMPTY;
+                }
             }
         }
 

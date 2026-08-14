@@ -7,10 +7,13 @@ import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.ItemStack;
 import org.bensam.touristry.tourism.experience.ExperienceTarget;
+import org.bensam.touristry.tourism.experience.ItemPrice;
 import org.bensam.touristry.tourism.experience.TouristLocationStats;
 
 import java.util.List;
+import java.util.TreeSet;
 import java.util.UUID;
 
 public final class ModComponents {
@@ -94,6 +97,22 @@ public final class ModComponents {
             DataComponentType.<List<ExperienceTarget>>builder()
                     .persistent(ExperienceTarget.CODEC.listOf())
                     .networkSynchronized(ExperienceTarget.STREAM_CODEC.apply(ByteBufCodecs.list()))
+                    .build()
+    );
+
+    public static final DataComponentType<ItemStack> SHOPPING_EXPERIENCE_DEFAULT_COST = Registry.register(
+            BuiltInRegistries.DATA_COMPONENT_TYPE,
+            Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "shopping_experience_default_cost"),
+            DataComponentType.<ItemStack>builder()
+                    .persistent(ItemStack.OPTIONAL_CODEC)
+                    .build()
+    );
+
+    public static final DataComponentType<TreeSet<ItemPrice>> SHOPPING_EXPERIENCE_ITEM_PRICES = Registry.register(
+            BuiltInRegistries.DATA_COMPONENT_TYPE,
+            Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "shopping_experience_item_prices"),
+            DataComponentType.<TreeSet<ItemPrice>>builder()
+                    .persistent(ItemPrice.TREESET_CODEC)
                     .build()
     );
 

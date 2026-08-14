@@ -13,5 +13,6 @@ public class ModNetworks {
         PayloadTypeRegistry.playC2S().register(ExperienceScreenActionC2SPayload.TYPE, ExperienceScreenActionC2SPayload.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(SyncTargetViewS2CPayload.TYPE, SyncTargetViewS2CPayload.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(SyncTargetOverlayViewS2CPayload.TYPE, SyncTargetOverlayViewS2CPayload.STREAM_CODEC);
+        PayloadTypeRegistry.playS2C().register(SyncItemPricesS2CPayload.TYPE, SyncItemPricesS2CPayload.STREAM_CODEC);
     }
 }

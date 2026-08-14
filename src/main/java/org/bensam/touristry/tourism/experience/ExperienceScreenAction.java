@@ -10,7 +10,13 @@ public enum ExperienceScreenAction {
     MOVE_TARGET,
     REMOVE_TARGET,
     REMOVE_ALL_TARGETS,
-    SET_ORDERED_TARGETS;
+    SET_ORDERED_TARGETS,
+    REQUEST_ITEM_PRICES,
+    IMPORT_ITEMS_FROM_TARGETS,
+    SELECT_ITEM_PRICE,
+    ACCEPT_ITEM_PRICE,
+    REMOVE_ITEM_PRICE,
+    REMOVE_ALL_ITEM_PRICES;
 
     public static final StreamCodec<RegistryFriendlyByteBuf, ExperienceScreenAction> STREAM_CODEC =
             adapt(ByteBufCodecs.VAR_INT.map(

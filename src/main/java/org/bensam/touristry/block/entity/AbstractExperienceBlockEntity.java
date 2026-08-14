@@ -549,6 +549,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
     @Override
     protected void loadAdditional(ValueInput valueInput) {
         super.loadAdditional(valueInput);
+
         valueInput.read("UUID", UUIDUtil.CODEC).ifPresent(UUID -> this.uuid = UUID);
         valueInput.read("ParentExperienceUUID", UUIDUtil.CODEC).ifPresent(UUID -> this.parentExperienceUUID = UUID);
         this.setOpenForBusiness(valueInput.getBooleanOr("OpenForBusiness", false));
@@ -566,6 +567,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
     @Override
     protected void saveAdditional(ValueOutput valueOutput) {
         super.saveAdditional(valueOutput);
+
         valueOutput.store("UUID", UUIDUtil.CODEC, this.getUUID());
         if (this.parentExperienceUUID != null) {
             valueOutput.store("ParentExperienceUUID", UUIDUtil.CODEC, this.parentExperienceUUID);

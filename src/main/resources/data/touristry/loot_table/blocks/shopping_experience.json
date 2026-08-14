@@ -19,7 +19,9 @@
                 "touristry:tourist_experience_parent_uuid",
                 "touristry:tourist_experience_statistics",
                 "touristry:tourist_experience_status",
-                "touristry:tourist_experience_targets"
+                "touristry:tourist_experience_targets",
+                "touristry:shopping_experience_default_cost",
+                "touristry:shopping_experience_item_prices"
               ]
             },
             {
