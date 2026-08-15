@@ -15,7 +15,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.item.*;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import org.bensam.touristry.ModBlocks;
 import org.bensam.touristry.ModItems;
 import org.bensam.touristry.Touristry;
@@ -244,8 +246,10 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
 
     // Pricing screen fields
     private int defaultItemPriceLabelWidth;
+    private ItemStack focusItemForSale = ItemStack.EMPTY;
     private int selectedItemPriceIndex;
     private int pricesScrolledOff;
+    private int lastItemPricesRevision;
     private final ExperienceScrollBoxButton[] itemPriceButtons = new ExperienceScrollBoxButton[SCROLLBOX_ROWS];
     private ImageButton itemImportButton;
     private ImageButton itemPriceRemoveButton;
@@ -266,6 +270,8 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
         super.init();
         this.selectTab(this.selectedTab);
         this.defaultItemPriceLabelWidth = this.font.width(PRICING_DEFAULT_LABEL);
+
+        // Request sync-to-client of all experience targets and item prices.
         ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
                 this.menu.getContainerId(),
                 ExperienceScreenAction.REQUEST_TARGETS,
@@ -278,6 +284,27 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                 -1,
                 -1
         ));
+    }
+
+    @Override
+    protected void containerTick() {
+        super.containerTick();
+
+        if (this.menu.getSyncedItemPricesRevision() != this.lastItemPricesRevision) {
+            this.lastItemPricesRevision = this.menu.getSyncedItemPricesRevision();
+
+            ItemStack itemForSale = this.menu.getSlot(ShoppingExperienceMenu.SHOPPING_ITEM_FOR_SALE_SLOT).getItem();
+            boolean changedItem = !ItemStack.isSameItemSameComponents(itemForSale, this.focusItemForSale);
+            if (changedItem) {
+                if (itemForSale.isEmpty()) {
+                    this.focusItemForSale = ItemStack.EMPTY;
+                    this.selectPricingIndex(-1);
+                } else {
+                    this.focusItemForSale = itemForSale.copy();
+                    this.focusOnItemForSale(this.focusItemForSale);
+                }
+            }
+        }
     }
 
     private void removeAllButtons() {
@@ -381,7 +408,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                 u, v,
                 new WidgetSprites(MOVE_DOWN_SPRITE, MOVE_DOWN_HIGHLIGHTED_SPRITE),
                 button -> {
-                    if (this.selectedTargetIndex < 0 || this.selectedTargetIndex >= this.menu.getSyncedTargets().size() - 1) {
+                    if (this.selectedTargetIndex < 0 || this.selectedTargetIndex >= (this.menu.getSyncedTargets().size() - 1)) {
                         // Selected target index is invalid or is already at the bottom of the list.
                         return;
                     }
@@ -403,10 +430,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                 16, 16,
                 new WidgetSprites(TRASH_SPRITE, TRASH_HIGHLIGHTED_SPRITE),
                 button -> {
-                    int numTargets = this.menu.getSyncedTargets().size();
-                    if (this.selectedTargetIndex < 0 || this.selectedTargetIndex >= numTargets) {
-                        // Selected target index is invalid.
-                        this.selectTargetIndex(-1);
+                    if (!this.isTargetSelected()) {
                         return;
                     }
                     ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
@@ -416,8 +440,8 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                             -1
                     ));
                     // Adjust scroll position as needed.
-                    numTargets--;
-                    if (numTargets - this.targetsScrolledOff < SCROLLBOX_ROWS) {
+                    int numTargets = this.menu.getSyncedTargets().size() - 1;
+                    if ((numTargets - this.targetsScrolledOff) < SCROLLBOX_ROWS) {
                         this.targetsScrolledOff = Math.max(0, this.targetsScrolledOff - 1);
                     }
                     this.selectTargetIndex(-1);
@@ -515,15 +539,10 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                 9, 9,
                 new WidgetSprites(ACCEPT_SPRITE, ACCEPT_HIGHLIGHTED_SPRITE),
                 button -> {
-                    if (this.selectedItemPriceIndex < 0 || this.selectedItemPriceIndex >= this.menu.getSyncedItemPrices().size()) {
-                        // Selected item price index is invalid.
-                        this.selectPricingIndex(-1);
-                        return;
-                    }
                     ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
                             this.menu.getContainerId(),
                             ExperienceScreenAction.ACCEPT_ITEM_PRICE,
-                            this.selectedItemPriceIndex,
+                            -1,
                             -1
                     ));
                 }
@@ -555,10 +574,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                 12, 12,
                 new WidgetSprites(TRASH_SPRITE, TRASH_HIGHLIGHTED_SPRITE),
                 button -> {
-                    int numPrices = this.menu.getSyncedItemPrices().size();
-                    if (this.selectedItemPriceIndex < 0 || this.selectedItemPriceIndex >= numPrices) {
-                        // Selected item price index is invalid.
-                        this.selectPricingIndex(-1);
+                    if (!this.isItemPriceSelected()) {
                         return;
                     }
                     ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
@@ -568,8 +584,8 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                             -1
                     ));
                     // Adjust scroll position as needed.
-                    numPrices--;
-                    if (numPrices - this.pricesScrolledOff < SCROLLBOX_ROWS) {
+                    int numPrices = this.menu.getSyncedItemPrices().size() - 1;
+                    if ((numPrices - this.pricesScrolledOff) < SCROLLBOX_ROWS) {
                         this.pricesScrolledOff = Math.max(0, this.pricesScrolledOff - 1);
                     }
                     this.selectPricingIndex(-1);
@@ -711,9 +727,9 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
             // Render FREE item costs.
             if (!this.menu.getSlot(ShoppingExperienceMenu.SHOPPING_COST_SLOT).hasItem() &&
                     this.menu.getSlot(ShoppingExperienceMenu.SHOPPING_ITEM_FOR_SALE_SLOT).hasItem() &&
-                    !(this.selectedItemPriceIndex >= 0 && this.selectedItemPriceIndex < this.menu.getSyncedItemPrices().size() &&
+                    !(this.isItemPriceSelected() &&
                             this.menu.getSyncedItemPrices().get(this.selectedItemPriceIndex).cost() == null &&
-                            !this.menu.isDefaultCostFree())
+                            !this.menu.isDefaultCostFree()) // special case where we don't draw FREE when selected item price is null (meaning: use default cost) and default cost is not free
             ) {
                 guiGraphics.blitSprite(
                         RenderPipelines.GUI_TEXTURED,
@@ -788,9 +804,6 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     }
 
     protected void renderPricingScrollBoxContents(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        // Update target button focus and scrolled off amount to match item stack in "item for sale" slot, if applicable.
-        // TODO...
-
         // Render scroller in correct position or disabled.
         List<ItemPrice> itemPrices = this.menu.getSyncedItemPrices();
         this.renderScroller(guiGraphics, mouseX, mouseY, itemPrices.size(), this.pricesScrolledOff);
@@ -1015,7 +1028,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                 false
         );
 
-        if (this.selectedTargetIndex >= 0 && this.selectedTargetIndex < numTargets) {
+        if (this.isTargetSelected()) {
             TargetView targetView = this.menu.getSyncedTargets().get(this.selectedTargetIndex);
             String targetDetails = (this.selectedTargetIndex + 1) + ") " + targetView.displayName();
             int maxDetailWidth = this.imageWidth - TARGET_DETAILS_LABEL_X - 5;
@@ -1075,7 +1088,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
         return switch (this.selectedTab) {
             case STATUS -> false;
             case TARGETS -> this.menu.getSyncedTargets().size() > SCROLLBOX_ROWS;
-            case PRICING -> false;
+            case PRICING -> this.menu.getSyncedItemPrices().size() > SCROLLBOX_ROWS;
         };
     }
 
@@ -1103,9 +1116,17 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                 y <= SCROLLER_TRACK_BOTTOM_Y;
     }
 
+    private boolean isItemPriceSelected() {
+        return this.selectedItemPriceIndex >= 0 && this.selectedItemPriceIndex < this.menu.getSyncedItemPrices().size();
+    }
+
+    private boolean isTargetSelected() {
+        return this.selectedTargetIndex >= 0 && this.selectedTargetIndex < this.menu.getSyncedTargets().size();
+    }
+
     private boolean isSelectedItemPriceDirty() {
         ItemStack slotItemForSale = this.menu.getSlot(ShoppingExperienceMenu.SHOPPING_ITEM_FOR_SALE_SLOT).getItem();
-        ItemPrice selectedItemPrice = (this.selectedItemPriceIndex >= 0 && this.selectedItemPriceIndex < this.menu.getSyncedItemPrices().size())
+        ItemPrice selectedItemPrice = this.isItemPriceSelected()
                 ? this.menu.getSyncedItemPrices().get(this.selectedItemPriceIndex)
                 : null;
 
@@ -1177,7 +1198,13 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
             return super.mouseDragged(mouseButtonEvent, dx, dy);
         }
 
-        int totalRows = this.selectedTab == TabDisplay.TARGETS ? this.menu.getSyncedTargets().size() : 0;
+        int totalRows = 0;
+        if (this.selectedTab == TabDisplay.TARGETS) {
+            totalRows = this.menu.getSyncedTargets().size();
+        } else if (this.selectedTab == TabDisplay.PRICING) {
+            totalRows = this.menu.getSyncedItemPrices().size();
+        }
+
         int maxScrolledOff = totalRows - SCROLLBOX_ROWS;
         if (maxScrolledOff <= 0) {
             if (this.selectedTab == TabDisplay.TARGETS) {
@@ -1222,7 +1249,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                 this.targetsScrolledOff = Mth.clamp((int)(this.targetsScrolledOff - scrollY), 0, maxScrolledOff);
                 this.updateRowFocusForSelectedTarget();
             } else if (this.selectedTab == TabDisplay.PRICING) {
-                int totalRows = 0;
+                int totalRows = this.menu.getSyncedItemPrices().size();
                 int maxScrolledOff = totalRows - SCROLLBOX_ROWS;
                 this.pricesScrolledOff = Mth.clamp((int)(this.pricesScrolledOff - scrollY), 0, maxScrolledOff);
                 this.updateRowFocusForSelectedItemPrice();
@@ -1231,6 +1258,29 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
         }
 
         return false;
+    }
+
+    private void focusOnItemForSale(ItemStack itemForSale) {
+        List<ItemPrice> itemPrices = this.menu.getSyncedItemPrices();
+
+        for (int i = 0; i < itemPrices.size(); i++) {
+            if (ItemStack.isSameItemSameComponents(itemPrices.get(i).itemForSale(), itemForSale)) {
+                this.selectedItemPriceIndex = i;
+                this.scrollPricingIntoView(i);
+                return;
+            }
+        }
+
+        this.selectPricingIndex(-1);
+    }
+
+    private void scrollPricingIntoView(int index) {
+        if (index < this.pricesScrolledOff) {
+            this.pricesScrolledOff = index;
+        } else if (index >= this.pricesScrolledOff + SCROLLBOX_ROWS) {
+            this.pricesScrolledOff = index - SCROLLBOX_ROWS + 1;
+        }
+        this.updateRowFocusForSelectedItemPrice();
     }
 
     private void selectTab(TabDisplay tab) {
@@ -1276,13 +1326,12 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
             button.setFocused(false);
         }
 
-        int numItemPrices = this.menu.getSyncedItemPrices().size();
-
-        if (this.selectedItemPriceIndex < 0 || this.selectedItemPriceIndex >= numItemPrices) {
+        if (!this.isItemPriceSelected()) {
             this.selectedItemPriceIndex = -1;
             return;
         }
 
+        int numItemPrices = this.menu.getSyncedItemPrices().size();
         int visibleRows = Math.min(numItemPrices, SCROLLBOX_ROWS);
         int firstVisible = this.pricesScrolledOff;
         int lastVisible = this.pricesScrolledOff + visibleRows - 1;
@@ -1310,13 +1359,12 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
             button.setFocused(false);
         }
 
-        int numTargets = this.menu.getSyncedTargets().size();
-
-        if (this.selectedTargetIndex < 0 || this.selectedTargetIndex >= numTargets) {
+        if (!this.isTargetSelected()) {
             this.selectedTargetIndex = -1;
             return;
         }
 
+        int numTargets = this.menu.getSyncedTargets().size();
         int visibleRows = Math.min(numTargets, SCROLLBOX_ROWS);
         int firstVisible = this.targetsScrolledOff;
         int lastVisible = this.targetsScrolledOff + visibleRows - 1;

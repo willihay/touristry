@@ -5,12 +5,13 @@ import net.minecraft.world.Container;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import org.bensam.touristry.tourism.experience.ItemPrice;
 
 public class ItemPricingContainer implements Container {
+    public static final int ITEM_FOR_SALE_SLOT = 0;
+    public static final int COST_SLOT = 1;
     public static final int ITEM_PRICING_SLOTS = 2;
 
-    private ItemPrice activeItemPricing;
+    private ItemStack activeItemForSale = ItemStack.EMPTY;
     private final NonNullList<ItemStack> itemStacks = NonNullList.withSize(ITEM_PRICING_SLOTS, ItemStack.EMPTY);
     private final ShoppingExperienceMenu menu;
 
@@ -20,7 +21,7 @@ public class ItemPricingContainer implements Container {
 
     @Override
     public void clearContent() {
-        this.activeItemPricing = null;
+        this.activeItemForSale = ItemStack.EMPTY;
         this.itemStacks.clear();
     }
 
@@ -62,7 +63,7 @@ public class ItemPricingContainer implements Container {
 
     @Override
     public void setChanged() {
-        this.setActiveItemPricing();
+        this.setActiveItemForSale();
     }
 
     @Override
@@ -77,7 +78,11 @@ public class ItemPricingContainer implements Container {
         return this.menu.stillValid(player);
     }
 
-    private void setActiveItemPricing() {
-
+    private void setActiveItemForSale() {
+        ItemStack itemForSale = this.itemStacks.get(ITEM_FOR_SALE_SLOT);
+        if (!ItemStack.isSameItemSameComponents(this.activeItemForSale, itemForSale)) {
+            this.activeItemForSale = itemForSale.copy();
+            this.menu.onItemForSaleChanged(this.activeItemForSale);
+        }
     }
 }

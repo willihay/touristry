@@ -21,6 +21,7 @@ import org.bensam.touristry.tourism.ExperienceTargetOverlaySyncManager;
 import org.bensam.touristry.tourism.experience.ItemPrice;
 import org.bensam.touristry.tourism.experience.TargetView;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.Optional;
@@ -122,6 +123,7 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
     private Tab selectedTab = Tab.STATUS;
 
     // Client-side snapshot fields:
+    private int syncedItemPricesRevision;
     private List<ItemPrice> syncedItemPrices = List.of();
     private boolean syncedOrderedTargets = true;
     private List<TargetView> syncedTargets = List.of();
@@ -209,7 +211,7 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
         // Add item pricing slots.
         this.addSlot(new ShoppingSlot(
                 this.itemPricingContainer,
-                0,
+                ItemPricingContainer.ITEM_FOR_SALE_SLOT,
                 SHOPPING_ITEM_FOR_SALE_SLOT_X,
                 SHOPPING_ITEM_FOR_SALE_SLOT_Y,
                 menu -> menu.isSelectedTab(Tab.PRICING)
@@ -217,7 +219,7 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
 
         this.addSlot(new ShoppingSlot(
                 this.itemPricingContainer,
-                1,
+                ItemPricingContainer.COST_SLOT,
                 SHOPPING_COST_SLOT_X,
                 SHOPPING_COST_SLOT_Y,
                 menu -> menu.isSelectedTab(Tab.PRICING)
@@ -360,7 +362,6 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
                 shoppingSlot.setByPlayer(ItemStack.EMPTY);
                 shoppingSlot.setChanged();
             }
-            return;
         }
 
         // Otherwise, block number-key / offhand placement into dummy slots.
@@ -409,15 +410,22 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
         return (double) this.experienceContainerData.get(ShoppingExperienceBlockEntity.DATA_REPUTATION) / 100;
     }
 
-    // client-side getters
+    // client-side getter
     public List<ItemPrice> getSyncedItemPrices() {
         return this.syncedItemPrices;
     }
 
+    // client-side getter
+    public int getSyncedItemPricesRevision() {
+        return this.syncedItemPricesRevision;
+    }
+
+    // client-side getter
     public boolean getSyncedOrderedTargets() {
         return this.syncedOrderedTargets;
     }
 
+    // client-side getter
     public List<TargetView> getSyncedTargets() {
         return this.syncedTargets;
     }
@@ -429,7 +437,7 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
                 return;
             }
 
-            if (!(serverLevel.getBlockEntity(blockPos) instanceof ShoppingExperienceBlockEntity shoppingExperienceBlockEntity)) {
+            if (!(this.experienceInventory instanceof ShoppingExperienceBlockEntity shoppingExperienceBlockEntity)) {
                 return;
             }
 
@@ -488,7 +496,6 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
                         );
                         shoppingExperienceBlockEntity.updateItemPrice(itemPrice);
                         this.syncItemPrices(serverPlayer, shoppingExperienceBlockEntity);
-                        this.clearItemPriceSlots();
                     }
                 }
 
@@ -515,7 +522,6 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
         });
     }
 
-    // server-side screen action helpers
     protected void clearItemPriceSlots() {
         int newStateId = this.incrementStateId();
 
@@ -527,11 +533,7 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
         int newStateId = this.incrementStateId();
 
         this.setItem(SHOPPING_ITEM_FOR_SALE_SLOT, newStateId, itemPrice.itemForSale().copy());
-        if (itemPrice.cost() == null) {
-            this.setItem(SHOPPING_COST_SLOT, newStateId, this.getSlot(SHOPPING_DEFAULT_COST_SLOT).getItem().copy());
-        } else {
-            this.setItem(SHOPPING_COST_SLOT, newStateId, itemPrice.cost().copy());
-        }
+        this.setCostSlot(itemPrice.cost(), newStateId);
     }
 
     public boolean isDefaultCostFree() {
@@ -546,21 +548,53 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
         return this.selectedTab == tab;
     }
 
+    public void onItemForSaleChanged(ItemStack itemForSale) {
+        this.syncedItemPricesRevision++;
+
+        this.containerLevelAccess.execute((level, blockPos) -> {
+            if (!(level instanceof ServerLevel)) {
+                return;
+            }
+
+            if (!(this.experienceInventory instanceof ShoppingExperienceBlockEntity shoppingExperienceBlockEntity)) {
+                return;
+            }
+
+            int newStateId = this.incrementStateId();
+            if (itemForSale.isEmpty()) {
+                this.setCostSlot(ItemStack.EMPTY, newStateId);
+            } else {
+                ItemPrice itemPrice = shoppingExperienceBlockEntity.findItemPriceFor(itemForSale);
+                this.setCostSlot(itemPrice == null ? ItemStack.EMPTY : itemPrice.cost(), newStateId);
+            }
+        });
+    }
+
+    private void setCostSlot(@Nullable ItemStack itemStack, int stateId) {
+        if (itemStack == null) {
+            this.setItem(SHOPPING_COST_SLOT, stateId, this.getSlot(SHOPPING_DEFAULT_COST_SLOT).getItem().copy());
+        } else {
+            this.setItem(SHOPPING_COST_SLOT, stateId, itemStack.copy());
+        }
+    }
+
     public void setSelectedTab(Tab selectedTab) {
         this.selectedTab = selectedTab;
     }
 
-    // client-side setters
+    // client-side setter
     public void setSyncedItemPrices(List<ItemPrice> itemPrices) {
-        this.syncedItemPrices = itemPrices;
+        this.syncedItemPrices = List.copyOf(itemPrices);
+        this.syncedItemPricesRevision++;
     }
 
+    // client-side setter
     public void setSyncedTargets(boolean orderedTargets, List<TargetView> targets) {
         this.syncedOrderedTargets = orderedTargets;
         this.syncedTargets = List.copyOf(targets);
     }
 
-    // server-side sync initiators
+    // server-side sync initiator
     public void syncItemPrices(ServerPlayer serverPlayer, ShoppingExperienceBlockEntity shoppingExperienceBlockEntity) {
         ServerPlayNetworking.send(
                 serverPlayer,
@@ -571,6 +605,7 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
         );
     }
 
+    // server-side sync initiator
     public void syncTargets(ServerPlayer serverPlayer, ServerLevel serverLevel, AbstractExperienceBlockEntity experienceBlockEntity) {
         ServerPlayNetworking.send(
                 serverPlayer,
