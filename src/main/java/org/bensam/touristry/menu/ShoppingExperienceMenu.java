@@ -480,6 +480,12 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
                     );
                 }
 
+                case RESET_DEFAULT_COST -> {
+                    shoppingExperienceBlockEntity.resetDefaultCost();
+                    int newStateId = this.incrementStateId();
+                    this.setItem(SHOPPING_DEFAULT_COST_SLOT, newStateId, shoppingExperienceBlockEntity.getDefaultCost().copy());
+                }
+
                 case SELECT_ITEM_PRICE -> {
                     ItemPrice itemPrice = shoppingExperienceBlockEntity.getItemPrice(payload.primary());
                     if (itemPrice != null) {

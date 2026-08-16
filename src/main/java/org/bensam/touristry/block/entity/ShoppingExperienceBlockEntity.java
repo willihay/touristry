@@ -98,6 +98,10 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
         return null;
     }
 
+    public ItemStack getDefaultCost() {
+        return this.defaultCost.copy();
+    }
+
     @Override
     protected Component getDefaultName() {
         return Component.translatable("block." + Touristry.MOD_ID + ".shopping_experience");
@@ -209,6 +213,11 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
 
     public void removeAllItemPrices() {
         this.itemPrices.clear();
+        this.setChanged();
+    }
+
+    public void resetDefaultCost() {
+        this.defaultCost = new ItemStack(Items.EMERALD);
         this.setChanged();
     }
 

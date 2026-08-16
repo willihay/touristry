@@ -70,6 +70,8 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     private static final Identifier MOVE_DOWN_HIGHLIGHTED_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "move_down_highlighted");
     private static final Identifier REMOVE_ALL_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "take_out");
     private static final Identifier REMOVE_ALL_HIGHLIGHTED_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "take_out_highlighted");
+    private static final Identifier RESET_DEFAULT_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "reset");
+    private static final Identifier RESET_DEFAULT_HIGHLIGHTED_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "reset_highlighted");
     private static final Identifier SCROLLER_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "scroller");
     private static final Identifier SCROLLER_DISABLED_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "scroller_disabled");
     private static final Identifier SWEEP_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "sweep");
@@ -153,6 +155,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     private static final Component PRICING_SCREEN_TITLE = Component.translatable("screen.touristry.tourist_block.tab.pricing");
     private static final Component PRICING_IMPORT_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.pricing.import.tooltip");
     private static final Component PRICING_DEFAULT_LABEL = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.pricing.default.label");
+    private static final Component PRICING_RESET_DEFAULT_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.pricing.reset_default_cost.tooltip");
     private static final Component PRICING_REMOVE_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.pricing.remove.tooltip");
     private static final Component PRICING_ACCEPT_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.pricing.accept.tooltip");
     private static final Component PRICING_CANCEL_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.pricing.cancel.tooltip");
@@ -161,6 +164,8 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     private static final int PRICING_IMPORT_BUTTON_Y = SCROLLBOX_TOP_Y;
     private static final int PRICING_DEFAULT_LABEL_RIGHT_X = 211;
     private static final int PRICING_DEFAULT_LABEL_Y = 22;
+    private static final int PRICING_RESET_DEFAULT_BUTTON_X = 238;
+    private static final int PRICING_RESET_DEFAULT_BUTTON_Y = 26;
     private static final int PRICING_ACCEPT_BUTTON_X = 242;
     private static final int PRICING_ACCEPT_BUTTON_Y = 50;
     private static final int PRICING_CANCEL_BUTTON_X = 242;
@@ -253,6 +258,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     private final ExperienceScrollBoxButton[] itemPriceButtons = new ExperienceScrollBoxButton[SCROLLBOX_ROWS];
     private ImageButton itemImportButton;
     private ImageButton itemPriceRemoveButton;
+    private ImageButton itemPriceResetDefaultButton;
     private ImageButton itemPriceAcceptButton;
     private ImageButton itemPriceCancelButton;
     private ImageButton itemPriceRemoveAllButton;
@@ -531,6 +537,23 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                 }
         ));
         this.itemImportButton.setTooltip(Tooltip.create(PRICING_IMPORT_TOOLTIP));
+
+        buttonX = this.leftPos + PRICING_RESET_DEFAULT_BUTTON_X;
+        buttonY = this.topPos + PRICING_RESET_DEFAULT_BUTTON_Y;
+        this.itemPriceResetDefaultButton = this.addRenderableWidget(new NoFocusImageButton(
+                buttonX, buttonY,
+                8, 8,
+                new WidgetSprites(RESET_DEFAULT_SPRITE, RESET_DEFAULT_HIGHLIGHTED_SPRITE),
+                button -> {
+                    ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
+                            this.menu.getContainerId(),
+                            ExperienceScreenAction.RESET_DEFAULT_COST,
+                            -1,
+                            -1
+                    ));
+                }
+        ));
+        this.itemPriceResetDefaultButton.setTooltip(Tooltip.create(PRICING_RESET_DEFAULT_TOOLTIP));
 
         buttonX = this.leftPos + PRICING_ACCEPT_BUTTON_X;
         buttonY = this.topPos + PRICING_ACCEPT_BUTTON_Y;
