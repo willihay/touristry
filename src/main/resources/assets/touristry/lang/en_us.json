@@ -25,6 +25,7 @@
   "screen.touristry.tourist_block.tab.pricing": "Pricing",
   "screen.touristry.tourist_block.entry_fee.label": "Entry Fee:",
   "screen.touristry.tourist_block.pricing.default.label": "Default Cost:",
+  "screen.touristry.tourist_block.pricing.default.label.tooltip": "Sale price of items in target containers if not specified here",
   "screen.touristry.tourist_block.pricing.import.tooltip": "Import new items for sale from target containers",
   "screen.touristry.tourist_block.pricing.reset_default_cost.tooltip": "Reset default cost",
   "screen.touristry.tourist_block.pricing.remove.tooltip": "Remove selected pricing from list",

@@ -11,6 +11,7 @@ import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
@@ -155,6 +156,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     private static final Component PRICING_SCREEN_TITLE = Component.translatable("screen.touristry.tourist_block.tab.pricing");
     private static final Component PRICING_IMPORT_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.pricing.import.tooltip");
     private static final Component PRICING_DEFAULT_LABEL = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.pricing.default.label");
+    private static final Component PRICING_DEFAULT_LABEL_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.pricing.default.label.tooltip");
     private static final Component PRICING_RESET_DEFAULT_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.pricing.reset_default_cost.tooltip");
     private static final Component PRICING_REMOVE_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.pricing.remove.tooltip");
     private static final Component PRICING_ACCEPT_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.pricing.accept.tooltip");
@@ -849,10 +851,23 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                 this.itemPriceButtons[row].visible = true;
 
                 ItemPrice itemPrice = itemPrices.get(itemPriceIndex);
+                ItemStack itemForSale = itemPrice.itemForSale();
 
                 // Render item for sale.
-                guiGraphics.renderFakeItem(itemPrice.itemForSale(), xItemForSale, yItem);
-                guiGraphics.renderItemDecorations(this.font, itemPrice.itemForSale(), xItemForSale, yItem);
+                guiGraphics.renderFakeItem(itemForSale, xItemForSale, yItem);
+                guiGraphics.renderItemDecorations(this.font, itemForSale, xItemForSale, yItem);
+
+                // Render item tooltip if needed, based on mouse position.
+                if (this.isHovering(xItemForSale - this.leftPos, yItem - this.topPos, 16, 16, mouseX, mouseY)) {
+                    guiGraphics.setTooltipForNextFrame(
+                            this.font,
+                            this.getTooltipFromContainerItem(itemForSale),
+                            itemForSale.getTooltipImage(),
+                            mouseX,
+                            mouseY,
+                            itemForSale.get(DataComponents.TOOLTIP_STYLE)
+                    );
+                }
 
                 // Render trade arrow.
                 guiGraphics.blitSprite(
@@ -969,7 +984,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     }
 
     @Override
-    protected void renderLabels(@NonNull GuiGraphics guiGraphics, int x, int y) {
+    protected void renderLabels(@NonNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
         switch (this.selectedTab) {
             case STATUS -> {
                 guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, ARGB_SCREEN_TEXT_COLOR, false);
@@ -980,7 +995,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                 this.renderTargetLabels(guiGraphics);
             }
             case PRICING -> {
-                this.renderPricingLabels(guiGraphics);
+                this.renderPricingLabels(guiGraphics, mouseX, mouseY);
                 guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, ARGB_SCREEN_TEXT_COLOR, false);
             }
         }
@@ -1084,7 +1099,8 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
         );
     }
 
-    protected void renderPricingLabels(@NonNull GuiGraphics guiGraphics) {
+    protected void renderPricingLabels(@NonNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        // Render pricing tab title, including number of item prices in table.
         int numItemPrices = this.menu.getSyncedItemPrices().size();
         Component pricingsTitle = PRICING_SCREEN_TITLE.copy().append(" (" + numItemPrices + ")");
         int pricingLabelWidth = this.font.width(pricingsTitle);
@@ -1097,14 +1113,25 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                 false
         );
 
+        // Render default cost label and tooltip.
+        int xDefaultCostLabel = PRICING_DEFAULT_LABEL_RIGHT_X - this.defaultItemPriceLabelWidth;
         guiGraphics.drawString(
                 this.font,
                 PRICING_DEFAULT_LABEL,
-                PRICING_DEFAULT_LABEL_RIGHT_X - this.defaultItemPriceLabelWidth,
+                xDefaultCostLabel,
                 PRICING_DEFAULT_LABEL_Y,
                 ARGB_SCREEN_TEXT_COLOR,
                 false
         );
+
+        if (this.isHovering(xDefaultCostLabel, PRICING_DEFAULT_LABEL_Y, this.defaultItemPriceLabelWidth, this.font.lineHeight, mouseX, mouseY)) {
+            guiGraphics.setTooltipForNextFrame(
+                    this.font,
+                    PRICING_DEFAULT_LABEL_TOOLTIP,
+                    mouseX,
+                    mouseY
+            );
+        }
     }
 
     private boolean canScroll() {
