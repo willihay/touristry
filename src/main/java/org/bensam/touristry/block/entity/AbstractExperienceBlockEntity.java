@@ -148,6 +148,11 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
     }
 
     @Override
+    public boolean canSpendBudgetHere() {
+        return this.hasEntryFee();
+    }
+
+    @Override
     public void clearContent() {
         super.clearContent();
         this.setChanged();

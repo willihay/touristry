@@ -157,6 +157,16 @@ public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEnt
         return PAYMENT_SLOT_SIZE;
     }
 
+    @Override
+    public boolean hasBeds() {
+        return false;
+    }
+
+    @Override
+    public boolean hasEntryFee() {
+        return !this.inventory.get(ENTRY_FEE_INDEX).isEmpty();
+    }
+
     private boolean isSightseeingBlock(BlockState blockState) {
         return blockState.is(Blocks.LECTERN);
     }

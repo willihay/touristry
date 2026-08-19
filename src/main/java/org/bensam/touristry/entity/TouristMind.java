@@ -17,10 +17,7 @@ import net.minecraft.world.level.storage.ValueOutput;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
 import org.bensam.touristry.config.ModServerConfigManager;
 import org.bensam.touristry.config.Verbosity;
-import org.bensam.touristry.tourism.TourismManager;
-import org.bensam.touristry.tourism.TouristLocation;
-import org.bensam.touristry.tourism.TouristReview;
-import org.bensam.touristry.tourism.VisitResult;
+import org.bensam.touristry.tourism.*;
 import org.bensam.touristry.tourism.experience.ExperienceTarget;
 import org.bensam.touristry.tourism.experience.ExperienceVisit;
 import org.bensam.touristry.tourism.experience.TouristExperience;
@@ -53,7 +50,7 @@ public final class TouristMind {
     private TouristState state;
     private double closestDistanceToDestination;
     private int consecutiveFailedProgressChecks;
-    private int dailyBudgetEmeralds;
+    private int dailyBudgetEmeralds; // does not include budget for overnight accommodations, which is handled separately
     private int eveningDespawnTimeTicks;
     private int goodExperiencesToday;
     private boolean isHungry;
@@ -91,10 +88,10 @@ public final class TouristMind {
         this.tourist = tourist;
         this.beaconPos = null;
         this.closestDistanceToDestination = Double.MAX_VALUE;
-        this.dailyBudgetEmeralds = this.getDailyBudget();
-        this.eveningDespawnTimeTicks = this.getRandomDespawnTime();
+        this.dailyBudgetEmeralds = this.generateDailyBudget();
+        this.eveningDespawnTimeTicks = this.generateRandomDespawnTime();
         this.experienceBlockPos = null;
-        this.mood = this.getRandomStartingMood();
+        this.mood = this.generateRandomStartingMood();
         this.nextMoodCheckTicks = this.random().nextInt(CHECK_MOOD_INTERVAL_TICKS);
         this.remainingBudgetEmeralds = this.dailyBudgetEmeralds;
         this.state = TouristState.IDLE;
@@ -122,8 +119,9 @@ public final class TouristMind {
         this.goodExperiencesToday = 0;
         this.isStayingOvernight = false;
         this.lastMapToggleTicks = 0;
-        this.mood = this.getRandomStartingMood();
+        this.mood = this.generateRandomStartingMood();
         this.nextMoodCheckTicks = this.random().nextInt(CHECK_MOOD_INTERVAL_TICKS);
+        this.remainingBudgetEmeralds = this.dailyBudgetEmeralds;
         this.reportedHurtEnRoute = false;
         this.reportedHurtOnPremises = false;
         this.ticksAtCurrentTarget = 0;
@@ -230,14 +228,6 @@ public final class TouristMind {
 
     public int getConsecutiveFailedProgressChecks() {
         return this.consecutiveFailedProgressChecks;
-    }
-
-    private int getDailyBudget() {
-        double budget = 0;
-        for (int i = 1; i <= 20; i++) {
-            budget = this.random().nextGaussian() * BUDGET_STD_DEV_EMERALDS;
-        }
-        return BUDGET_MEAN_EMERALDS + Math.clamp(Math.round(budget), BUDGET_MIN_EMERALDS - BUDGET_MEAN_EMERALDS, Integer.MAX_VALUE);
     }
 
     public @Nullable BlockPos getExperiencePos() {
@@ -519,11 +509,52 @@ public final class TouristMind {
         this.injectedExperienceGoals.clear();
     }
 
-    private int getRandomDespawnTime() {
+    // Prerequisite: entry fee for current experience has already been paid.
+    private int generateAllowanceForExperience(TouristExperience experience) {
+        if (!experience.canSpendBudgetHere()) {
+            return 0;
+        }
+
+        int remainingBudget = this.remainingBudgetEmeralds;
+        if (remainingBudget <= 1) {
+            return remainingBudget;
+        }
+
+        int remainingPlacesToSpendBudget = 0;
+
+        for (UUID availableExperienceUUID : this.availableExperienceUUIDs) {
+            TouristExperience availableExperience = TourismManager.getTouristExperienceById(availableExperienceUUID);
+            if (availableExperience != null &&
+                    availableExperience.canSpendBudgetHere() &&
+                    TouristEconomy.getEmeraldEquivalent(availableExperience.getEntryFee()) < remainingBudget
+            ) {
+                remainingPlacesToSpendBudget++;
+            }
+        }
+
+        if (remainingPlacesToSpendBudget <= 1) {
+            // The current experience is the only place remaining in the list of available experiences. They can spend it all here!
+            return remainingBudget;
+        }
+
+        // Determine the number of experiences at the moment where the tourist wants to spend their remaining daily budget.
+        // This number will usually be less than the total number of remaining experiences, centered around half of them,
+        // resulting in a larger allowance for the current experience than simply dividing their budget by the number of remaining experiences.
+        double medianPlacesToSpendBudget = remainingPlacesToSpendBudget / 2.0D;
+        int placesTouristWantsToSpendBudget = (int) Math.clamp(medianPlacesToSpendBudget + (this.random().nextGaussian() * 2.0D), 1, remainingPlacesToSpendBudget);
+        return remainingBudget / placesTouristWantsToSpendBudget;
+    }
+
+    private int generateDailyBudget() {
+        double budget = BUDGET_MEAN_EMERALDS + (this.random().nextGaussian() * BUDGET_STD_DEV_EMERALDS);
+        return Math.clamp(Math.round(budget), BUDGET_MIN_EMERALDS, Integer.MAX_VALUE);
+    }
+
+    private int generateRandomDespawnTime() {
         return 12000 + this.random().nextInt(1000);
     }
 
-    private double getRandomStartingMood() {
+    private double generateRandomStartingMood() {
         return 1.0 + this.random().nextDouble();
     }
 
@@ -951,7 +982,7 @@ public final class TouristMind {
 
         // Pay entry fee, if applicable.
         ItemStack entryFee = experience.getEntryFee();
-        if (entryFee != null && entryFee.getItem() != Items.AIR) {
+        if (!entryFee.isEmpty()) {
             if (!experience.tryDepositPayment(entryFee)) {
                 // Payment failed. Assume that we cannot enter this experience.
                 this.updateMood(VisitResult.PAYMENT_FAILED);
@@ -987,6 +1018,7 @@ public final class TouristMind {
         // Create ExperienceVisit and push onto stack.
         ExperienceVisit visit = new ExperienceVisit(
                 experience.getUUID(),
+                this.generateAllowanceForExperience(experience),
                 new ArrayList<>(targets),
                 0,
                 targets.size()
@@ -1120,6 +1152,7 @@ public final class TouristMind {
 
         ExperienceVisit updatedVisit = new ExperienceVisit(
                 currentVisit.experienceUUID(),
+                currentVisit.budgetAllowance(),
                 remainingTargets,
                 markCompleted ? currentVisit.targetsCompleted() + 1 : currentVisit.targetsCompleted(),
                 currentVisit.totalTargets()

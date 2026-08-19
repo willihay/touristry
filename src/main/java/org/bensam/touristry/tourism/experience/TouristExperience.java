@@ -24,12 +24,15 @@ public interface TouristExperience {
     boolean addBlockTarget(ServerLevel serverLevel, BlockPos blockPos, Direction playerFacing);
     boolean addChildExperienceTarget(ServerLevel serverLevel, BlockPos blockPos, Direction playerFacing, UUID childUUID);
     boolean addEntityTarget(ServerLevel serverLevel, BlockPos entityPos, Direction playerFacing, UUID entityUUID);
+    boolean canSpendBudgetHere(); // return true if there are ways for a tourist to spend their budget here, NOT including cost of beds or child experiences
     ItemStack getEntryFee();
     int getIdealApproachDistance();
     int getMaxApproachDistance();
     int getMaxRangeToTarget();
     List<ExperienceTarget> getTargets(ServerLevel serverLevel);
     List<TargetOverlayView> getTargetOverlayViews(ServerLevel serverLevel);
+    boolean hasBeds(); // return true if this experience (not including child experiences) has beds where the tourists can spend the night (does not guarantee availability of beds)
+    boolean hasEntryFee();
     boolean hasTarget(BlockPos blockPos);
     boolean isOpenForBusiness();
     boolean removeTarget(ServerLevel serverLevel, BlockPos pos);

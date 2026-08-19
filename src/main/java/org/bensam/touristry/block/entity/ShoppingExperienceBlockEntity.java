@@ -76,6 +76,11 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
 
     // Helpers
     @Override
+    public boolean canSpendBudgetHere() {
+        return true;
+    }
+
+    @Override
     public @Nullable Goal createGoalForTarget(TouristEntity tourist, ExperienceTarget target) {
         if (target.isChildExperience()) {
             return null; // just navigate to sub-experience
@@ -148,6 +153,16 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
     @Override
     protected int getTargetKeySlotIndex() {
         return PAYMENT_SLOT_SIZE;
+    }
+
+    @Override
+    public boolean hasBeds() {
+        return false;
+    }
+
+    @Override
+    public boolean hasEntryFee() {
+        return !this.inventory.get(ENTRY_FEE_INDEX).isEmpty();
     }
 
     public int importItemsFromTargets(ServerLevel serverLevel) {

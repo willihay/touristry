@@ -9,12 +9,14 @@ import java.util.UUID;
 
 public record ExperienceVisit(
         UUID experienceUUID,
+        int budgetAllowance,
         List<ExperienceTarget> remainingTargets,
         int targetsCompleted,
         int totalTargets
 ) {
     public static final Codec<ExperienceVisit> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             UUIDUtil.CODEC.fieldOf("experience_uuid").forGetter(ExperienceVisit::experienceUUID),
+            Codec.INT.fieldOf("budget_allowance").forGetter(ExperienceVisit::budgetAllowance),
             ExperienceTarget.CODEC.listOf().fieldOf("remaining_targets").forGetter(ExperienceVisit::remainingTargets),
             Codec.INT.fieldOf("targets_completed").forGetter(ExperienceVisit::targetsCompleted),
             Codec.INT.fieldOf("total_targets").forGetter(ExperienceVisit::totalTargets)
