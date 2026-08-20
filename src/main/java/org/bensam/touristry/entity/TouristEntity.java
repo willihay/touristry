@@ -44,8 +44,12 @@ import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 public class TouristEntity extends AbstractVillager {
+    private static final int BASE_MODEL_VARIANTS = 10;
+
+    private static final EntityDataAccessor<Integer> DATA_BASE_MODEL = SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> DATA_WAVING = SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.BOOLEAN);
 
+    private int baseModelVariant;
     private final TouristMind mind;
     private boolean registeredWithTourismManager;
 
@@ -55,13 +59,18 @@ public class TouristEntity extends AbstractVillager {
 
     public TouristEntity(EntityType<? extends TouristEntity> entityType, Level level) {
         super(entityType, level);
+        this.setBaseModelVariant(this.generateBaseModelVariant());
         this.mind = new TouristMind(this);
         this.getNavigation().setCanOpenDoors(true);
         this.getNavigation().setCanFloat(true);
         this.getNavigation().setRequiredPathLength(48.0F);
     }
 
-    private double chooseSpeedModifier() {
+    private int generateBaseModelVariant() {
+        return this.random.nextIntBetweenInclusive(1, BASE_MODEL_VARIANTS);
+    }
+
+    private double generateSpeedModifier() {
         return 0.75 + (0.5 * this.random.nextDouble());
     }
 
@@ -75,7 +84,17 @@ public class TouristEntity extends AbstractVillager {
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
+        builder.define(DATA_BASE_MODEL, this.baseModelVariant);
         builder.define(DATA_WAVING, false);
+    }
+
+    public int getBaseModelVariant() {
+        return this.entityData.get(DATA_BASE_MODEL);
+    }
+
+    public void setBaseModelVariant(int value) {
+        this.baseModelVariant = value;
+        this.entityData.set(DATA_BASE_MODEL, value);
     }
 
     public boolean isWaving() {
@@ -433,12 +452,14 @@ public class TouristEntity extends AbstractVillager {
     @Override
     protected void addAdditionalSaveData(ValueOutput valueOutput) {
         super.addAdditionalSaveData(valueOutput);
+        valueOutput.putInt("BaseModelVariant", this.baseModelVariant);
         this.mind.addAdditionalSaveData(valueOutput);
     }
 
     @Override
     protected void readAdditionalSaveData(ValueInput valueInput) {
         super.readAdditionalSaveData(valueInput);
+        this.setBaseModelVariant(valueInput.getIntOr("BaseModelVariant", this.baseModelVariant));
         this.mind.readAdditionalSaveData(valueInput);
 
         if (this.level() instanceof ServerLevel serverLevel) {

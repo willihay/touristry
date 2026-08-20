@@ -16,7 +16,7 @@ import org.jspecify.annotations.NonNull;
 
 @Environment(EnvType.CLIENT)
 public class TouristRenderer extends AgeableMobRenderer<TouristEntity, TouristRenderState, TouristModel> {
-    private static final Identifier TOURIST_BASE_SKIN = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "textures/entity/tourist.png");
+    private static final String TOURIST_BASE_PATH = "textures/entity/base/base_";
 
     public TouristRenderer(EntityRendererProvider.Context context) {
         super(context, new TouristModel(context.bakeLayer(TouristModel.LAYER)), new TouristModel(context.bakeLayer(TouristModel.BABY_LAYER)), 0.5F); // 0.5 shadow radius
@@ -37,7 +37,7 @@ public class TouristRenderer extends AgeableMobRenderer<TouristEntity, TouristRe
 
     @Override
     public @NonNull Identifier getTextureLocation(TouristRenderState touristRenderState) {
-        return TOURIST_BASE_SKIN;
+        return Identifier.fromNamespaceAndPath(Touristry.MOD_ID, TOURIST_BASE_PATH + touristRenderState.baseModelVariant + ".png");
     }
 
     @Override
@@ -45,7 +45,8 @@ public class TouristRenderer extends AgeableMobRenderer<TouristEntity, TouristRe
         super.extractRenderState(touristEntity, touristRenderState, partialTicks);
         HoldingEntityRenderState.extractHoldingEntityRenderState(touristEntity, touristRenderState, this.itemModelResolver);
 
-        // TODO: Extract custom outfit and color variants.
+        // Extract custom outfit and color variants.
+        touristRenderState.baseModelVariant = touristEntity.getBaseModelVariant();
 
         // Extract general mood.
         touristRenderState.isUnhappy = touristEntity.getUnhappyCounter() > 0;
