@@ -1,4 +1,4 @@
-package org.bensam.touristry.client.model;
+package org.bensam.touristry.client;
 
 import net.fabricmc.fabric.api.client.rendering.v1.EntityModelLayerRegistry;
 import org.bensam.touristry.client.model.entity.TouristModel;

@@ -6,7 +6,9 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
+import net.fabricmc.fabric.api.resource.v1.ResourceLoader;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.packs.PackType;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
@@ -14,6 +16,7 @@ import net.minecraft.world.level.Level;
 import org.bensam.touristry.block.TouristBeaconBlock;
 import org.bensam.touristry.block.TouristExperienceBlock;
 import org.bensam.touristry.command.TourCommand;
+import org.bensam.touristry.config.ClothingCountLoader;
 import org.bensam.touristry.config.ModServerConfigManager;
 import org.bensam.touristry.config.ModServerConfigSync;
 import org.bensam.touristry.config.SyncedClientConfig;
@@ -53,10 +56,13 @@ public class Touristry implements ModInitializer {
 		// Register network payloads.
 		ModNetworks.initialize();
 
-		// Register server-side player connection event handlers and packet receiver handlers.
+		// Register server-side player connection event handlers and network packet receiver handlers.
 		SyncedClientConfig.initialize();
 		ExperienceServerPackets.registerServerReceivers();
 		ExperienceTargetOverlaySyncManager.initialize();
+
+		// Register server-side resource loader.
+		ResourceLoader.get(PackType.SERVER_DATA).registerReloader(ClothingCountLoader.ID, new ClothingCountLoader());
 
 		ServerWorldEvents.LOAD.register((server, serverLevel) -> {
 			if (serverLevel == server.overworld()) {

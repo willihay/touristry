@@ -28,6 +28,7 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import org.bensam.touristry.ModEntities;
 import org.bensam.touristry.Touristry;
+import org.bensam.touristry.config.ClothingCountLoader;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
 import org.bensam.touristry.config.ModServerConfigManager;
 import org.bensam.touristry.config.Verbosity;
@@ -47,9 +48,11 @@ public class TouristEntity extends AbstractVillager {
     private static final int BASE_MODEL_VARIANTS = 10;
 
     private static final EntityDataAccessor<Integer> DATA_BASE_MODEL = SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> DATA_CLOTHING_VARIANT = SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> DATA_WAVING = SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.BOOLEAN);
 
     private int baseModelVariant;
+    private int clothingVariantIndex;
     private final TouristMind mind;
     private boolean registeredWithTourismManager;
 
@@ -60,14 +63,20 @@ public class TouristEntity extends AbstractVillager {
     public TouristEntity(EntityType<? extends TouristEntity> entityType, Level level) {
         super(entityType, level);
         this.setBaseModelVariant(this.generateBaseModelVariant());
+        this.setClothingVariant(this.generateClothingVariant());
         this.mind = new TouristMind(this);
         this.getNavigation().setCanOpenDoors(true);
         this.getNavigation().setCanFloat(true);
         this.getNavigation().setRequiredPathLength(48.0F);
+        Touristry.LOGGER.info("[DEBUG-VARIANT] Constructed tourist {} base={} clothing={}", System.identityHashCode(this), this.baseModelVariant, this.clothingVariantIndex);
     }
 
     private int generateBaseModelVariant() {
         return this.random.nextIntBetweenInclusive(1, BASE_MODEL_VARIANTS);
+    }
+
+    private int generateClothingVariant() {
+        return this.random.nextInt(ClothingCountLoader.CLOTHING_COUNT);
     }
 
     private double generateSpeedModifier() {
@@ -85,6 +94,7 @@ public class TouristEntity extends AbstractVillager {
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
         builder.define(DATA_BASE_MODEL, this.baseModelVariant);
+        builder.define(DATA_CLOTHING_VARIANT, this.clothingVariantIndex);
         builder.define(DATA_WAVING, false);
     }
 
@@ -95,6 +105,15 @@ public class TouristEntity extends AbstractVillager {
     public void setBaseModelVariant(int value) {
         this.baseModelVariant = value;
         this.entityData.set(DATA_BASE_MODEL, value);
+    }
+
+    public int getClothingVariant() {
+        return this.entityData.get(DATA_CLOTHING_VARIANT);
+    }
+
+    public void setClothingVariant(int value) {
+        this.clothingVariantIndex = value;
+        this.entityData.set(DATA_CLOTHING_VARIANT, value);
     }
 
     public boolean isWaving() {
@@ -453,6 +472,8 @@ public class TouristEntity extends AbstractVillager {
     protected void addAdditionalSaveData(ValueOutput valueOutput) {
         super.addAdditionalSaveData(valueOutput);
         valueOutput.putInt("BaseModelVariant", this.baseModelVariant);
+        valueOutput.putInt("ClothingVariantIndex", this.clothingVariantIndex);
+        Touristry.LOGGER.info("[DEBUG-VARIANT] Saving tourist {} base={} clothing={}", System.identityHashCode(this), this.baseModelVariant, this.clothingVariantIndex);
         this.mind.addAdditionalSaveData(valueOutput);
     }
 
@@ -460,6 +481,8 @@ public class TouristEntity extends AbstractVillager {
     protected void readAdditionalSaveData(ValueInput valueInput) {
         super.readAdditionalSaveData(valueInput);
         this.setBaseModelVariant(valueInput.getIntOr("BaseModelVariant", this.baseModelVariant));
+        this.setClothingVariant(valueInput.getIntOr("ClothingVariantIndex", this.clothingVariantIndex));
+        Touristry.LOGGER.info("[DEBUG-VARIANT] Loaded tourist {} base={} clothing={}", System.identityHashCode(this), this.baseModelVariant, this.clothingVariantIndex);
         this.mind.readAdditionalSaveData(valueInput);
 
         if (this.level() instanceof ServerLevel serverLevel) {

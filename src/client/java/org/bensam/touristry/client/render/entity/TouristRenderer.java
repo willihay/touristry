@@ -10,6 +10,7 @@ import net.minecraft.client.renderer.entity.state.HoldingEntityRenderState;
 import net.minecraft.resources.Identifier;
 import org.bensam.touristry.Touristry;
 import org.bensam.touristry.client.model.entity.TouristModel;
+import org.bensam.touristry.client.render.entity.layers.TouristOuterwearLayer;
 import org.bensam.touristry.client.render.entity.state.TouristRenderState;
 import org.bensam.touristry.entity.TouristEntity;
 import org.jspecify.annotations.NonNull;
@@ -22,6 +23,7 @@ public class TouristRenderer extends AgeableMobRenderer<TouristEntity, TouristRe
         super(context, new TouristModel(context.bakeLayer(TouristModel.LAYER)), new TouristModel(context.bakeLayer(TouristModel.BABY_LAYER)), 0.5F); // 0.5 shadow radius
         this.addLayer(new CustomHeadLayer<>(this, context.getModelSet(), context.getPlayerSkinRenderCache()));
         this.addLayer(new CrossedArmsItemLayer<>(this));
+        this.addLayer(new TouristOuterwearLayer<>(this));
     }
 
     @Override
@@ -47,6 +49,7 @@ public class TouristRenderer extends AgeableMobRenderer<TouristEntity, TouristRe
 
         // Extract custom outfit and color variants.
         touristRenderState.baseModelVariant = touristEntity.getBaseModelVariant();
+        touristRenderState.clothingVariantIndex = touristEntity.getClothingVariant();
 
         // Extract general mood.
         touristRenderState.isUnhappy = touristEntity.getUnhappyCounter() > 0;

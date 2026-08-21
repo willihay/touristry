@@ -1,12 +1,13 @@
 package org.bensam.touristry.client;
 
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.resource.v1.ResourceLoader;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.renderer.entity.EntityRenderers;
+import net.minecraft.server.packs.PackType;
 import org.bensam.touristry.ModEntities;
 import org.bensam.touristry.ModMenus;
 import org.bensam.touristry.client.config.ModClientConfigManager;
-import org.bensam.touristry.client.model.ModModelLayers;
 import org.bensam.touristry.client.network.ConfigClientPackets;
 import org.bensam.touristry.client.network.ExperienceClientPackets;
 import org.bensam.touristry.client.render.ExperienceTargetOverlayRenderer;
@@ -28,12 +29,15 @@ public class TouristryClient implements ClientModInitializer {
 				() -> ModClientConfigManager.getConfig().verboseTooltips()
 		);
 
-		// Register packet receivers.
-		ConfigClientPackets.registerClientReceivers();
-		ExperienceClientPackets.registerClientReceivers();
+		// Load texture resources (reloads whenever client resources reload).
+		ResourceLoader.get(PackType.CLIENT_RESOURCES).registerReloader(ModResources.ID, new ModResources());
 
 		// Register model layers.
 		ModModelLayers.initialize();
+
+		// Register network packet receivers.
+		ConfigClientPackets.registerClientReceivers();
+		ExperienceClientPackets.registerClientReceivers();
 
 		// Register screens.
 		MenuScreens.register(ModMenus.TOURIST_BEACON_MENU.get(), TouristBeaconScreen::new);
