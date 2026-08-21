@@ -10,5 +10,5 @@ import net.fabricmc.api.Environment;
  */
 @Environment(EnvType.CLIENT)
 public interface TouristDataHolderRenderState {
-    int getClothingVariantIndex();
+    String getClothingVariantKey();
 }

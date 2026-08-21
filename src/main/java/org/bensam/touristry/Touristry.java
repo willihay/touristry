@@ -16,7 +16,7 @@ import net.minecraft.world.level.Level;
 import org.bensam.touristry.block.TouristBeaconBlock;
 import org.bensam.touristry.block.TouristExperienceBlock;
 import org.bensam.touristry.command.TourCommand;
-import org.bensam.touristry.config.ClothingCountLoader;
+import org.bensam.touristry.config.ClothingOptionsLoader;
 import org.bensam.touristry.config.ModServerConfigManager;
 import org.bensam.touristry.config.ModServerConfigSync;
 import org.bensam.touristry.config.SyncedClientConfig;
@@ -62,7 +62,7 @@ public class Touristry implements ModInitializer {
 		ExperienceTargetOverlaySyncManager.initialize();
 
 		// Register server-side resource loader.
-		ResourceLoader.get(PackType.SERVER_DATA).registerReloader(ClothingCountLoader.ID, new ClothingCountLoader());
+		ResourceLoader.get(PackType.SERVER_DATA).registerReloader(ClothingOptionsLoader.ID, new ClothingOptionsLoader());
 
 		ServerWorldEvents.LOAD.register((server, serverLevel) -> {
 			if (serverLevel == server.overworld()) {

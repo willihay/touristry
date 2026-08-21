@@ -28,7 +28,7 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import org.bensam.touristry.ModEntities;
 import org.bensam.touristry.Touristry;
-import org.bensam.touristry.config.ClothingCountLoader;
+import org.bensam.touristry.config.ClothingOptionsLoader;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
 import org.bensam.touristry.config.ModServerConfigManager;
 import org.bensam.touristry.config.Verbosity;
@@ -48,11 +48,11 @@ public class TouristEntity extends AbstractVillager {
     private static final int BASE_MODEL_VARIANTS = 10;
 
     private static final EntityDataAccessor<Integer> DATA_BASE_MODEL = SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.INT);
-    private static final EntityDataAccessor<Integer> DATA_CLOTHING_VARIANT = SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<String> DATA_CLOTHING_VARIANT = SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.STRING);
     private static final EntityDataAccessor<Boolean> DATA_WAVING = SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.BOOLEAN);
 
     private int baseModelVariant;
-    private int clothingVariantIndex;
+    private String clothingVariantKey = ClothingOptionsLoader.DEFAULT_KEY;
     private final TouristMind mind;
     private boolean registeredWithTourismManager;
 
@@ -62,21 +62,28 @@ public class TouristEntity extends AbstractVillager {
 
     public TouristEntity(EntityType<? extends TouristEntity> entityType, Level level) {
         super(entityType, level);
-        this.setBaseModelVariant(this.generateBaseModelVariant());
-        this.setClothingVariant(this.generateClothingVariant());
+        // Only roll a new random appearance on the authoritative server side. If this ran on the client too
+        // (e.g. when the client constructs its local entity instance upon receiving a spawn packet), the
+        // client's own random roll would sometimes coincidentally match the synced-data default value
+        // registered in defineSynchedData(), causing the server to omit that field from the spawn packet
+        // (per SynchedEntityData.getNonDefaultValues()) and leaving the client's own mismatched roll in place.
+        if (!level.isClientSide()) {
+            this.setBaseModelVariant(this.generateBaseModelVariant());
+            this.setClothingVariant(this.generateClothingVariant());
+        }
         this.mind = new TouristMind(this);
         this.getNavigation().setCanOpenDoors(true);
         this.getNavigation().setCanFloat(true);
         this.getNavigation().setRequiredPathLength(48.0F);
-        Touristry.LOGGER.info("[DEBUG-VARIANT] Constructed tourist {} base={} clothing={}", System.identityHashCode(this), this.baseModelVariant, this.clothingVariantIndex);
+        //Touristry.LOGGER.info("[DEBUG-VARIANT] Constructed tourist {} base={} clothing={}", this.uuid, this.baseModelVariant, this.clothingVariantKey);
     }
 
     private int generateBaseModelVariant() {
         return this.random.nextIntBetweenInclusive(1, BASE_MODEL_VARIANTS);
     }
 
-    private int generateClothingVariant() {
-        return this.random.nextInt(ClothingCountLoader.CLOTHING_COUNT);
+    private String generateClothingVariant() {
+        return ClothingOptionsLoader.randomKey(this.random);
     }
 
     private double generateSpeedModifier() {
@@ -94,7 +101,7 @@ public class TouristEntity extends AbstractVillager {
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
         builder.define(DATA_BASE_MODEL, this.baseModelVariant);
-        builder.define(DATA_CLOTHING_VARIANT, this.clothingVariantIndex);
+        builder.define(DATA_CLOTHING_VARIANT, this.clothingVariantKey != null ? this.clothingVariantKey : "");
         builder.define(DATA_WAVING, false);
     }
 
@@ -107,12 +114,12 @@ public class TouristEntity extends AbstractVillager {
         this.entityData.set(DATA_BASE_MODEL, value);
     }
 
-    public int getClothingVariant() {
+    public String getClothingVariant() {
         return this.entityData.get(DATA_CLOTHING_VARIANT);
     }
 
-    public void setClothingVariant(int value) {
-        this.clothingVariantIndex = value;
+    public void setClothingVariant(String value) {
+        this.clothingVariantKey = value;
         this.entityData.set(DATA_CLOTHING_VARIANT, value);
     }
 
@@ -472,8 +479,8 @@ public class TouristEntity extends AbstractVillager {
     protected void addAdditionalSaveData(ValueOutput valueOutput) {
         super.addAdditionalSaveData(valueOutput);
         valueOutput.putInt("BaseModelVariant", this.baseModelVariant);
-        valueOutput.putInt("ClothingVariantIndex", this.clothingVariantIndex);
-        Touristry.LOGGER.info("[DEBUG-VARIANT] Saving tourist {} base={} clothing={}", System.identityHashCode(this), this.baseModelVariant, this.clothingVariantIndex);
+        valueOutput.putString("ClothingVariantKey", this.clothingVariantKey);
+        //Touristry.LOGGER.info("[DEBUG-VARIANT] Saving tourist {} base={} clothing={}", this.uuid, this.baseModelVariant, this.clothingVariantKey);
         this.mind.addAdditionalSaveData(valueOutput);
     }
 
@@ -481,8 +488,8 @@ public class TouristEntity extends AbstractVillager {
     protected void readAdditionalSaveData(ValueInput valueInput) {
         super.readAdditionalSaveData(valueInput);
         this.setBaseModelVariant(valueInput.getIntOr("BaseModelVariant", this.baseModelVariant));
-        this.setClothingVariant(valueInput.getIntOr("ClothingVariantIndex", this.clothingVariantIndex));
-        Touristry.LOGGER.info("[DEBUG-VARIANT] Loaded tourist {} base={} clothing={}", System.identityHashCode(this), this.baseModelVariant, this.clothingVariantIndex);
+        this.setClothingVariant(valueInput.getStringOr("ClothingVariantKey", this.clothingVariantKey));
+        //Touristry.LOGGER.info("[DEBUG-VARIANT] Loaded tourist {} base={} clothing={}", this.uuid, this.baseModelVariant, this.clothingVariantKey);
         this.mind.readAdditionalSaveData(valueInput);
 
         if (this.level() instanceof ServerLevel serverLevel) {

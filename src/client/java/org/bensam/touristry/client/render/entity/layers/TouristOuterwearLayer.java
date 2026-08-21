@@ -10,12 +10,14 @@ import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.resources.Identifier;
-import org.bensam.touristry.client.ModResources;
+import org.bensam.touristry.Touristry;
 import org.bensam.touristry.client.render.entity.state.TouristDataHolderRenderState;
 
 @Environment(EnvType.CLIENT)
 public class TouristOuterwearLayer<S extends LivingEntityRenderState & TouristDataHolderRenderState, M extends EntityModel<S> & VillagerLikeModel<S>>
         extends RenderLayer<S, M> {
+
+    private static final String CLOTHING_PATH = "textures/entity/clothes/";
 
     public TouristOuterwearLayer(RenderLayerParent<S, M> renderLayerParent) {
         super(renderLayerParent);
@@ -27,11 +29,14 @@ public class TouristOuterwearLayer<S extends LivingEntityRenderState & TouristDa
             return;
         }
 
-        int clothingIndex = entityRenderState.getClothingVariantIndex();
-        if (clothingIndex >= 0 && clothingIndex < ModResources.CLOTHING_TEXTURES.size()) {
-            M model = this.getParentModel();
-            Identifier clothingVariant = ModResources.CLOTHING_TEXTURES.get(clothingIndex);
-            renderColoredCutoutModel(model, clothingVariant, poseStack, submitNodeCollector, i, entityRenderState, -1, 1);
+        String clothingKey = entityRenderState.getClothingVariantKey();
+        if (clothingKey == null || clothingKey.isEmpty()) {
+            return;
         }
+
+        M model = this.getParentModel();
+        Identifier clothingVariant = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, CLOTHING_PATH + clothingKey + ".png");
+        renderColoredCutoutModel(model, clothingVariant, poseStack, submitNodeCollector, i, entityRenderState, -1, 1);
     }
 }
+

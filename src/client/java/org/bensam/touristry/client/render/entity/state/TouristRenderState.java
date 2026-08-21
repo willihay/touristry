@@ -7,7 +7,7 @@ import net.minecraft.client.renderer.entity.state.HoldingEntityRenderState;
 @Environment(EnvType.CLIENT)
 public class TouristRenderState extends HoldingEntityRenderState implements TouristDataHolderRenderState {
     public int baseModelVariant;
-    public int clothingVariantIndex;
+    public String clothingVariantKey;
     public boolean isUnhappy;
     public boolean isWaving;
 
@@ -17,7 +17,7 @@ public class TouristRenderState extends HoldingEntityRenderState implements Tour
     }
 
     @Override
-    public int getClothingVariantIndex() {
-        return this.clothingVariantIndex;
+    public String getClothingVariantKey() {
+        return this.clothingVariantKey;
     }
 }

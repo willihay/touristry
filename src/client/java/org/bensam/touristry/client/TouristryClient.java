@@ -1,10 +1,8 @@
 package org.bensam.touristry.client;
 
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.resource.v1.ResourceLoader;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.renderer.entity.EntityRenderers;
-import net.minecraft.server.packs.PackType;
 import org.bensam.touristry.ModEntities;
 import org.bensam.touristry.ModMenus;
 import org.bensam.touristry.client.config.ModClientConfigManager;
@@ -28,9 +26,6 @@ public class TouristryClient implements ClientModInitializer {
 				//someItem -> someItem.getBalanceConfig(SyncedServerConfig.get()), // not in use at this time
 				() -> ModClientConfigManager.getConfig().verboseTooltips()
 		);
-
-		// Load texture resources (reloads whenever client resources reload).
-		ResourceLoader.get(PackType.CLIENT_RESOURCES).registerReloader(ModResources.ID, new ModResources());
 
 		// Register model layers.
 		ModModelLayers.initialize();
