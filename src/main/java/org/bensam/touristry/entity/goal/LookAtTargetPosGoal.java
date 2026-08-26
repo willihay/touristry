@@ -1,11 +1,9 @@
 package org.bensam.touristry.entity.goal;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.world.entity.ai.goal.Goal;
 import org.bensam.touristry.config.Verbosity;
 import org.bensam.touristry.entity.TouristEntity;
-import org.bensam.touristry.entity.TouristState;
 
 import java.util.EnumSet;
 
@@ -13,13 +11,13 @@ public class LookAtTargetPosGoal extends Goal {
 
     private final TouristEntity tourist;
     private final BlockPos targetPos;
-    private int tickCount = 0;
-    private int ticksUntilNextLookChange = 0;
-    private double lookUpOffset = 0;
-    private double sideOffset = 0;
-    private double xVariation = 0;
-    private double yVariation = 0;
-    private double zVariation = 0;
+    private int tickCount;
+    private int ticksUntilNextLookChange;
+    private double lookUpOffset;
+    private double sideOffset;
+    private double xVariation;
+    private double yVariation;
+    private double zVariation;
 
     public LookAtTargetPosGoal(TouristEntity tourist, BlockPos targetPos) {
         this.tourist = tourist;
@@ -29,12 +27,7 @@ public class LookAtTargetPosGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        return this.tourist.getMind().getState() == TouristState.EXPERIENCING_TARGET;
-    }
-
-    @Override
-    public boolean canContinueToUse() {
-        return this.canUse();
+        return this.tourist.isAtExperienceTarget();
     }
 
     @Override
@@ -43,8 +36,6 @@ public class LookAtTargetPosGoal extends Goal {
             return;
         }
 
-        this.tickCount = 0;
-        this.ticksUntilNextLookChange = 0;
         TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[LookAtTargetPosGoal] Starting to look at target at " + this.targetPos.toShortString());
     }
 

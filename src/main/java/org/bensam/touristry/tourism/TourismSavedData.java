@@ -21,10 +21,10 @@ public final class TourismSavedData extends SavedData {
     }
 
     private static final Codec<TourismSavedData> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            Codec.INT.optionalFieldOf("highest_budget", 0).forGetter(TourismSavedData::getRecordHighestTouristBudget),
+            Codec.FLOAT.optionalFieldOf("highest_budget", 0.0F).forGetter(TourismSavedData::getRecordHighestTouristBudget),
             Codec.LONG.optionalFieldOf("prepared_day", -1L).forGetter(TourismSavedData::getPreparedDay),
             PendingTouristSpawnData.CODEC.listOf().optionalFieldOf("pending_spawns", List.of()).forGetter(TourismSavedData::getPendingSpawns)
-    ).apply(instance, (highestTouristBudget, preparedDay, pendingSpawns) -> new TourismSavedData(highestTouristBudget, preparedDay, pendingSpawns)));
+    ).apply(instance, TourismSavedData::new));
 
     public static final SavedDataType<TourismSavedData> TYPE = new SavedDataType<>(
             "touristry_tourism",
@@ -33,21 +33,21 @@ public final class TourismSavedData extends SavedData {
             DataFixTypes.SAVED_DATA_COMMAND_STORAGE
     );
 
-    private int highestTouristBudget;
+    private float highestTouristBudget;
     private long preparedDay;
     private final List<PendingTouristSpawnData> pendingSpawns;
 
     public TourismSavedData() {
-        this(0, -1L, List.of());
+        this(0.0F, -1L, List.of());
     }
 
-    private TourismSavedData(int highestTouristBudget, long preparedDay, List<PendingTouristSpawnData> pendingSpawns) {
+    private TourismSavedData(float highestTouristBudget, long preparedDay, List<PendingTouristSpawnData> pendingSpawns) {
         this.highestTouristBudget = highestTouristBudget;
         this.preparedDay = preparedDay;
         this.pendingSpawns = new ArrayList<>(pendingSpawns);
     }
 
-    public int getRecordHighestTouristBudget() {
+    public float getRecordHighestTouristBudget() {
         return this.highestTouristBudget;
     }
 
@@ -59,7 +59,7 @@ public final class TourismSavedData extends SavedData {
         return List.copyOf(this.pendingSpawns);
     }
 
-    public void setSavedState(int highestTouristBudget, long preparedDay, Collection<PendingTouristSpawnData> pendingSpawns) {
+    public void setSavedState(float highestTouristBudget, long preparedDay, Collection<PendingTouristSpawnData> pendingSpawns) {
         List<PendingTouristSpawnData> pendingSpawnCopy = List.copyOf(pendingSpawns);
         if (this.highestTouristBudget == highestTouristBudget &&
                 this.preparedDay == preparedDay &&

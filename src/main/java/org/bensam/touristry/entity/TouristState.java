@@ -55,6 +55,10 @@ public enum TouristState implements StringRepresentable {
         return this.touristLocation == TouristLocation.EXPERIENCE;
     }
 
+    public boolean isAtTarget() {
+        return this == EXPERIENCING_TARGET;
+    }
+
     public boolean isAtTouristLocation() {
         return this.touristLocation != TouristLocation.WORLD;
     }

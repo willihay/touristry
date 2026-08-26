@@ -570,7 +570,7 @@ public class ShoppingExperienceMenu extends AbstractContainerMenu implements Tou
             if (itemForSale.isEmpty()) {
                 this.setCostSlot(ItemStack.EMPTY, newStateId);
             } else {
-                ItemPrice itemPrice = shoppingExperienceBlockEntity.findItemPriceFor(itemForSale);
+                ItemPrice itemPrice = shoppingExperienceBlockEntity.lookupItemPriceFor(itemForSale);
                 this.setCostSlot(itemPrice == null ? ItemStack.EMPTY : itemPrice.cost(), newStateId);
             }
         });

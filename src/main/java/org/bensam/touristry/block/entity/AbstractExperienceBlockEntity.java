@@ -10,6 +10,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.Container;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.item.ItemStack;
@@ -189,6 +190,14 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         return key;
     }
 
+    public Direction getApproachDirection() {
+        BlockState blockState = this.getBlockState();
+        if (blockState.hasProperty(TouristExperienceBlock.FACING)) {
+            return blockState.getValue(TouristExperienceBlock.FACING).getOpposite();
+        }
+        return Direction.NORTH;
+    }
+
     @Override
     public List<UUID> getChildExperienceUUIDs() {
         return this.targets.stream()
@@ -225,6 +234,37 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
     @Override
     public TouristLocationStats getStatistics() {
         return this.statistics;
+    }
+
+    public static List<ItemStack> getTargetContainerContents(Container container) {
+        List<ItemStack> contents = new ArrayList<>();
+
+        if (container.iterator() instanceof Container.ContainerIterator it) {
+            while (it.hasNext()) {
+                ItemStack itemInContainer = it.next();
+                if (!itemInContainer.isEmpty()) {
+                    boolean merged = false;
+
+                    for (ItemStack existingItem : contents) {
+                        if (ItemStack.isSameItemSameComponents(itemInContainer, existingItem)) {
+                            existingItem.grow(itemInContainer.getCount());
+                            merged = true;
+                            break;
+                        }
+                    }
+
+                    if (!merged) {
+                        ItemStack copyOfItem = itemInContainer.copy();
+                        if (copyOfItem.isDamageableItem()) {
+                            copyOfItem.setDamageValue(0);
+                        }
+                        contents.add(copyOfItem);
+                    }
+                }
+            }
+        }
+
+        return contents;
     }
 
     protected abstract int getTargetKeySlotIndex();
@@ -304,6 +344,11 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
     @Override
     public UUID getUUID() {
         return this.uuid;
+    }
+
+    @Override
+    public boolean hasBeds() {
+        return false;
     }
 
     public boolean hasCapacity() {

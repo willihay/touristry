@@ -1,10 +1,34 @@
 {
   "variants": {
-    "open_for_business=false": {
+    "facing=east,open_for_business=false": {
+      "model": "touristry:block/shopping_experience",
+      "y": 90
+    },
+    "facing=east,open_for_business=true": {
+      "model": "touristry:block/shopping_experience",
+      "y": 90
+    },
+    "facing=north,open_for_business=false": {
       "model": "touristry:block/shopping_experience"
     },
-    "open_for_business=true": {
+    "facing=north,open_for_business=true": {
       "model": "touristry:block/shopping_experience"
+    },
+    "facing=south,open_for_business=false": {
+      "model": "touristry:block/shopping_experience",
+      "y": 180
+    },
+    "facing=south,open_for_business=true": {
+      "model": "touristry:block/shopping_experience",
+      "y": 180
+    },
+    "facing=west,open_for_business=false": {
+      "model": "touristry:block/shopping_experience",
+      "y": 270
+    },
+    "facing=west,open_for_business=true": {
+      "model": "touristry:block/shopping_experience",
+      "y": 270
     }
   }
 }

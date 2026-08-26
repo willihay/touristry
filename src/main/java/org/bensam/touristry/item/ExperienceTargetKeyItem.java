@@ -102,16 +102,16 @@ public class ExperienceTargetKeyItem extends Item {
                 // Check if target is also an experience block, in which case it will become a child experience.
                 UUID childUUID = blockEntity instanceof AbstractExperienceBlockEntity childExperience ? childExperience.getUUID() : null;
 
-                // Get the player's facing direction so that it can be stored in the target, so that pathfinding goals can
-                // lead a tourist to approach from the same direction, if desired.
-                Direction playerFacing = player.getDirection();
+                // Get either the experience block's approach direction or the player's current facing direction so that it can be
+                // stored in the target, so that pathfinding goals can lead a tourist to approach from the same direction.
+                Direction approachFrom = blockEntity instanceof AbstractExperienceBlockEntity childExperience ? childExperience.getApproachDirection() : player.getDirection();
 
                 // Try to add target to experience.
                 boolean success;
                 if (childUUID == null) {
-                    success = experience.addBlockTarget(serverLevel, blockPos, playerFacing);
+                    success = experience.addBlockTarget(serverLevel, blockPos, approachFrom);
                 } else {
-                    success = experience.addChildExperienceTarget(serverLevel, blockPos, playerFacing, childUUID);
+                    success = experience.addChildExperienceTarget(serverLevel, blockPos, approachFrom, childUUID);
                 }
 
                 if (success) {

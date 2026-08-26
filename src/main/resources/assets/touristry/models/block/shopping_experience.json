@@ -1,12 +1,9 @@
 {
-  "parent": "minecraft:block/cube",
+  "parent": "minecraft:block/orientable_with_bottom",
   "textures": {
-    "particle": "touristry:block/shopping_experience_side",
-    "down": "touristry:block/shopping_experience_bottom",
-    "up": "touristry:block/shopping_experience_top",
-    "north": "touristry:block/shopping_experience_side",
-    "south": "touristry:block/shopping_experience_side",
-    "west": "touristry:block/shopping_experience_side",
-    "east": "touristry:block/shopping_experience_side"
+    "bottom": "touristry:block/shopping_experience_bottom",
+    "top": "touristry:block/shopping_experience_top",
+    "front": "touristry:block/shopping_experience_front",
+    "side": "touristry:block/shopping_experience_side"
   }
 }

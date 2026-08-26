@@ -656,6 +656,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
         Arrays.fill(this.itemPriceButtons, null);
 
         this.removeWidget(this.itemImportButton);
+        this.removeWidget(this.itemPriceResetDefaultButton);
         this.removeWidget(this.itemPriceAcceptButton);
         this.removeWidget(this.itemPriceCancelButton);
         this.removeWidget(this.itemPriceRemoveButton);

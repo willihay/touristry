@@ -1,6 +1,7 @@
 package org.bensam.touristry.block.entity;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
@@ -20,7 +21,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.bensam.touristry.ModBlockEntities;
 import org.bensam.touristry.Touristry;
 import org.bensam.touristry.entity.TouristEntity;
-import org.bensam.touristry.entity.goal.LookAtTargetPosGoal;
+import org.bensam.touristry.entity.goal.SightseeingExperienceGoal;
 import org.bensam.touristry.menu.SightseeingExperienceMenu;
 import org.bensam.touristry.tourism.experience.ExperienceTarget;
 import org.jspecify.annotations.Nullable;
@@ -29,6 +30,7 @@ public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEnt
     public static final int IDEAL_APPROACH_DISTANCE = 2; // Tourist should try to stand this far away for sightseeing targets
     public static final int MAX_APPROACH_DISTANCE = 6; // Skip target if tourist can't get closer than this distance
     public static final int MAX_RANGE_TO_TARGET = 100;
+    public static final int MIN_TICKS_AT_TARGET = 100;
     public static final int PAYMENT_SLOT_SIZE = 9;
     public static final int TARGET_KEY_INDEX = PAYMENT_SLOT_SIZE;
     public static final int ENTRY_FEE_INDEX = TARGET_KEY_INDEX + 1;
@@ -40,25 +42,27 @@ public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEnt
 
     // Lifecycle
     @Override
-    public void onTouristArrival(TouristEntity tourist, ServerLevel serverLevel) {
-
-    }
+    public void onTouristArrival(TouristEntity tourist, ServerLevel serverLevel) {}
 
     @Override
-    public boolean tickAtTarget(TouristEntity tourist, ServerLevel serverLevel, ExperienceTarget target) {
-        if (target == null) {
-            return true;
+    public void onTouristDeparture(TouristEntity tourist, ServerLevel serverLevel, boolean completed) {}
+
+    // Helpers
+    @Override
+    public @Nullable Goal createGoalForTarget(TouristEntity tourist, ServerLevel serverLevel, ExperienceTarget target) {
+        if (target.isChildExperience()) {
+            return null; // just navigate to sub-experience
         }
 
-        // Calculate duration modifiers as needed.
+        // Calculate duration modifier as needed.
         int durationModifier = 0;
         if (target.isBlock()) {
             BlockEntity blockEntity = this.level.getBlockEntity(target.pos());
             // Extend duration of lectern targets that have books by the number of written pages in the book.
             if (blockEntity instanceof LecternBlockEntity lectern) {
                 ItemStack book = lectern.getBook();
-                if (!book.isEmpty() && book.has(net.minecraft.core.component.DataComponents.WRITTEN_BOOK_CONTENT)) {
-                    WrittenBookContent content = book.get(net.minecraft.core.component.DataComponents.WRITTEN_BOOK_CONTENT);
+                if (!book.isEmpty() && book.has(DataComponents.WRITTEN_BOOK_CONTENT)) {
+                    WrittenBookContent content = book.get(DataComponents.WRITTEN_BOOK_CONTENT);
                     if (content != null) {
                         durationModifier = Math.min(content.pages().size() * 10, 160); // extend duration by 10 ticks per written page (max 160)
                     }
@@ -69,26 +73,15 @@ public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEnt
             // Extend duration of painting targets by the size of the painting.
             if (entity instanceof Painting painting) {
                 int area = painting.getVariant().value().area();
-                durationModifier = area * 5; // extend duration by 5 ticks per sq. unit of area
+                durationModifier = area * 5; // extend duration by 5 ticks per unit of area
             }
         }
 
-        return tourist.getTicksAtCurrentTarget() >= (160 + durationModifier); // minimum 8 game seconds at a sightseeing target
-    }
-
-    @Override
-    public void onTouristDeparture(TouristEntity tourist, ServerLevel serverLevel, boolean completed) {
-
-    }
-
-    // Helpers
-    @Override
-    public @Nullable Goal createGoalForTarget(TouristEntity tourist, ExperienceTarget target) {
-        if (target.isChildExperience()) {
-            return null; // just navigate to sub-experience
-        }
-
-        return new LookAtTargetPosGoal(tourist, target.pos());
+        return new SightseeingExperienceGoal(
+                tourist,
+                target.pos(),
+                tourist.getTicksAtCurrentTarget(),
+                MIN_TICKS_AT_TARGET + durationModifier);
     }
 
     @Override
@@ -155,11 +148,6 @@ public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEnt
     @Override
     protected int getTargetKeySlotIndex() {
         return PAYMENT_SLOT_SIZE;
-    }
-
-    @Override
-    public boolean hasBeds() {
-        return false;
     }
 
     @Override

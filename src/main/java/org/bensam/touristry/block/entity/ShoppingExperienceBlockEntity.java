@@ -20,20 +20,24 @@ import org.bensam.touristry.ModBlockEntities;
 import org.bensam.touristry.ModComponents;
 import org.bensam.touristry.Touristry;
 import org.bensam.touristry.entity.TouristEntity;
-import org.bensam.touristry.entity.goal.LookAtTargetPosGoal;
+import org.bensam.touristry.entity.goal.ShoppingExperienceGoal;
 import org.bensam.touristry.menu.ShoppingExperienceMenu;
 import org.bensam.touristry.tourism.experience.ExperienceTarget;
 import org.bensam.touristry.tourism.experience.ItemPrice;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.TreeSet;
 
 public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity {
     public static final int IDEAL_APPROACH_DISTANCE = 1; // Tourist should try to stand this far away for shopping targets
     public static final int MAX_APPROACH_DISTANCE = 4; // Skip target if tourist can't get closer than this distance
     public static final int MAX_RANGE_TO_TARGET = 100;
+    public static final int MIN_TICKS_AT_TARGET = 40;
+    public static final int MAX_TICKS_AT_TARGET = 100;
+    public static final int TICKS_AT_BLOCK_WHEN_PURCHASING = 40;
     public static final int PAYMENT_SLOT_SIZE = 9;
     public static final int TARGET_KEY_INDEX = PAYMENT_SLOT_SIZE;
     public static final int ENTRY_FEE_INDEX = TARGET_KEY_INDEX + 1;
@@ -41,12 +45,28 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
     public static final int TOTAL_INVENTORY_SIZE = PAYMENT_SLOT_SIZE + 3;
 
     private ItemStack defaultCost = ItemStack.EMPTY;
-    protected TreeSet<ItemPrice> itemPrices;
+    private LinkedHashMap<ItemStackKey, ItemPrice> itemPrices;
+
+    public record ItemStackKey(ItemStack itemStack) {
+        public ItemStackKey {
+            itemStack = itemStack.copyWithCount(1);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return obj instanceof ItemStackKey(ItemStack other) && ItemStack.isSameItemSameComponents(this.itemStack, other);
+        }
+
+        @Override
+        public int hashCode() {
+            return ItemStack.hashItemAndComponents(this.itemStack);
+        }
+    }
 
     public ShoppingExperienceBlockEntity(BlockPos blockPos, BlockState blockState) {
         super(ModBlockEntities.SHOPPING_EXPERIENCE.get(), blockPos, blockState, TOTAL_INVENTORY_SIZE);
 
-        this.itemPrices = new TreeSet<>();
+        this.itemPrices = new LinkedHashMap<>();
 
         if (this.defaultCost.isEmpty()) {
             this.defaultCost = new ItemStack(Items.EMERALD);
@@ -56,23 +76,10 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
 
     // Lifecycle
     @Override
-    public void onTouristArrival(TouristEntity tourist, ServerLevel serverLevel) {
-
-    }
+    public void onTouristArrival(TouristEntity tourist, ServerLevel serverLevel) {}
 
     @Override
-    public boolean tickAtTarget(TouristEntity tourist, ServerLevel serverLevel, ExperienceTarget target) {
-        if (target == null) {
-            return true;
-        }
-
-        return tourist.getTicksAtCurrentTarget() >= 100; // minimum 5 game seconds at a shopping target
-    }
-
-    @Override
-    public void onTouristDeparture(TouristEntity tourist, ServerLevel serverLevel, boolean completed) {
-
-    }
+    public void onTouristDeparture(TouristEntity tourist, ServerLevel serverLevel, boolean completed) {}
 
     // Helpers
     @Override
@@ -81,26 +88,47 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
     }
 
     @Override
-    public @Nullable Goal createGoalForTarget(TouristEntity tourist, ExperienceTarget target) {
+    public @Nullable Goal createGoalForTarget(TouristEntity tourist, ServerLevel serverLevel, ExperienceTarget target) {
         if (target.isChildExperience()) {
             return null; // just navigate to sub-experience
         }
 
-        return new LookAtTargetPosGoal(tourist, target.pos());
+        int ticksAtBlock = 0;
+        boolean isPayingHere = target.pos().equals(this.getBlockPos());
+
+        // Determine how long the tourist will visibly pause at the target while making a purchase decision.
+        if (isPayingHere) {
+            ticksAtBlock = TICKS_AT_BLOCK_WHEN_PURCHASING;
+        } else {
+            // Gather all items in target container.
+            List<ItemStack> itemsInContainer = new ArrayList<>();
+            BlockEntity blockEntity = serverLevel.getBlockEntity(target.pos());
+            if (blockEntity instanceof Container container) {
+                itemsInContainer = AbstractExperienceBlockEntity.getTargetContainerContents(container);
+            }
+
+            int numItemsInTargetContainer = itemsInContainer.size();
+            int minTicksAtTarget = Math.min(numItemsInTargetContainer * 10, MIN_TICKS_AT_TARGET);
+            if (minTicksAtTarget < MIN_TICKS_AT_TARGET) {
+                // If there are only a few, keep the visit short.
+                ticksAtBlock = minTicksAtTarget;
+            } else {
+                ticksAtBlock = tourist.getRandom().nextIntBetweenInclusive(minTicksAtTarget, MAX_TICKS_AT_TARGET);
+            }
+        }
+
+        return new ShoppingExperienceGoal(
+                tourist,
+                this.getBlockPos(),
+                target.pos(),
+                tourist.getTicksAtCurrentTarget(),
+                ticksAtBlock,
+                isPayingHere);
     }
 
     @Override
     protected AbstractContainerMenu createMenu(int i, Inventory inventory) {
         return new ShoppingExperienceMenu(i, inventory, this, this.data, ContainerLevelAccess.create(this.level, this.getBlockPos()));
-    }
-
-    public @Nullable ItemPrice findItemPriceFor(ItemStack itemStack) {
-        for (ItemPrice itemPrice : this.itemPrices) {
-            if (ItemStack.isSameItemSameComponents(itemPrice.itemForSale(), itemStack)) {
-                return itemPrice;
-            }
-        }
-        return null;
     }
 
     public ItemStack getDefaultCost() {
@@ -131,8 +159,19 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
         return null;
     }
 
+    public @NonNull ItemPrice getItemPrice(ItemStack itemStack) {
+        ItemPrice itemPrice = this.lookupItemPriceFor(itemStack);
+        if (itemPrice != null && itemPrice.cost() != null) {
+            return itemPrice;
+        }
+
+        return new ItemPrice(itemStack.copy(), this.getDefaultCost());
+    }
+
     public List<ItemPrice> getItemPrices() {
-        return this.itemPrices.stream().toList();
+        return this.itemPrices.values().stream()
+                .sorted(ItemPrice.DISPLAY_ORDER)
+                .toList();
     }
 
     @Override
@@ -156,8 +195,21 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
     }
 
     @Override
-    public boolean hasBeds() {
-        return false;
+    public List<ExperienceTarget> getTargets(ServerLevel serverLevel) {
+        List<ExperienceTarget> targets = super.getTargets(serverLevel);
+
+        if (!targets.isEmpty()) {
+            // Add shopping experience block entity as last target so that tourists can return here to pay for items.
+            targets.add(new ExperienceTarget(
+                    this.getBlockPos(),
+                    this.getApproachDirection(),
+                    null,
+                    null,
+                    serverLevel.getDayTime()
+            ));
+        }
+
+        return targets;
     }
 
     @Override
@@ -182,8 +234,8 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
                                 if (copyOfItem.isDamageableItem()) {
                                     copyOfItem.setDamageValue(0);
                                 }
-                                ItemPrice itemPrice = new ItemPrice(copyOfItem, this.defaultCost.copy());
-                                if (this.itemPrices.add(itemPrice)) {
+                                ItemPrice itemPrice = new ItemPrice(copyOfItem, this.getDefaultCost());
+                                if (this.itemPrices.putIfAbsent(new ItemStackKey(copyOfItem), itemPrice) == null) {
                                     numAdded++;
                                 }
                             }
@@ -218,8 +270,12 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
         return blockEntity instanceof Container;
     }
 
+    public @Nullable ItemPrice lookupItemPriceFor(ItemStack itemStack) {
+        return itemPrices.get(new ItemStackKey(itemStack));
+    }
+
     public boolean removeItemPrice(@NonNull ItemPrice itemPrice) {
-        boolean removed = this.itemPrices.remove(itemPrice);
+        boolean removed = this.itemPrices.remove(new ItemStackKey(itemPrice.itemForSale())) != null;
         if (removed) {
             this.setChanged();
         }
@@ -242,8 +298,7 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
     }
 
     public void updateItemPrice(@NonNull ItemPrice itemPrice) {
-        this.itemPrices.remove(itemPrice);
-        this.itemPrices.add(itemPrice);
+        this.itemPrices.put(new ItemStackKey(itemPrice.itemForSale()), itemPrice);
         this.setChanged();
     }
 
@@ -255,7 +310,7 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
         this.defaultCost = valueInput.read("DefaultCost", ItemStack.OPTIONAL_CODEC).orElse(this.defaultCost);
         this.inventory.set(DEFAULT_COST_INDEX, this.defaultCost.copy());
 
-        this.itemPrices = valueInput.read("ItemPrices", ItemPrice.TREESET_CODEC).orElse(new TreeSet<>());
+        this.itemPrices = valueInput.read("ItemPrices", ItemPrice.MAP_CODEC).orElse(new LinkedHashMap<>());
     }
 
     @Override
@@ -263,7 +318,7 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
         super.saveAdditional(valueOutput);
 
         valueOutput.store("DefaultCost", ItemStack.OPTIONAL_CODEC, this.defaultCost);
-        valueOutput.store("ItemPrices", ItemPrice.TREESET_CODEC, this.itemPrices);
+        valueOutput.store("ItemPrices", ItemPrice.MAP_CODEC, this.itemPrices);
     }
 
     @Override
@@ -274,8 +329,7 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
         this.defaultCost = dataComponentGetter.getOrDefault(ModComponents.SHOPPING_EXPERIENCE_DEFAULT_COST, this.defaultCost);
         this.inventory.set(DEFAULT_COST_INDEX, this.defaultCost.copy());
 
-        this.itemPrices = new TreeSet<>();
-        this.itemPrices.addAll(dataComponentGetter.getOrDefault(ModComponents.SHOPPING_EXPERIENCE_ITEM_PRICES, new TreeSet<>()));
+        this.itemPrices = dataComponentGetter.getOrDefault(ModComponents.SHOPPING_EXPERIENCE_ITEM_PRICES, new LinkedHashMap<>());
     }
 
     @Override

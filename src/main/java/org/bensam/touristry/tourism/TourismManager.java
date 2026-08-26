@@ -31,7 +31,7 @@ public class TourismManager {
     private static final int SPAWN_ATTEMPTS_PER_BEACON = 8;
 
     private static @Nullable TourismSavedData tourismSavedData;
-    private static int recordHighestTouristBudget;
+    private static float recordHighestTouristBudget;
 
     private static long lastDayThreshold = -1;
     private static long lastHourThreshold = -1;
@@ -200,7 +200,7 @@ public class TourismManager {
         return null;
     }
 
-    public static int getRecordHighestTouristBudget() {
+    public static float getRecordHighestTouristBudget() {
         return recordHighestTouristBudget;
     }
 
@@ -258,10 +258,10 @@ public class TourismManager {
         });
     }
 
-    public static void recordTouristBudget(int budget) {
+    public static void recordTouristBudget(float budget) {
         if (budget > recordHighestTouristBudget) {
             recordHighestTouristBudget = budget;
-            logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "New record tourist budget: {} emeralds", budget);
+            logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "New record tourist budget: {} emeralds", String.format("%.2f", budget));
             persistSavedData();
         }
     }

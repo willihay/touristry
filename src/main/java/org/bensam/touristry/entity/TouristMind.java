@@ -17,6 +17,7 @@ import net.minecraft.world.level.storage.ValueOutput;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
 import org.bensam.touristry.config.ModServerConfigManager;
 import org.bensam.touristry.config.Verbosity;
+import org.bensam.touristry.entity.goal.PositionForViewingGoal;
 import org.bensam.touristry.tourism.*;
 import org.bensam.touristry.tourism.experience.ExperienceTarget;
 import org.bensam.touristry.tourism.experience.ExperienceVisit;
@@ -29,9 +30,10 @@ import java.util.stream.Collectors;
 
 public final class TouristMind {
     //region Constants
-    private static final int BUDGET_MIN_EMERALDS = 3;
-    private static final int BUDGET_MEAN_EMERALDS = 7;
-    private static final double BUDGET_STD_DEV_EMERALDS = 2.0;
+    private static final float BUDGET_MIN_EMERALDS = 4.0F;
+    private static final float BUDGET_MAX_EMERALDS = 1000.0F;
+    private static final double BUDGET_MEAN_EMERALDS = 8.0F;
+    private static final double BUDGET_STD_DEV_EMERALDS = 2.0D;
     private static final int CHECK_MOOD_INTERVAL_TICKS = 250;
     private static final double MIN_MOOD = -3.0;
     private static final double MAX_MOOD = 4.0;
@@ -50,7 +52,7 @@ public final class TouristMind {
     private TouristState state;
     private double closestDistanceToDestination;
     private int consecutiveFailedProgressChecks;
-    private int dailyBudgetEmeralds; // does not include budget for overnight accommodations, which is handled separately
+    private float dailyBudgetEmeralds; // does not include budget for overnight accommodations, which is handled separately
     private int eveningDespawnTimeTicks;
     private int goodExperiencesToday;
     private boolean isHungry;
@@ -58,7 +60,7 @@ public final class TouristMind {
     private long lastMapToggleTicks; // (not persisted)
     private double mood;
     private int nextMoodCheckTicks; // (not persisted)
-    private int remainingBudgetEmeralds;
+    private float remainingBudgetEmeralds;
     private boolean reportedHurtEnRoute;
     private boolean reportedHurtOnPremises;
     private int waitTicks;
@@ -170,7 +172,7 @@ public final class TouristMind {
         }
 
         // Recreate and inject the goal for the current target.
-        Goal goal = experience.createGoalForTarget(this.tourist, this.currentExperienceTarget);
+        Goal goal = experience.createGoalForTarget(this.tourist, serverLevel, this.currentExperienceTarget);
         if (goal != null) {
             this.injectExperienceGoal(goal);
             TouristEntity.logActivity(Verbosity.LEVEL_1_DIAGNOSTICS, "[TouristMind] Load: Reconstructed experience goal {}", goal.getClass().getSimpleName());
@@ -232,6 +234,10 @@ public final class TouristMind {
 
     public @Nullable BlockPos getExperiencePos() {
         return this.experienceBlockPos;
+    }
+
+    public @Nullable ExperienceVisit getExperienceVisit() {
+        return this.experienceTargetTracker.peekFirst();
     }
 
     public String getLocationNameOrPos() {
@@ -464,22 +470,6 @@ public final class TouristMind {
         }
 
         this.ticksAtCurrentTarget++;
-
-        // Call experience tick - returns true when target is complete.
-        boolean targetComplete = experience.tickAtTarget(this.tourist, serverLevel, this.currentExperienceTarget);
-
-        if (targetComplete) {
-            this.tourist.playSound(SoundEvents.VILLAGER_CELEBRATE);
-
-            // Remove experience-specific goals.
-            this.clearInjectedGoals();
-
-            // Mark target as complete.
-            this.removeCurrentTarget(serverLevel, true);
-
-            // Choose next activity (or exit if experience is complete).
-            this.transitionTo(TouristState.CHOOSING_EXPERIENCE_TARGET);
-        }
     }
 
     private void clearBeaconSession() {
@@ -510,13 +500,13 @@ public final class TouristMind {
     }
 
     // Prerequisite: entry fee for current experience has already been paid.
-    private int generateAllowanceForExperience(TouristExperience experience) {
+    private float generateAllowanceForExperience(TouristExperience experience) {
         if (!experience.canSpendBudgetHere()) {
             return 0;
         }
 
-        int remainingBudget = this.remainingBudgetEmeralds;
-        if (remainingBudget <= 1) {
+        float remainingBudget = this.remainingBudgetEmeralds;
+        if (remainingBudget <= 1.0F) {
             return remainingBudget;
         }
 
@@ -545,9 +535,9 @@ public final class TouristMind {
         return remainingBudget / placesTouristWantsToSpendBudget;
     }
 
-    private int generateDailyBudget() {
+    private float generateDailyBudget() {
         double budget = BUDGET_MEAN_EMERALDS + (this.random().nextGaussian() * BUDGET_STD_DEV_EMERALDS);
-        return Math.clamp(Math.round(budget), BUDGET_MIN_EMERALDS, Integer.MAX_VALUE);
+        return Math.clamp(Math.round(budget), BUDGET_MIN_EMERALDS, BUDGET_MAX_EMERALDS);
     }
 
     private int generateRandomDespawnTime() {
@@ -620,6 +610,10 @@ public final class TouristMind {
         this.recordExperience(serverLevel, review);
     }
 
+    public void spendBudget(float amount) {
+        this.remainingBudgetEmeralds -= amount;
+    }
+
     private void toggleHeldMap() {
         if (this.tourist.hasHeldItem()) {
             this.tourist.clearHeldItem();
@@ -636,6 +630,46 @@ public final class TouristMind {
             this.toggleHeldMap();
             this.lastMapToggleTicks = serverLevel.getDayTime();
         }
+    }
+
+    public void updateExperienceVisitAllowance(float newAllowance) {
+        if (this.experienceTargetTracker.isEmpty()) {
+            return;
+        }
+
+        // Pop current visit, update it, push it back.
+        ExperienceVisit currentVisit = this.experienceTargetTracker.pollFirst();
+
+        ExperienceVisit updatedVisit = new ExperienceVisit(
+                currentVisit.experienceUUID(),
+                newAllowance,
+                currentVisit.remainingTargets(),
+                currentVisit.targetsCompleted(),
+                currentVisit.totalTargets(),
+                currentVisit.result()
+        );
+
+        this.experienceTargetTracker.push(updatedVisit);
+    }
+
+    public void updateExperienceVisitResult(VisitResult newResult) {
+        if (this.experienceTargetTracker.isEmpty()) {
+            return;
+        }
+
+        // Pop current visit, update it, push it back.
+        ExperienceVisit currentVisit = this.experienceTargetTracker.pollFirst();
+
+        ExperienceVisit updatedVisit = new ExperienceVisit(
+                currentVisit.experienceUUID(),
+                currentVisit.budgetRemaining(),
+                currentVisit.remainingTargets(),
+                currentVisit.targetsCompleted(),
+                currentVisit.totalTargets(),
+                newResult
+        );
+
+        this.experienceTargetTracker.push(updatedVisit);
     }
 
     //region State Transition Methods
@@ -918,7 +952,11 @@ public final class TouristMind {
 
         if (remainingTargets.isEmpty()) {
             // All targets attempted - exit experience.
-            VisitResult result = currentVisit.allTargetsCompleted() ? VisitResult.GOOD : VisitResult.UNFAVORABLE;
+            VisitResult result = currentVisit.result();
+            if (result == VisitResult.ARRIVED) {
+                // No updates since tourist arrived. Use target completion as a default result.
+                result = currentVisit.allTargetsCompleted() ? VisitResult.GOOD : VisitResult.UNFAVORABLE;
+            }
             this.exitCurrentExperience(serverLevel, result, true, null);
             return;
         }
@@ -983,7 +1021,11 @@ public final class TouristMind {
         // Pay entry fee, if applicable.
         ItemStack entryFee = experience.getEntryFee();
         if (!entryFee.isEmpty()) {
-            if (!experience.tryDepositPayment(entryFee)) {
+            // TODO Use TouristEconomy to determine if entry fee is reasonable. Consider skipping experience if not.
+            if (experience.tryDepositPayment(entryFee)) {
+                float feeValue = (int) TouristEconomy.getEmeraldEquivalent(entryFee);
+                this.spendBudget(feeValue);
+            } else {
                 // Payment failed. Assume that we cannot enter this experience.
                 this.updateMood(VisitResult.PAYMENT_FAILED);
                 this.recordExperience(serverLevel, new TouristReview(
@@ -1021,7 +1063,8 @@ public final class TouristMind {
                 this.generateAllowanceForExperience(experience),
                 new ArrayList<>(targets),
                 0,
-                targets.size()
+                targets.size(),
+                VisitResult.ARRIVED
         );
         this.experienceTargetTracker.push(visit);
 
@@ -1099,7 +1142,7 @@ public final class TouristMind {
         }
 
         // Now inject experience-specific goals.
-        Goal experienceGoal = experience.createGoalForTarget(this.tourist, this.currentExperienceTarget);
+        Goal experienceGoal = experience.createGoalForTarget(this.tourist, serverLevel, this.currentExperienceTarget);
 
         if (experienceGoal != null) {
             this.injectExperienceGoal(experienceGoal);
@@ -1108,6 +1151,17 @@ public final class TouristMind {
         }
 
         this.transitionTo(TouristState.EXPERIENCING_TARGET);
+    }
+
+    public void finishTargetGoal(ServerLevel serverLevel) {
+        // Remove experience-specific goals.
+        this.clearInjectedGoals();
+
+        // Mark target as complete.
+        this.removeCurrentTarget(serverLevel, true);
+
+        // Choose next activity (or exit if experience is complete).
+        this.transitionTo(TouristState.CHOOSING_EXPERIENCE_TARGET);
     }
 
     private void leaveEarly(ServerLevel serverLevel) {
@@ -1135,31 +1189,6 @@ public final class TouristMind {
         this.recordExperience(serverLevel, review);
 
         this.transitionTo(TouristState.DESPAWNING);
-    }
-
-    private void removeCurrentTarget(ServerLevel serverLevel, boolean markCompleted) {
-        if (this.experienceTargetTracker.isEmpty()) {
-            return;
-        }
-
-        // Pop current visit, update it, push it back.
-        ExperienceVisit currentVisit = this.experienceTargetTracker.pollFirst();
-
-        List<ExperienceTarget> remainingTargets = new ArrayList<>(currentVisit.remainingTargets());
-        if (!remainingTargets.isEmpty()) {
-            remainingTargets.removeFirst(); // remove target
-        }
-
-        ExperienceVisit updatedVisit = new ExperienceVisit(
-                currentVisit.experienceUUID(),
-                currentVisit.budgetAllowance(),
-                remainingTargets,
-                markCompleted ? currentVisit.targetsCompleted() + 1 : currentVisit.targetsCompleted(),
-                currentVisit.totalTargets()
-        );
-
-        this.experienceTargetTracker.push(updatedVisit);
-        //this.currentTargetIndex++; (not currently used - completed targets are removed from list)
     }
 
     public void onForcedDespawn() {
@@ -1296,7 +1325,7 @@ public final class TouristMind {
 
         // Inject positioning goal to fine-tune position and orientation.
         int idealDistance = experience.getIdealApproachDistance();
-        Goal positioningGoal = new org.bensam.touristry.entity.goal.PositionForViewingGoal(
+        Goal positioningGoal = new PositionForViewingGoal(
                 this.tourist,
                 this.currentExperienceTarget.pos(),
                 this.currentExperienceTarget.playerFacing(),
@@ -1312,6 +1341,32 @@ public final class TouristMind {
     public void prepareForJourney(@NonNull BlockPos beaconTarget) {
         this.beaconPos = beaconTarget.immutable();
         this.transitionTo(TouristState.TRAVELING_TO_BEACON);
+    }
+
+    private void removeCurrentTarget(ServerLevel serverLevel, boolean markCompleted) {
+        if (this.experienceTargetTracker.isEmpty()) {
+            return;
+        }
+
+        // Pop current visit, update it, push it back.
+        ExperienceVisit currentVisit = this.experienceTargetTracker.pollFirst();
+
+        List<ExperienceTarget> remainingTargets = new ArrayList<>(currentVisit.remainingTargets());
+        if (!remainingTargets.isEmpty()) {
+            remainingTargets.removeFirst(); // remove target
+        }
+
+        ExperienceVisit updatedVisit = new ExperienceVisit(
+                currentVisit.experienceUUID(),
+                currentVisit.budgetRemaining(),
+                remainingTargets,
+                markCompleted ? currentVisit.targetsCompleted() + 1 : currentVisit.targetsCompleted(),
+                currentVisit.totalTargets(),
+                currentVisit.result()
+        );
+
+        this.experienceTargetTracker.push(updatedVisit);
+        //this.currentTargetIndex++; (not currently used - completed targets are removed from list)
     }
     //endregion
 
@@ -1356,8 +1411,8 @@ public final class TouristMind {
         valueOutput.putInt("TicksAtCurrentExperience", this.ticksAtCurrentExperience);
         valueOutput.putInt("TicksAtCurrentTarget", this.ticksAtCurrentTarget);
         valueOutput.putInt("WaitTicks", this.waitTicks);
-        valueOutput.putInt("DailyBudget", this.dailyBudgetEmeralds);
-        valueOutput.putInt("RemainingBudget", this.remainingBudgetEmeralds);
+        valueOutput.putFloat("DailyBudget", this.dailyBudgetEmeralds);
+        valueOutput.putFloat("RemainingBudget", this.remainingBudgetEmeralds);
     }
 
     public void readAdditionalSaveData(ValueInput valueInput) {
@@ -1394,8 +1449,8 @@ public final class TouristMind {
         this.ticksAtCurrentExperience = valueInput.getIntOr("TicksAtCurrentExperience", 0);
         this.ticksAtCurrentTarget = valueInput.getIntOr("TicksAtCurrentTarget", 0);
         this.waitTicks = valueInput.getIntOr("WaitTicks", 0);
-        this.dailyBudgetEmeralds = valueInput.getIntOr("DailyBudgetEmeralds", this.dailyBudgetEmeralds);
-        this.remainingBudgetEmeralds = valueInput.getIntOr("RemainingBudgetEmeralds", this.remainingBudgetEmeralds);
+        this.dailyBudgetEmeralds = valueInput.getFloatOr("DailyBudgetEmeralds", this.dailyBudgetEmeralds);
+        this.remainingBudgetEmeralds = valueInput.getFloatOr("RemainingBudgetEmeralds", this.remainingBudgetEmeralds);
 
         // Reconstruct currentExperienceTarget from experienceTargetTracker.
         if (!this.experienceTargetTracker.isEmpty()) {

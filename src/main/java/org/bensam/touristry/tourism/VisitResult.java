@@ -1,25 +1,37 @@
 package org.bensam.touristry.tourism;
 
-public enum VisitResult {
+import com.mojang.serialization.Codec;
+import net.minecraft.util.StringRepresentable;
+
+import java.util.Locale;
+
+public enum VisitResult implements StringRepresentable {
     ARRIVED(0.0, 1.0),
     GOOD(1.0, 1.0),
     GREAT(2.0, 2.0),
     UNFAVORABLE(-1.5, -1.0),
-    FAILED_SPAWN(-1.0, 0),
+    FAILED_SPAWN(-1.0, 0.0),
     LOST(-1.5, -1.0),
     CLOSED_EARLY(-1.5, -1.0),
     PAYMENT_FAILED(-0.5, -1.0),
     HURT_EN_ROUTE(-2.0, -2.0),
     HURT_ON_PREMISES(-4.0, -2.0),
-    KILLED_EN_ROUTE(-3.0, 0),
-    KILLED_ON_PREMISES(-9.0, 0);
+    KILLED_EN_ROUTE(-3.0, 0.0),
+    KILLED_ON_PREMISES(-9.0, 0.0);
 
     private final double baseReputationDelta;
     private final double moodDelta;
 
+    public static final Codec<VisitResult> CODEC = StringRepresentable.fromEnum(VisitResult::values);
+
     VisitResult(double baseReputationDelta, double moodDelta) {
         this.baseReputationDelta = baseReputationDelta;
         this.moodDelta = moodDelta;
+    }
+
+    @Override
+    public String getSerializedName() {
+        return name().toLowerCase(Locale.ROOT);
     }
 
     public double baseReputationDelta() {

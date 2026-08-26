@@ -44,8 +44,6 @@ public interface TouristExperience {
 
     // Lifecycle
     void onTouristArrival(TouristEntity tourist, ServerLevel serverLevel);
-    boolean tickAtTarget(TouristEntity tourist, ServerLevel serverLevel, ExperienceTarget target);
     void onTouristDeparture(TouristEntity tourist, ServerLevel serverLevel, boolean completed);
-
-    @Nullable Goal createGoalForTarget(TouristEntity tourist, ExperienceTarget target);
+    @Nullable Goal createGoalForTarget(TouristEntity tourist, ServerLevel serverLevel, ExperienceTarget target);
 }

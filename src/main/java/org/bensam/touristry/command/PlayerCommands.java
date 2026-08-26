@@ -316,7 +316,10 @@ public final class PlayerCommands {
     }
 
     private static int listTouristStatistics(CommandSourceStack source) {
-        source.sendSuccess(() -> Component.literal("Highest tourist daily budget: " + TourismManager.getRecordHighestTouristBudget()), false);
+        source.sendSuccess(
+                () -> Component.literal("Highest recorded tourist daily budget: " + String.format("%.2f", TourismManager.getRecordHighestTouristBudget()) + " emeralds"),
+                false
+        );
         return 1;
     }
 

@@ -40,9 +40,13 @@ import org.bensam.touristry.tourism.TourismManager;
 import org.bensam.touristry.tourism.TouristLocation;
 import org.bensam.touristry.tourism.TouristReview;
 import org.bensam.touristry.tourism.VisitResult;
+import org.bensam.touristry.tourism.experience.ItemPrice;
 import org.bensam.touristry.tourism.experience.TouristExperience;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class TouristEntity extends AbstractVillager {
     private static final int BASE_MODEL_VARIANTS = 10;
@@ -54,6 +58,8 @@ public class TouristEntity extends AbstractVillager {
     private int baseModelVariant;
     private String clothingVariantKey = ClothingOptionsLoader.DEFAULT_KEY;
     private final TouristMind mind;
+    private List<ItemPrice> shoppingBag = new ArrayList<>();
+
     private boolean registeredWithTourismManager;
 
     public TouristEntity(Level level) {
@@ -181,6 +187,18 @@ public class TouristEntity extends AbstractVillager {
         }
     }
 
+    public void addToShoppingBag(ItemPrice newItem) {
+        for (ItemPrice bagItem : this.shoppingBag) {
+            if (bagItem.equals(newItem)) {
+                ItemStack itemForSale = bagItem.itemForSale();
+                itemForSale.setCount(itemForSale.getCount() + newItem.itemForSale().getCount());
+                return;
+            }
+        }
+
+        this.shoppingBag.add(newItem);
+    }
+
     public void applyExperienceToWorld(
             ServerLevel serverLevel,
             TouristReview review,
@@ -245,12 +263,19 @@ public class TouristEntity extends AbstractVillager {
         this.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
     }
 
+    public void clearShoppingBag() {
+        this.shoppingBag.clear();
+    }
+
     @Override
     public void die(DamageSource damageSource) {
         if (this.level() instanceof ServerLevel serverLevel) {
+            // Drop everything carried.
+            this.dropAll();
+
+            // Record experience.
             MutableComponent experienceMessage = damageSource.getLocalizedDeathMessage(this).copy();
             VisitResult visitResult = null;
-
             if (this.isTraveling()) {
                 experienceMessage.append(Component.literal(" while travelling to"));
                 visitResult = VisitResult.KILLED_EN_ROUTE;
@@ -274,6 +299,17 @@ public class TouristEntity extends AbstractVillager {
         }
 
         super.die(damageSource);
+    }
+
+    protected void dropAll() {
+        // Drop contents of shopping bag.
+        if (!this.shoppingBag.isEmpty()) {
+            for (ItemPrice bagItem : this.shoppingBag) {
+                this.drop(bagItem.itemForSale(), true, false);
+            }
+
+            this.shoppingBag.clear();
+        }
     }
 
     public @Nullable BlockPos getBeaconTarget() {
@@ -323,6 +359,10 @@ public class TouristEntity extends AbstractVillager {
         return this.mind.getMoveToTargetName();
     }
 
+    public List<ItemPrice> getShoppingBag() {
+        return List.copyOf(this.shoppingBag);
+    }
+
     public int getTicksAtCurrentTarget() {
         return this.mind.getTicksAtCurrentTarget();
     }
@@ -367,6 +407,10 @@ public class TouristEntity extends AbstractVillager {
         }
 
         return super.hurtServer(serverLevel, damageSource, f);
+    }
+
+    public boolean isAtExperienceTarget() {
+        return this.mind.getState().isAtTarget();
     }
 
     public boolean isAtTouristLocation() {
@@ -481,6 +525,9 @@ public class TouristEntity extends AbstractVillager {
         valueOutput.putInt("BaseModelVariant", this.baseModelVariant);
         valueOutput.putString("ClothingVariantKey", this.clothingVariantKey);
         //Touristry.LOGGER.info("[DEBUG-VARIANT] Saving tourist {} base={} clothing={}", this.uuid, this.baseModelVariant, this.clothingVariantKey);
+        if (!this.shoppingBag.isEmpty()) {
+            valueOutput.store("ShoppingBag", ItemPrice.CODEC.listOf(), List.copyOf(this.shoppingBag));
+        }
         this.mind.addAdditionalSaveData(valueOutput);
     }
 
@@ -490,6 +537,10 @@ public class TouristEntity extends AbstractVillager {
         this.setBaseModelVariant(valueInput.getIntOr("BaseModelVariant", this.baseModelVariant));
         this.setClothingVariant(valueInput.getStringOr("ClothingVariantKey", this.clothingVariantKey));
         //Touristry.LOGGER.info("[DEBUG-VARIANT] Loaded tourist {} base={} clothing={}", this.uuid, this.baseModelVariant, this.clothingVariantKey);
+        this.shoppingBag = new ArrayList<>(
+                valueInput.read("ShoppingBag", ItemPrice.CODEC.listOf()).orElse(List.of())
+        );
+
         this.mind.readAdditionalSaveData(valueInput);
 
         if (this.level() instanceof ServerLevel serverLevel) {

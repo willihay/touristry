@@ -8,12 +8,13 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
+import org.bensam.touristry.block.entity.ShoppingExperienceBlockEntity;
 import org.bensam.touristry.tourism.experience.ExperienceTarget;
 import org.bensam.touristry.tourism.experience.ItemPrice;
 import org.bensam.touristry.tourism.experience.TouristLocationStats;
 
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.TreeSet;
 import java.util.UUID;
 
 public final class ModComponents {
@@ -108,11 +109,11 @@ public final class ModComponents {
                     .build()
     );
 
-    public static final DataComponentType<TreeSet<ItemPrice>> SHOPPING_EXPERIENCE_ITEM_PRICES = Registry.register(
+    public static final DataComponentType<LinkedHashMap<ShoppingExperienceBlockEntity.ItemStackKey, ItemPrice>> SHOPPING_EXPERIENCE_ITEM_PRICES = Registry.register(
             BuiltInRegistries.DATA_COMPONENT_TYPE,
             Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "shopping_experience_item_prices"),
-            DataComponentType.<TreeSet<ItemPrice>>builder()
-                    .persistent(ItemPrice.TREESET_CODEC)
+            DataComponentType.<LinkedHashMap<ShoppingExperienceBlockEntity.ItemStackKey, ItemPrice>>builder()
+                    .persistent(ItemPrice.MAP_CODEC)
                     .build()
     );
 
