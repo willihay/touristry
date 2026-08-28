@@ -287,8 +287,37 @@ public final class TouristMind {
         return null;
     }
 
-    public String getTargetName() {
-        switch (this.state) {
+    public TouristState getState() {
+        return this.state;
+    }
+
+    public String getStateForLogging() {
+        return this.getStateForLogging(this.state);
+    }
+
+    public String getStateForLogging(TouristState state) {
+        String targetName = this.getStateTargetName(state);
+        if (targetName.isEmpty()) {
+            targetName = "(unknown)";
+        }
+
+        String logMessageSuffix = switch (state) {
+            case TRAVELING_TO_BEACON, WAIT_AT_BEACON, CHOOSING_EXPERIENCE_AT_BEACON, WANDERING_AT_BEACON,
+                 TRAVELING_TO_EXPERIENCE, WAIT_AT_EXPERIENCE, ENTERING_EXPERIENCE, WANDERING_AT_EXPERIENCE,
+                 TRAVELING_TO_EXPERIENCE_TARGET, POSITIONING_AT_TARGET, EXPERIENCING_TARGET -> " " + targetName;
+            case CHOOSING_EXPERIENCE_TARGET, SLEEPING -> " at " + targetName;
+            default -> "";
+        };
+
+        return state + logMessageSuffix;
+    }
+
+    public String getStateTargetName() {
+        return this.getStateTargetName(this.state);
+    }
+
+    public String getStateTargetName(TouristState state) {
+        switch (state) {
             case TRAVELING_TO_BEACON, WAIT_AT_BEACON, CHOOSING_EXPERIENCE_AT_BEACON, WANDERING_AT_BEACON -> {
                 TouristBeaconBlockEntity beaconBlockEntity = TourismManager.getBeaconBlockEntity(this.tourist.level(), this.beaconPos);
                 if (beaconBlockEntity != null) {
@@ -307,6 +336,9 @@ public final class TouristMind {
                 }
             }
             case TRAVELING_TO_EXPERIENCE_TARGET, POSITIONING_AT_TARGET, EXPERIENCING_TARGET -> {
+                if (this.targetPos == null) {
+                    return "";
+                }
                 TouristExperience experience = TourismManager.getTouristExperienceByPos(this.experienceBlockPos);
                 if (experience != null) {
                     return this.targetPos.toShortString() + " from " + experience.getDisplayName().getString();
@@ -316,27 +348,6 @@ public final class TouristMind {
             }
             default -> { return ""; }
         }
-    }
-
-    public TouristState getState() {
-        return this.state;
-    }
-
-    public String getStateForLogging() {
-        String targetName = this.getTargetName();
-        if (targetName.isEmpty()) {
-            targetName = "(unknown)";
-        }
-
-        String logMessageSuffix = switch (this.state) {
-            case TRAVELING_TO_BEACON, WAIT_AT_BEACON, CHOOSING_EXPERIENCE_AT_BEACON, WANDERING_AT_BEACON,
-                 TRAVELING_TO_EXPERIENCE, WAIT_AT_EXPERIENCE, ENTERING_EXPERIENCE, WANDERING_AT_EXPERIENCE,
-                 TRAVELING_TO_EXPERIENCE_TARGET, POSITIONING_AT_TARGET, EXPERIENCING_TARGET -> " " + targetName;
-            case CHOOSING_EXPERIENCE_TARGET, SLEEPING -> " at " + targetName;
-            default -> "";
-        };
-
-        return this.state + logMessageSuffix;
     }
 
     public int getTicksAtCurrentTarget() {
@@ -768,7 +779,7 @@ public final class TouristMind {
             }
         }
 
-        String stateForLogging = this.getStateForLogging();
+        String stateForLogging = this.getStateForLogging(newState);
         if (this.state == newState) {
             TouristEntity.logActivity(Verbosity.MAJOR_EVENTS, "[TouristMind] Re-entering state {}", stateForLogging);
         } else {
