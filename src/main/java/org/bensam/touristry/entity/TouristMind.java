@@ -57,6 +57,7 @@ public final class TouristMind {
     private float dailyBudgetEmeralds; // does not include budget for overnight accommodations, which is handled separately
     private int eveningDespawnTimeTicks;
     private int goodExperiencesToday;
+    private List<TouristItemInterest> interests = new ArrayList<>();
     private boolean isHungry;
     private boolean isStayingOvernight;
     private long lastMapToggleTicks; // (not persisted)
@@ -100,6 +101,7 @@ public final class TouristMind {
         this.remainingBudgetEmeralds = this.dailyBudgetEmeralds;
         this.state = TouristState.IDLE;
         this.targetPos = null;
+        this.generateInterests();
     }
 
     public void postInitialize() {
@@ -242,6 +244,10 @@ public final class TouristMind {
         return this.experienceTargetTracker.peekFirst();
     }
 
+    public List<TouristItemInterest> getInterests() {
+        return List.copyOf(this.interests);
+    }
+
     public String getLocationNameOrPos() {
         TouristLocation currentLocation = this.state.touristLocation();
         switch (currentLocation) {
@@ -281,27 +287,56 @@ public final class TouristMind {
         return null;
     }
 
-    public String getMoveToTargetName() {
-        if (this.state == TouristState.TRAVELING_TO_BEACON) {
-            TouristBeaconBlockEntity beaconBlockEntity = TourismManager.getBeaconBlockEntity(this.tourist.level(), this.beaconPos);
-            if (beaconBlockEntity != null) {
-                return beaconBlockEntity.getPlainTextName();
-            }
-        } else if (this.state == TouristState.TRAVELING_TO_EXPERIENCE || 
-                   this.state == TouristState.TRAVELING_TO_EXPERIENCE_TARGET) {
-            TouristExperience experience = TourismManager.getTouristExperienceByPos(this.experienceBlockPos);
-            if (experience != null) {
-                if (this.state == TouristState.TRAVELING_TO_EXPERIENCE_TARGET && this.targetPos != null) {
-                    return experience.getDisplayName().getString() + " target at " + this.targetPos.toShortString();
+    public String getTargetName() {
+        switch (this.state) {
+            case TRAVELING_TO_BEACON, WAIT_AT_BEACON, CHOOSING_EXPERIENCE_AT_BEACON, WANDERING_AT_BEACON -> {
+                TouristBeaconBlockEntity beaconBlockEntity = TourismManager.getBeaconBlockEntity(this.tourist.level(), this.beaconPos);
+                if (beaconBlockEntity != null) {
+                    return beaconBlockEntity.getPlainTextName();
+                } else {
+                    return "";
                 }
-                return experience.getDisplayName().getString();
             }
+            case TRAVELING_TO_EXPERIENCE, WAIT_AT_EXPERIENCE, ENTERING_EXPERIENCE, WANDERING_AT_EXPERIENCE,
+                 CHOOSING_EXPERIENCE_TARGET, SLEEPING -> {
+                TouristExperience experience = TourismManager.getTouristExperienceByPos(this.experienceBlockPos);
+                if (experience != null) {
+                    return experience.getDisplayName().getString();
+                } else {
+                    return "";
+                }
+            }
+            case TRAVELING_TO_EXPERIENCE_TARGET, POSITIONING_AT_TARGET, EXPERIENCING_TARGET -> {
+                TouristExperience experience = TourismManager.getTouristExperienceByPos(this.experienceBlockPos);
+                if (experience != null) {
+                    return this.targetPos.toShortString() + " from " + experience.getDisplayName().getString();
+                } else {
+                    return this.targetPos.toShortString();
+                }
+            }
+            default -> { return ""; }
         }
-        return "";
     }
 
     public TouristState getState() {
         return this.state;
+    }
+
+    public String getStateForLogging() {
+        String targetName = this.getTargetName();
+        if (targetName.isEmpty()) {
+            targetName = "(unknown)";
+        }
+
+        String logMessageSuffix = switch (this.state) {
+            case TRAVELING_TO_BEACON, WAIT_AT_BEACON, CHOOSING_EXPERIENCE_AT_BEACON, WANDERING_AT_BEACON,
+                 TRAVELING_TO_EXPERIENCE, WAIT_AT_EXPERIENCE, ENTERING_EXPERIENCE, WANDERING_AT_EXPERIENCE,
+                 TRAVELING_TO_EXPERIENCE_TARGET, POSITIONING_AT_TARGET, EXPERIENCING_TARGET -> " " + targetName;
+            case CHOOSING_EXPERIENCE_TARGET, SLEEPING -> " at " + targetName;
+            default -> "";
+        };
+
+        return this.state + logMessageSuffix;
     }
 
     public int getTicksAtCurrentTarget() {
@@ -543,6 +578,14 @@ public final class TouristMind {
         return Math.clamp(Math.round(budget), BUDGET_MIN_EMERALDS, BUDGET_MAX_EMERALDS);
     }
 
+    private void generateInterests() {
+        for (TouristItemInterest interest : TouristItemInterest.values()) {
+            if (this.random().nextFloat() <= interest.probability()) {
+                this.interests.add(interest);
+            }
+        }
+    }
+
     private int generateRandomDespawnTime() {
         return 12000 + this.random().nextInt(1000);
     }
@@ -683,7 +726,6 @@ public final class TouristMind {
 
         // Validate prerequisites before transition.
         TouristBeaconBlockEntity beaconBlockEntity = null;
-        String beaconName = "";
         if (newState.requiresBeaconPos()) {
             if (this.beaconPos != null) {
                 beaconBlockEntity = TourismManager.getBeaconBlockEntity(serverLevel, this.beaconPos);
@@ -700,12 +742,9 @@ public final class TouristMind {
                     return;
                 }
             }
-
-            beaconName = beaconBlockEntity.getDisplayName().getString();
         }
 
         TouristExperience experience = null;
-        String experienceName = "";
         if (newState.requiresExperiencePos()) {
             if (this.experienceBlockPos != null) {
                 experience = TourismManager.getTouristExperienceByPos(this.experienceBlockPos);
@@ -716,8 +755,6 @@ public final class TouristMind {
                 this.transitionTo(TouristState.PLANNING_NEXT_MOVE); // fallback
                 return;
             }
-
-            experienceName = experience.getDisplayName().getString();
         }
 
         if (newState == TouristState.TRAVELING_TO_EXPERIENCE_TARGET ||
@@ -731,17 +768,11 @@ public final class TouristMind {
             }
         }
 
-        String logMessageSuffix = switch (newState) {
-            case TRAVELING_TO_BEACON, WAIT_AT_BEACON, CHOOSING_EXPERIENCE_AT_BEACON, WANDERING_AT_BEACON -> " " + beaconName;
-            case TRAVELING_TO_EXPERIENCE, WAIT_AT_EXPERIENCE, ENTERING_EXPERIENCE, WANDERING_AT_EXPERIENCE -> " " + experienceName;
-            case CHOOSING_EXPERIENCE_TARGET, SLEEPING -> " at " + experienceName;
-            case TRAVELING_TO_EXPERIENCE_TARGET, POSITIONING_AT_TARGET, EXPERIENCING_TARGET -> " at " + this.targetPos.toShortString();
-            default -> "";
-        };
+        String stateForLogging = this.getStateForLogging();
         if (this.state == newState) {
-            TouristEntity.logActivity(Verbosity.MAJOR_EVENTS, "[TouristMind] Re-entering state {}{}", newState, logMessageSuffix);
+            TouristEntity.logActivity(Verbosity.MAJOR_EVENTS, "[TouristMind] Re-entering state {}", stateForLogging);
         } else {
-            TouristEntity.logActivity(Verbosity.MAJOR_EVENTS, "[TouristMind] Transitioning state to {}{}", newState, logMessageSuffix);
+            TouristEntity.logActivity(Verbosity.MAJOR_EVENTS, "[TouristMind] Transitioning state to {}", stateForLogging);
         }
 
         this.state = newState;
@@ -1236,18 +1267,7 @@ public final class TouristMind {
             this.removeCurrentTarget(serverLevel, false);
             this.transitionTo(TouristState.CHOOSING_EXPERIENCE_TARGET);
         } else if (this.state == TouristState.TRAVELING_TO_EXPERIENCE) {
-            TouristExperience experience = TourismManager.getTouristExperienceByPos(this.experienceBlockPos);
-            Component experienceMessage;
-            if (experience == null) {
-                experienceMessage = Component.literal("got lost travelling to experience at " + this.experienceBlockPos.toShortString());
-            } else {
-                String targetInfo = this.state == TouristState.TRAVELING_TO_EXPERIENCE_TARGET && this.targetPos != null
-                        ? " target at " + this.targetPos.toShortString() /* TODO: use TouristExperience::getTargetDisplayName */
-                        : "";
-                experienceMessage = Component.literal("got lost travelling to ")
-                        .append(experience.getDisplayName())
-                        .append(targetInfo);
-            }
+            Component experienceMessage = Component.literal("got lost travelling to");
             this.exitCurrentExperience(serverLevel, VisitResult.LOST, false, experienceMessage);
         } else {
             this.updateMood(VisitResult.LOST);
@@ -1419,6 +1439,10 @@ public final class TouristMind {
             valueOutput.store("ExperienceTargetTracker", ExperienceVisit.CODEC.listOf(),
                     List.copyOf(this.experienceTargetTracker));
         }
+
+        if (!this.interests.isEmpty()) {
+            valueOutput.store("Interests", TouristItemInterest.CODEC.listOf(), List.copyOf(this.interests));
+        }
         
         if (this.beaconPos != null) {
             valueOutput.store("BeaconPos", BlockPos.CODEC, this.beaconPos);
@@ -1464,7 +1488,14 @@ public final class TouristMind {
         List<ExperienceVisit> trackerList = valueInput.read("ExperienceTargetTracker", ExperienceVisit.CODEC.listOf())
                 .orElse(List.of());
         this.experienceTargetTracker = new ArrayDeque<>(trackerList);
-        
+
+        List<TouristItemInterest> interests = new ArrayList<>(
+                valueInput.read("Interests", TouristItemInterest.CODEC.listOf()).orElse(List.of())
+        );
+        if (!interests.isEmpty()) {
+            this.interests = List.copyOf(interests);
+        }
+
         this.experienceBlockPos = valueInput.read("ExperienceBlockPos", BlockPos.CODEC).orElse(null);
         this.targetPos = valueInput.read("TargetPos", BlockPos.CODEC).orElse(null);
         this.closestDistanceToDestination = valueInput.getDoubleOr("ClosestDistanceToDestination", Double.MAX_VALUE);

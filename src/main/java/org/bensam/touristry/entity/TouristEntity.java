@@ -81,7 +81,7 @@ public class TouristEntity extends AbstractVillager {
         this.getNavigation().setCanOpenDoors(true);
         this.getNavigation().setCanFloat(true);
         this.getNavigation().setRequiredPathLength(48.0F);
-        //Touristry.LOGGER.info("[DEBUG-VARIANT] Constructed tourist {} base={} clothing={}", this.uuid, this.baseModelVariant, this.clothingVariantKey);
+        logActivity(Verbosity.LEVEL_1_DIAGNOSTICS, "Constructed tourist {} base={} clothing={}", this.uuid, this.baseModelVariant, this.clothingVariantKey);
     }
 
     private int generateBaseModelVariant() {
@@ -210,8 +210,6 @@ public class TouristEntity extends AbstractVillager {
                 TouristBeaconBlockEntity beaconBlockEntity = TourismManager.getBeaconBlockEntity(serverLevel, reviewTargetPos);
                 if (beaconBlockEntity != null) {
                     beaconBlockEntity.rateVisit(review.result(), serverLevel.getDayTime());
-                } else {
-                    // TODO: Leave a pending VisitResult rating with the TourismManager for if/when the beacon returns.
                 }
             }
         } else if (review.reviewTarget() == TouristLocation.EXPERIENCE) {
@@ -221,8 +219,6 @@ public class TouristEntity extends AbstractVillager {
                 TouristExperience experience = TourismManager.getTouristExperienceByPos(reviewTargetPos);
                 if (experience != null) {
                     experience.rateVisit(review.result(), serverLevel.getDayTime());
-                } else {
-                    // TODO: Leave a pending VisitResult rating with the TourismManager for if/when the experience returns.
                 }
             }
         }
@@ -351,10 +347,6 @@ public class TouristEntity extends AbstractVillager {
         return this.mind.getMoveToTarget();
     }
 
-    public String getMoveToTargetName() {
-        return this.mind.getMoveToTargetName();
-    }
-
     public List<ItemPrice> getShoppingBag() {
         return List.copyOf(this.shoppingBag);
     }
@@ -442,14 +434,19 @@ public class TouristEntity extends AbstractVillager {
 
     @Override
     public void onRemoval(Entity.@NonNull RemovalReason removalReason) {
-        TourismManager.unregisterTourist(this);
-        this.registeredWithTourismManager = false;
+        logActivity(Verbosity.LEVEL_1_DIAGNOSTICS, "Tourist {} removed because {}", this.getUUID(), removalReason);
+
+        if (this.level() instanceof ServerLevel) {
+            TourismManager.unregisterTourist(this);
+            this.registeredWithTourismManager = false;
+        }
+
         super.onRemoval(removalReason);
     }
 
     @Override
     public boolean removeWhenFarAway(double distanceToClosestPlayer) {
-        return false; // prevents entity from de-spawning
+        return false; // prevents entity from de-spawning due to distance from players
     }
 
     @Override
@@ -517,10 +514,10 @@ public class TouristEntity extends AbstractVillager {
 
     @Override
     protected void addAdditionalSaveData(ValueOutput valueOutput) {
+        logActivity(Verbosity.LEVEL_1_DIAGNOSTICS, "Saving tourist {} base={} clothing={}", this.uuid, this.baseModelVariant, this.clothingVariantKey);
         super.addAdditionalSaveData(valueOutput);
         valueOutput.putInt("BaseModelVariant", this.baseModelVariant);
         valueOutput.putString("ClothingVariantKey", this.clothingVariantKey);
-        //Touristry.LOGGER.info("[DEBUG-VARIANT] Saving tourist {} base={} clothing={}", this.uuid, this.baseModelVariant, this.clothingVariantKey);
         if (!this.shoppingBag.isEmpty()) {
             valueOutput.store("ShoppingBag", ItemPrice.CODEC.listOf(), List.copyOf(this.shoppingBag));
         }
@@ -532,10 +529,10 @@ public class TouristEntity extends AbstractVillager {
         super.readAdditionalSaveData(valueInput);
         this.setBaseModelVariant(valueInput.getIntOr("BaseModelVariant", this.baseModelVariant));
         this.setClothingVariant(valueInput.getStringOr("ClothingVariantKey", this.clothingVariantKey));
-        //Touristry.LOGGER.info("[DEBUG-VARIANT] Loaded tourist {} base={} clothing={}", this.uuid, this.baseModelVariant, this.clothingVariantKey);
         this.shoppingBag = new ArrayList<>(
                 valueInput.read("ShoppingBag", ItemPrice.CODEC.listOf()).orElse(List.of())
         );
+        logActivity(Verbosity.LEVEL_1_DIAGNOSTICS, "Loaded tourist {} base={} clothing={}", this.uuid, this.baseModelVariant, this.clothingVariantKey);
 
         this.mind.readAdditionalSaveData(valueInput);
 

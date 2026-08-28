@@ -50,7 +50,7 @@ public class MoveToTargetGoal extends Goal {
             return;
         }
 
-        String targetName = this.tourist.getMoveToTargetName();
+        String targetName = this.tourist.getMind().getTargetName();
         if (!targetName.isEmpty()) {
             TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[MoveToTargetGoal] Starting navigation to " + targetName);
         } else {

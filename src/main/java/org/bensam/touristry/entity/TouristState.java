@@ -28,12 +28,12 @@ public enum TouristState implements StringRepresentable {
     LOST(false, false, TouristLocation.WORLD, TouristLocation.WORLD),
     FINISHED(false, false, TouristLocation.WORLD, TouristLocation.WORLD);
 
+    public static final Codec<TouristState> CODEC = StringRepresentable.fromEnum(TouristState::values);
+
     private final boolean requiresBeaconPos;
     private final boolean requiresExperiencePos;
     private final TouristLocation touristLocation;
     private final TouristLocation reviewTarget;
-
-    public static final Codec<TouristState> CODEC = StringRepresentable.fromEnum(TouristState::values);
 
     TouristState(boolean requiresBeaconPos, boolean requiresExperiencePos, TouristLocation touristLocation, TouristLocation reviewTarget) {
         this.requiresBeaconPos = requiresBeaconPos;

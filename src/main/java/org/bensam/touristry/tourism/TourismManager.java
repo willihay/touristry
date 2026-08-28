@@ -393,6 +393,10 @@ public class TourismManager {
     //endregion
 
     //region Tourist Helpers
+    public static List<TouristEntity> getTourists() {
+        return loadedTourists.values().stream().toList();
+    }
+
     public static void registerTourist(TouristEntity touristEntity) {
         if (!(touristEntity.level() instanceof ServerLevel serverLevel)) {
             return;

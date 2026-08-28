@@ -13,6 +13,7 @@ import net.minecraft.world.item.ItemStack;
 import org.bensam.touristry.Touristry;
 import org.bensam.touristry.block.entity.AbstractExperienceBlockEntity;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
+import org.bensam.touristry.entity.TouristEntity;
 import org.bensam.touristry.tourism.TourismManager;
 import org.bensam.touristry.tourism.experience.ExperienceTarget;
 import org.bensam.touristry.tourism.experience.TouristExperience;
@@ -21,6 +22,7 @@ import org.bensam.touristry.tourism.experience.TouristLocationStats;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @SuppressWarnings("SameReturnValue")
 public final class PlayerCommands {
@@ -52,6 +54,8 @@ public final class PlayerCommands {
                         .executes(ctx -> listBeacons(ctx.getSource())))
                 .then(Commands.literal("experiences")
                         .executes(ctx -> listExperiences(ctx.getSource())))
+                .then(Commands.literal("tourists")
+                        .executes(ctx -> listTourists(ctx.getSource())))
                 .then(Commands.literal("touristSchedule")
                         .executes(ctx -> listTouristSchedule(ctx.getSource())))
                 .then(Commands.literal("touristStatistics")
@@ -291,6 +295,32 @@ public final class PlayerCommands {
                     .append(" (" + experience.getClass().getSimpleName() + ")")
                     .append(Component.literal(" @ " + experience.getBlockPos().toShortString()));
             source.sendSuccess(() -> message, false);
+        }
+        return 1;
+    }
+
+    private static int listTourists(CommandSourceStack source) {
+        List<TouristEntity> tourists = TourismManager.getTourists();
+        if (tourists.isEmpty()) {
+            source.sendSuccess(() -> Component.literal("No tourists currently in this world"), false);
+            return 1;
+        }
+
+        source.sendSuccess(() -> Component.literal("Tourists:"), false);
+
+        for (TouristEntity touristEntity : tourists) {
+            Component message = Component.literal(" - ")
+                    .append(touristEntity.getName())
+                    .append(" @ " + touristEntity.blockPosition().toShortString());
+            source.sendSuccess(() -> message, false);
+
+            Component stateMessage = Component.literal("   - State: ")
+                    .append(touristEntity.getMind().getStateForLogging());
+            source.sendSuccess(() -> stateMessage, false);
+
+            Component interestsMessage = Component.literal("   - Interests: ")
+                    .append(touristEntity.getMind().getInterests().stream().map(Enum::toString).collect(Collectors.joining(", ")));
+            source.sendSuccess(() -> interestsMessage, false);
         }
         return 1;
     }

@@ -20,10 +20,10 @@ public enum VisitResult implements StringRepresentable {
     KILLED_EN_ROUTE(-3.0, 0.0),
     KILLED_ON_PREMISES(-9.0, 0.0);
 
+    public static final Codec<VisitResult> CODEC = StringRepresentable.fromEnum(VisitResult::values);
+
     private final double baseReputationDelta;
     private final double moodDelta;
-
-    public static final Codec<VisitResult> CODEC = StringRepresentable.fromEnum(VisitResult::values);
 
     VisitResult(double baseReputationDelta, double moodDelta) {
         this.baseReputationDelta = baseReputationDelta;

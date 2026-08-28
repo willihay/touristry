@@ -30,6 +30,7 @@ public final class ModEntities {
                 EntityType.Builder.<TouristEntity>of(TouristEntity::new, MobCategory.CREATURE)
                         .sized(0.6F, 1.95F)
                         .eyeHeight(1.62F)
+                        .clientTrackingRange(10)
                         .build(entityKey)
         );
 
