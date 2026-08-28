@@ -496,9 +496,10 @@ public class TouristEntity extends AbstractVillager {
     private static MutableComponent getHurtMessage(DamageSource damageSource) {
         if (damageSource.getEntity() == null && damageSource.getDirectEntity() == null) {
             return Component.literal("hurt");
+        } else if (damageSource.getEntity() == null) {
+            return Component.literal("hurt by ").append(damageSource.getDirectEntity().getDisplayName());
         } else {
-            Component hurtBy = damageSource.getEntity() == null ? damageSource.getDirectEntity().getDisplayName() : damageSource.getEntity().getDisplayName();
-            return Component.literal("hurt by ").append(hurtBy);
+            return Component.literal("hurt by ").append(damageSource.getEntity().getDisplayName());
         }
     }
 

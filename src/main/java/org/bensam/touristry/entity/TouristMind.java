@@ -139,8 +139,8 @@ public final class TouristMind {
      * Called after entity and mind data have been fully loaded.
      * Reconstructs runtime state that cannot be serialized (e.g., Goals).
      *
-     * CRITICAL: Must be called from TouristEntity.readAdditionalSaveData()
-     * after mind.readAdditionalSaveData() completes.
+     * <p>CRITICAL: Must be called from TouristEntity.readAdditionalSaveData()
+     * after mind.readAdditionalSaveData() completes.</p>
      */
     public void onEntityLoaded(ServerLevel serverLevel) {
        if (this.state == TouristState.EXPERIENCING_TARGET) {
@@ -762,7 +762,7 @@ public final class TouristMind {
                 newState == TouristState.EXPERIENCING_TARGET) {
             if (this.targetPos == null) {
                 TouristEntity.logActivity(Verbosity.GAMEPLAY_WARNINGS, "[TouristMind] Cannot transition to {} - target BlockPos not available", newState);
-                this.removeCurrentTarget(serverLevel, false);
+                this.removeCurrentTarget(false);
                 this.transitionTo(TouristState.CHOOSING_EXPERIENCE_TARGET); // fallback
                 return;
             }
@@ -812,9 +812,9 @@ public final class TouristMind {
         switch (this.state) {
             case TRAVELING_TO_BEACON -> this.arriveAtBeacon(serverLevel);
 
-            case TRAVELING_TO_EXPERIENCE -> this.arriveAtExperience(serverLevel);
+            case TRAVELING_TO_EXPERIENCE -> this.arriveAtExperience();
 
-            case TRAVELING_TO_EXPERIENCE_TARGET -> this.arriveAtExperienceTarget(serverLevel);
+            case TRAVELING_TO_EXPERIENCE_TARGET -> this.arriveAtExperienceTarget();
         }
     }
 
@@ -865,7 +865,7 @@ public final class TouristMind {
         }
     }
 
-    private void arriveAtExperience(ServerLevel serverLevel) {
+    private void arriveAtExperience() {
         // If already in this experience (stack top matches), skip re-entry.
         if (!this.experienceTargetTracker.isEmpty()) {
             ExperienceVisit topVisit = this.experienceTargetTracker.peekFirst();
@@ -883,7 +883,7 @@ public final class TouristMind {
         this.transitionTo(TouristState.WAIT_AT_EXPERIENCE);
     }
 
-    private void arriveAtExperienceTarget(ServerLevel serverLevel) {
+    private void arriveAtExperienceTarget() {
         if (this.experienceTargetTracker.isEmpty() || this.currentExperienceTarget == null) {
             this.transitionTo(TouristState.CHOOSING_EXPERIENCE_TARGET);
             return;
@@ -1015,7 +1015,7 @@ public final class TouristMind {
                 this.transitionTo(TouristState.TRAVELING_TO_EXPERIENCE);
             } else {
                 // Child experience unavailable - skip this target.
-                this.removeCurrentTarget(serverLevel, false);
+                this.removeCurrentTarget(false);
                 this.transitionTo(TouristState.CHOOSING_EXPERIENCE_TARGET);
             }
 
@@ -1214,7 +1214,7 @@ public final class TouristMind {
         this.clearInjectedGoals();
 
         // Mark target as complete.
-        this.removeCurrentTarget(serverLevel, true);
+        this.removeCurrentTarget(true);
 
         // Choose next activity (or exit if experience is complete).
         this.transitionTo(TouristState.CHOOSING_EXPERIENCE_TARGET);
@@ -1264,7 +1264,7 @@ public final class TouristMind {
 
         if (this.state == TouristState.TRAVELING_TO_EXPERIENCE_TARGET) {
             this.updateMood(VisitResult.LOST);
-            this.removeCurrentTarget(serverLevel, false);
+            this.removeCurrentTarget(false);
             this.transitionTo(TouristState.CHOOSING_EXPERIENCE_TARGET);
         } else if (this.state == TouristState.TRAVELING_TO_EXPERIENCE) {
             Component experienceMessage = Component.literal("got lost travelling to");
@@ -1395,7 +1395,7 @@ public final class TouristMind {
         }
     }
 
-    private void removeCurrentTarget(ServerLevel serverLevel, boolean markCompleted) {
+    private void removeCurrentTarget(boolean markCompleted) {
         if (this.experienceTargetTracker.isEmpty()) {
             return;
         }
