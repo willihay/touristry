@@ -4,6 +4,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.Nameable;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.level.Level;
@@ -91,8 +92,6 @@ public class TourismManager {
             Touristry.LOGGER.error("[TourismManager] {}", message);
         } else if (verbosityLevel.ordinal() <= verbosityConfig.ordinal()) {
             Touristry.LOGGER.info("[TourismManager] {}", message);
-        } else {
-            Touristry.LOGGER.debug("[TourismManager] {}", message);
         }
     }
 
@@ -102,8 +101,6 @@ public class TourismManager {
             Touristry.LOGGER.error("[TourismManager] " + message, args);
         } else if (verbosityLevel.ordinal() <= verbosityConfig.ordinal()) {
             Touristry.LOGGER.info("[TourismManager] " + message, args);
-        } else {
-            Touristry.LOGGER.debug("[TourismManager] " + message, args);
         }
     }
 
@@ -595,20 +592,20 @@ public class TourismManager {
 
         tourist.snapTo(spawnPoint, serverLevel.random.nextFloat() * 360.0F, 0.0F);
         tourist.getMind().postInitialize();
-        tourist.getMind().prepareForJourney(beaconPos);
+        tourist.getMind().prepareForJourney(serverLevel, beaconPos);
         tourist.finalizeSpawn(serverLevel, serverLevel.getCurrentDifficultyAt(tourist.blockPosition()), EntitySpawnReason.EVENT, null);
         // TODO: Implement random tourist names (ensuring name isn't currently in use)
         tourist.setCustomName(Component.literal("Ned Flanders"));
         serverLevel.addFreshEntity(tourist);
     }
 
-    public static boolean trySpawnTourist(ServerLevel serverLevel, @Nullable BlockPos requestedSpawnPoint, @Nullable TouristBeaconBlockEntity beaconBlockEntity, boolean worldOverride) {
-        if (requestedSpawnPoint == null && beaconBlockEntity == null) {
+    public static boolean trySpawnTourist(ServerLevel serverLevel, @Nullable BlockPos requestedSpawnPoint, @Nullable BlockEntity blockEntity, boolean worldOverride) {
+        if (requestedSpawnPoint == null && blockEntity == null) {
             return false;
         }
 
         if (!worldOverride) {
-            if (!isOverworld(serverLevel) || (beaconBlockEntity != null && beaconBlockEntity.getLevel() != serverLevel)) {
+            if (!isOverworld(serverLevel) || (blockEntity != null && blockEntity.getLevel() != serverLevel)) {
                 return false;
             }
         }
@@ -618,17 +615,17 @@ public class TourismManager {
             return false;
         }
 
-        BlockPos spawnPoint = (requestedSpawnPoint != null) ? requestedSpawnPoint : getSpawnPoint(serverLevel, beaconBlockEntity.getBlockPos(), tourist);
+        BlockPos spawnPoint = (requestedSpawnPoint != null) ? requestedSpawnPoint : getSpawnPoint(serverLevel, blockEntity.getBlockPos(), tourist);
         if (spawnPoint == null) {
             logActivity(Verbosity.GAMEPLAY_WARNINGS,
                     "No safe spawn point found for {} at {}",
-                    beaconBlockEntity.getPlainTextName(),
-                    beaconBlockEntity.getBlockPos()
+                    ((Nameable) blockEntity).getPlainTextName(),
+                    blockEntity.getBlockPos()
             );
             return false;
         }
 
-        if (beaconBlockEntity == null) {
+        if (blockEntity == null) {
             logActivity(Verbosity.MAJOR_EVENTS,
                     "Spawning tourist at {} by command",
                     spawnPoint
@@ -637,15 +634,15 @@ public class TourismManager {
             logActivity(Verbosity.MAJOR_EVENTS,
                     "Spawning tourist at {} for {} at {} by command",
                     spawnPoint,
-                    beaconBlockEntity.getPlainTextName(),
-                    beaconBlockEntity.getBlockPos()
+                    ((Nameable) blockEntity).getPlainTextName(),
+                    blockEntity.getBlockPos()
             );
         }
 
         tourist.snapTo(spawnPoint, serverLevel.random.nextFloat() * 360.0F, 0.0F);
         tourist.getMind().postInitialize();
-        if (beaconBlockEntity != null) {
-            tourist.getMind().prepareForJourney(beaconBlockEntity.getBlockPos());
+        if (blockEntity != null) {
+            tourist.getMind().prepareForJourney(serverLevel, blockEntity.getBlockPos());
         }
         tourist.finalizeSpawn(serverLevel, serverLevel.getCurrentDifficultyAt(tourist.blockPosition()), EntitySpawnReason.COMMAND, null);
         tourist.setCustomName(Component.literal("Tassian Candor"));

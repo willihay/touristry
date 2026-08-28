@@ -171,8 +171,6 @@ public class TouristEntity extends AbstractVillager {
             Touristry.LOGGER.error("[TouristEntity] {}", message);
         } else if (verbosityLevel.ordinal() <= verbosityConfig.ordinal()) {
             Touristry.LOGGER.info("[TouristEntity] {}", message);
-        } else {
-            Touristry.LOGGER.debug("[TouristEntity] {}", message);
         }
     }
 
@@ -182,8 +180,6 @@ public class TouristEntity extends AbstractVillager {
             Touristry.LOGGER.error("[TouristEntity] " + message, args);
         } else if (verbosityLevel.ordinal() <= verbosityConfig.ordinal()) {
             Touristry.LOGGER.info("[TouristEntity] " + message, args);
-        } else {
-            Touristry.LOGGER.debug("[TouristEntity] " + message, args);
         }
     }
 

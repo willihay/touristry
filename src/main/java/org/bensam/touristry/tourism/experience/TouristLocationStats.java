@@ -9,6 +9,7 @@ public class TouristLocationStats {
     private int abandonedVisits;
     private int failedSpawns;
     private int closedEarly;
+    private int unaffordable;
     private int paymentFailed;
     private int navFailures;
     private int touristsHurt;
@@ -22,6 +23,7 @@ public class TouristLocationStats {
             Codec.INT.fieldOf("abandoned_visits").forGetter(stats -> stats.abandonedVisits),
             Codec.INT.fieldOf("failed_spawns").forGetter(stats -> stats.failedSpawns),
             Codec.INT.fieldOf("closed_early").forGetter(stats -> stats.closedEarly),
+            Codec.INT.fieldOf("unaffordable").forGetter(stats -> stats.unaffordable),
             Codec.INT.fieldOf("payment_failed").forGetter(stats -> stats.paymentFailed),
             Codec.INT.fieldOf("nav_failures").forGetter(stats -> stats.navFailures),
             Codec.INT.fieldOf("tourists_hurt").forGetter(stats -> stats.touristsHurt),
@@ -31,11 +33,11 @@ public class TouristLocationStats {
     ).apply(instance, TouristLocationStats::new));
 
     public TouristLocationStats() {
-        this(0, 0, 0, 0, 0, 0, 0, 0, 0, 0L, 0.0d);
+        this(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0L, 0.0D);
     }
 
     public TouristLocationStats(int totalVisits, int completedVisits, int abandonedVisits,
-                                int failedSpawns, int closedEarly, int paymentFailed,
+                                int failedSpawns, int closedEarly, int unaffordable, int paymentFailed,
                                 int navFailures, int touristsHurt, int touristsKilled,
                                 long lastVisitTime, double reputationScore) {
         this.totalVisits = totalVisits;
@@ -43,6 +45,7 @@ public class TouristLocationStats {
         this.abandonedVisits = abandonedVisits;
         this.failedSpawns = failedSpawns;
         this.closedEarly = closedEarly;
+        this.unaffordable = unaffordable;
         this.paymentFailed = paymentFailed;
         this.navFailures = navFailures;
         this.touristsHurt = touristsHurt;
@@ -57,6 +60,7 @@ public class TouristLocationStats {
     public int getAbandonedVisits() { return this.abandonedVisits; }
     public int getFailedSpawns() { return this.failedSpawns; }
     public int getClosedEarly() { return this.closedEarly; }
+    public int getUnaffordable() { return this.unaffordable; }
     public int getPaymentFailed() { return this.paymentFailed; }
     public int getNavFailures() { return this.navFailures; }
     public int getTouristsHurt() { return this.touristsHurt; }
@@ -79,6 +83,10 @@ public class TouristLocationStats {
 
     public void recordClosedEarly() {
         this.closedEarly++;
+    }
+
+    public void recordUnaffordable() {
+        this.unaffordable++;
     }
 
     public void recordPaymentFailed() {
@@ -107,16 +115,17 @@ public class TouristLocationStats {
         this.abandonedVisits = 0;
         this.failedSpawns = 0;
         this.closedEarly = 0;
+        this.unaffordable = 0;
         this.paymentFailed = 0;
         this.navFailures = 0;
         this.touristsHurt = 0;
         this.touristsKilled = 0;
         this.lastVisitTime = 0L;
-        this.reputationScore = 0.0d;
+        this.reputationScore = 0.0D;
     }
 
     public void resetReputation() {
-        this.reputationScore = 0.0d;
+        this.reputationScore = 0.0D;
     }
 
     public void setReputation(double reputationScore) {

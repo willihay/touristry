@@ -1,17 +1,21 @@
 package org.bensam.touristry.entity.goal;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.bensam.touristry.block.entity.AbstractExperienceBlockEntity;
 import org.bensam.touristry.block.entity.ShoppingExperienceBlockEntity;
+import org.bensam.touristry.config.Verbosity;
 import org.bensam.touristry.entity.TouristEntity;
+import org.bensam.touristry.tourism.TourismManager;
 import org.bensam.touristry.tourism.TouristEconomy;
 import org.bensam.touristry.tourism.VisitResult;
 import org.bensam.touristry.tourism.experience.ExperienceVisit;
 import org.bensam.touristry.tourism.experience.ItemPrice;
+import org.bensam.touristry.tourism.experience.TouristExperience;
 
 import java.util.*;
 
@@ -20,18 +24,49 @@ public class ShoppingExperienceGoal extends LookAtTargetPosGoal {
     private final TouristEntity tourist;
     private final BlockPos shoppingExperiencePos;
     private final BlockPos targetPos;
+    private final int durationAtTarget;
     private int tickCount;
-    private final int timeAtTarget;
+    private final int adjustedTimeAtTarget;
     private final boolean isPurchaseCounter;
 
     public ShoppingExperienceGoal(TouristEntity tourist, BlockPos shoppingExperiencePos, BlockPos targetPos, int startingTickCount, int timeAtTarget, boolean isPurchaseCounter) {
-        super(tourist, targetPos);
+        super(tourist, targetPos, true);
         this.tourist = tourist;
         this.shoppingExperiencePos = shoppingExperiencePos;
         this.targetPos = targetPos;
-        this.tickCount = startingTickCount;
-        this.timeAtTarget = timeAtTarget;
+        this.tickCount = this.adjustedTickDelay(startingTickCount);
+        this.adjustedTimeAtTarget = this.tourist.getShoppingBag().isEmpty() ? 0 : this.adjustedTickDelay(timeAtTarget);
+        this.durationAtTarget = this.adjustedTimeAtTarget == 0 ? 0 : Math.max(0, timeAtTarget - startingTickCount);
         this.isPurchaseCounter = isPurchaseCounter;
+    }
+
+    @Override
+    public void start() {
+        super.start();
+
+        ExperienceVisit visit = this.tourist.getMind().getExperienceVisit();
+
+        if (this.isPurchaseCounter) {
+            Component experienceName = Component.literal("unknown experience");
+            if (visit != null) {
+                TouristExperience experience = TourismManager.getTouristExperienceById(visit.experienceUUID());
+                if (experience != null) {
+                    experienceName = experience.getDisplayName();
+                }
+            }
+            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[ShoppingExperienceGoal] Paying for {} items at {} for {} ticks",
+                    this.tourist.getShoppingBag().size(),
+                    experienceName.getString(),
+                    this.durationAtTarget);
+        } else {
+            float allowance = 0;
+            if (visit != null) {
+                allowance = visit.budgetRemaining();
+            }
+            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[ShoppingExperienceGoal] Shopping at target with a budget of {} for {} ticks",
+                    allowance,
+                    this.durationAtTarget);
+        }
     }
 
     @Override
@@ -43,7 +78,7 @@ public class ShoppingExperienceGoal extends LookAtTargetPosGoal {
             return;
         }
 
-        if (this.tickCount >= this.timeAtTarget) {
+        if (this.tickCount >= this.adjustedTimeAtTarget) {
             if (this.isPurchaseCounter) {
                 // Pay for items in shopping bag.
                 this.payForItems(serverLevel);
@@ -138,6 +173,7 @@ public class ShoppingExperienceGoal extends LookAtTargetPosGoal {
             if (((Container) blockEntity).iterator() instanceof Container.ContainerIterator it) {
                 ItemStack itemBuying = purchase.itemForSale();
                 int countBuying = itemBuying.getCount();
+                TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[ShoppingExperienceGoal] Adding {} {} to shopping bag", countBuying, itemBuying.getItem().getName().getString());
 
                 // Find item to buy in container and reduce its quantity by purchase count.
                 while (it.hasNext()) {

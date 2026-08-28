@@ -18,7 +18,8 @@ import java.util.EnumSet;
  * Uses the playerFacing direction to determine where the tourist should stand.
  */
 public class PositionForViewingGoal extends Goal {
-    private static final int MAX_POSITIONING_TICKS = 100; // 5 seconds timeout
+    private static final int MAX_POSITIONING_TICKS = 20;
+    private static final double LOOK_AT_DISTANCE_SQ = 9.0D; // squared distance at which tourist will start looking at target
     
     private final TouristEntity tourist;
     private final BlockPos targetPos;
@@ -70,7 +71,7 @@ public class PositionForViewingGoal extends Goal {
 
         // Check if tourist can see target from ideal position.
         if (!this.hasLineOfSight()) {
-            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS,
+            TouristEntity.logActivity(Verbosity.LEVEL_1_DIAGNOSTICS,
                 "[PositionForViewingGoal] No line of sight from ideal position, skipping fine positioning");
             this.aborted = true;
             return;
@@ -78,14 +79,14 @@ public class PositionForViewingGoal extends Goal {
 
         // Move to ideal viewing position.
         boolean moveStarted = this.tourist.getNavigation().moveTo(
-            this.idealViewingPos.getX() + 0.5,
+            this.idealViewingPos.getX(),
             this.idealViewingPos.getY(),
-            this.idealViewingPos.getZ() + 0.5,
+            this.idealViewingPos.getZ(),
             1.0 // speed modifier
         );
 
         if (!moveStarted) {
-            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS,
+            TouristEntity.logActivity(Verbosity.LEVEL_1_DIAGNOSTICS,
                 "[PositionForViewingGoal] Unable to path to ideal position, skipping fine positioning");
             this.aborted = true;
         }
@@ -95,19 +96,21 @@ public class PositionForViewingGoal extends Goal {
     public void tick() {
         this.ticksPositioning++;
 
-        // Check if tourist has reached the ideal XZ position (okay for Y to be less than ideal)
-        BlockPos idealPos = new BlockPos(this.idealViewingPos.getX(), this.tourist.blockPosition().getY(), this.idealViewingPos.getZ());
-        if (this.tourist.blockPosition().closerToCenterThan(idealPos.getCenter(), this.idealDistance)) {
-            this.positioned = true;
-            
-            // Orient tourist to look at target
+        if (this.tourist.blockPosition().distManhattan(this.idealViewingPos) <= LOOK_AT_DISTANCE_SQ) {
+            // Orient tourist to look at target.
             this.tourist.getLookControl().setLookAt(
-                this.targetPos.getX() + 0.5,
-                this.targetPos.getY() + 0.5,
-                this.targetPos.getZ() + 0.5
+                    this.targetPos.getX() + 0.5,
+                    this.targetPos.getY() + 0.5,
+                    this.targetPos.getZ() + 0.5
             );
+        }
 
-            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS,
+        // Check if tourist has reached the ideal XZ position (okay for Y to be less than ideal).
+        BlockPos idealPos = new BlockPos(this.idealViewingPos.getX(), this.tourist.blockPosition().getY(), this.idealViewingPos.getZ());
+        if (this.tourist.blockPosition().distManhattan(idealPos) <= this.idealDistance) {
+            this.positioned = true;
+
+            TouristEntity.logActivity(Verbosity.LEVEL_1_DIAGNOSTICS,
                 "[PositionForViewingGoal] Positioned at ideal viewing position");
             
             this.finishPositioning();
@@ -117,7 +120,7 @@ public class PositionForViewingGoal extends Goal {
     @Override
     public void stop() {
         if (!this.positioned && this.ticksPositioning >= MAX_POSITIONING_TICKS) {
-            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS,
+            TouristEntity.logActivity(Verbosity.LEVEL_1_DIAGNOSTICS,
                 "[PositionForViewingGoal] Positioning timeout, orienting tourist and proceeding anyway");
 
             this.tourist.getLookControl().setLookAt(

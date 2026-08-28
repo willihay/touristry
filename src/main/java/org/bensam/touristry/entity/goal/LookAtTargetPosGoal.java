@@ -11,6 +11,7 @@ public class LookAtTargetPosGoal extends Goal {
 
     private final TouristEntity tourist;
     private final BlockPos targetPos;
+    private final boolean alwaysLookAtTarget;
     private int tickCount;
     private int ticksUntilNextLookChange;
     private double lookUpOffset;
@@ -19,9 +20,10 @@ public class LookAtTargetPosGoal extends Goal {
     private double yVariation;
     private double zVariation;
 
-    public LookAtTargetPosGoal(TouristEntity tourist, BlockPos targetPos) {
+    public LookAtTargetPosGoal(TouristEntity tourist, BlockPos targetPos, boolean alwaysLookAtTarget) {
         this.tourist = tourist;
         this.targetPos = targetPos;
+        this.alwaysLookAtTarget = alwaysLookAtTarget;
         this.setFlags(EnumSet.of(Goal.Flag.LOOK));
     }
 
@@ -70,7 +72,7 @@ public class LookAtTargetPosGoal extends Goal {
             // Decide what to look at based on remaining time.
             int phase = this.ticksUntilNextLookChange / 10;
             
-            if (phase == 0) {
+            if (phase == 0 && !this.alwaysLookAtTarget) {
                 // Look up/away from target (last second of cycle).
                 this.lookNearTarget(sideOffset, lookUpOffset, sideOffset);
             } else {

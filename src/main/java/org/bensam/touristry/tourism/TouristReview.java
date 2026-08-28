@@ -21,7 +21,7 @@ public record TouristReview(
         double change = switch (result) {
             case ARRIVED, GOOD, GREAT ->
                     result.baseReputationDelta() * (1.0 - positiveNormalized) * (1.0 + 0.5 * negativeNormalized);
-            case UNFAVORABLE, FAILED_SPAWN, LOST, CLOSED_EARLY, PAYMENT_FAILED, HURT_EN_ROUTE, HURT_ON_PREMISES, KILLED_EN_ROUTE, KILLED_ON_PREMISES ->
+            case UNFAVORABLE, FAILED_SPAWN, LOST, CLOSED_EARLY, UNAFFORDABLE, PAYMENT_FAILED, HURT_EN_ROUTE, HURT_ON_PREMISES, KILLED_EN_ROUTE, KILLED_ON_PREMISES ->
                     result.baseReputationDelta() * (0.75 + 0.5 * positiveNormalized);
         };
 

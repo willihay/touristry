@@ -12,8 +12,10 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import org.bensam.touristry.block.entity.AbstractExperienceBlockEntity;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
 import org.bensam.touristry.config.ModServerConfigManager;
 import org.bensam.touristry.config.Verbosity;
@@ -40,8 +42,8 @@ public final class TouristMind {
     private static final int MIN_ACTIVITY_INTERVAL_TICKS = 500;
     private static final int MAX_ACTIVITY_INTERVAL_TICKS = 2000;
     private static final long MIN_TICKS_BEFORE_MAP_TOGGLE = 20;
-    private static final int MIN_WAIT_AFTER_ARRIVAL_TICKS = 40;
-    private static final int MAX_WAIT_AFTER_ARRIVAL_TICKS = 80;
+    private static final int MIN_WAIT_AT_BEACON_AFTER_ARRIVAL_TICKS = 40;
+    private static final int MAX_WAIT_AT_BEACON_AFTER_ARRIVAL_TICKS = 80;
     private static final int MAX_WAVE_COUNT = 3;
     private static final int MIN_WAVE_AT_ENTITY_INTERVAL_TICKS = 20 * 30; // 30 game seconds
     //endregion
@@ -365,7 +367,7 @@ public final class TouristMind {
                 VisitResult modifiedResult = this.goodExperiencesToday % 3 == 0 ? VisitResult.GREAT : result;
                 yield modifiedResult.moodDelta() * (1.0 - positiveNormalized) * (1.0 + 0.5 * negativeNormalized);
             }
-            case UNFAVORABLE, FAILED_SPAWN, LOST, CLOSED_EARLY, PAYMENT_FAILED, HURT_EN_ROUTE, HURT_ON_PREMISES, KILLED_EN_ROUTE, KILLED_ON_PREMISES ->
+            case UNFAVORABLE, FAILED_SPAWN, LOST, CLOSED_EARLY, UNAFFORDABLE, PAYMENT_FAILED, HURT_EN_ROUTE, HURT_ON_PREMISES, KILLED_EN_ROUTE, KILLED_ON_PREMISES ->
                     result.moodDelta() * (0.75 + 0.5 * positiveNormalized);
         };
 
@@ -441,6 +443,7 @@ public final class TouristMind {
     }
 
     private void tickExperiencingTarget(ServerLevel serverLevel) {
+        // Perform checks while the target Goal created by the experience runs until it considers the visit complete.
         if (this.experienceTargetTracker.isEmpty()) {
             this.transitionTo(TouristState.PLANNING_NEXT_MOVE);
             return;
@@ -747,7 +750,7 @@ public final class TouristMind {
         switch (newState) {
             case PLANNING_NEXT_MOVE -> this.planNextMove(serverLevel);
             case TRAVELING_TO_BEACON -> this.beginTravelingToBeacon();
-            case WAIT_AT_BEACON, WAIT_AT_EXPERIENCE -> this.beginWaitAtBlock();
+            case WAIT_AT_BEACON, WAIT_AT_EXPERIENCE -> this.beginWaitAtBlock(serverLevel);
             case CHOOSING_EXPERIENCE_AT_BEACON -> this.chooseExperienceAtBeacon(serverLevel, beaconBlockEntity);
             case CHOOSING_EXPERIENCE_TARGET -> this.chooseExperienceTarget(serverLevel);
             case TRAVELING_TO_EXPERIENCE -> this.beginTravelingToExperienceBlock();
@@ -809,7 +812,7 @@ public final class TouristMind {
             this.recordExperience(serverLevel, new TouristReview(
                     this.state.reviewTarget(),
                     VisitResult.ARRIVED,
-                    false,
+                    true,
                     false,
                     experienceMessage,
                     true,
@@ -875,9 +878,16 @@ public final class TouristMind {
         this.resetExperienceJourneyStats();
     }
 
-    private void beginWaitAtBlock() {
+    private void beginWaitAtBlock(ServerLevel serverLevel) {
         this.lastMapToggleTicks = this.tourist.level().getDayTime();
-        this.waitTicks = this.getRandomWaitTicks(MIN_WAIT_AFTER_ARRIVAL_TICKS, MAX_WAIT_AFTER_ARRIVAL_TICKS);
+
+        if (this.state == TouristState.WAIT_AT_EXPERIENCE &&
+                serverLevel.getBlockEntity(this.experienceBlockPos) instanceof AbstractExperienceBlockEntity experienceBlockEntity
+        ) {
+            this.waitTicks = experienceBlockEntity.getPostArrivalWaitTicks(this.random());
+        } else {
+            this.waitTicks = this.getRandomWaitTicks(MIN_WAIT_AT_BEACON_AFTER_ARRIVAL_TICKS, MAX_WAIT_AT_BEACON_AFTER_ARRIVAL_TICKS);
+        }
     }
 
     private void beginWanderingAtBlock() {
@@ -1021,9 +1031,24 @@ public final class TouristMind {
         // Pay entry fee, if applicable.
         ItemStack entryFee = experience.getEntryFee();
         if (!entryFee.isEmpty()) {
-            // TODO Use TouristEconomy to determine if entry fee is reasonable. Consider skipping experience if not.
+            float feeValue = (int) TouristEconomy.getEmeraldEquivalent(entryFee);
+            // TODO Use TouristEconomy to determine if entry fee is reasonable.
+            if (feeValue > this.remainingBudgetEmeralds) {
+                this.updateMood(VisitResult.UNAFFORDABLE);
+                this.recordExperience(serverLevel, new TouristReview(
+                        this.state.reviewTarget(),
+                        VisitResult.UNAFFORDABLE,
+                        true,
+                        true,
+                        Component.literal("found experience too expensive at"),
+                        true,
+                        true
+                ));
+                this.transitionTo(TouristState.CHOOSING_EXPERIENCE_AT_BEACON); // Try next experience.
+                return;
+            }
+
             if (experience.tryDepositPayment(entryFee)) {
-                float feeValue = (int) TouristEconomy.getEmeraldEquivalent(entryFee);
                 this.spendBudget(feeValue);
             } else {
                 // Payment failed. Assume that we cannot enter this experience.
@@ -1073,7 +1098,7 @@ public final class TouristMind {
         this.recordExperience(serverLevel, new TouristReview(
                 this.state.reviewTarget(),
                 VisitResult.ARRIVED,
-                false,
+                true,
                 false,
                 Component.literal("arrived at"),
                 true,
@@ -1338,9 +1363,16 @@ public final class TouristMind {
                 this.currentExperienceTarget.pos().toShortString(), idealDistance);
     }
 
-    public void prepareForJourney(@NonNull BlockPos beaconTarget) {
-        this.beaconPos = beaconTarget.immutable();
-        this.transitionTo(TouristState.TRAVELING_TO_BEACON);
+    public void prepareForJourney(ServerLevel serverLevel, @NonNull BlockPos target) {
+        BlockEntity blockEntity = serverLevel.getBlockEntity(target);
+        if (blockEntity instanceof TouristBeaconBlockEntity) {
+            this.beaconPos = target.immutable();
+            this.transitionTo(TouristState.TRAVELING_TO_BEACON);
+        } else if (blockEntity instanceof AbstractExperienceBlockEntity) {
+            this.beaconPos = null;
+            this.experienceBlockPos = target.immutable();
+            this.transitionTo(TouristState.TRAVELING_TO_EXPERIENCE);
+        }
     }
 
     private void removeCurrentTarget(ServerLevel serverLevel, boolean markCompleted) {

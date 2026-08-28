@@ -10,6 +10,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.Container;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.inventory.ContainerData;
@@ -41,6 +42,8 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
     public static final int DATA_REPUTATION = 0;
     public static final int DATA_OPEN_FOR_BUSINESS = 1;
     public static final int DATA_COUNT = 2;
+    private static final int MIN_WAIT_AFTER_ARRIVAL_TICKS = 40;
+    private static final int MAX_WAIT_AFTER_ARRIVAL_TICKS = 80;
 
     protected Set<UUID> currentGuests = new HashSet<>(); // for capacity tracking at experiences that need it
 
@@ -230,6 +233,10 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
     }
 
     public abstract int getPaymentSlotSize();
+
+    public int getPostArrivalWaitTicks(RandomSource randomSource) {
+        return randomSource.nextIntBetweenInclusive(MIN_WAIT_AFTER_ARRIVAL_TICKS, MAX_WAIT_AFTER_ARRIVAL_TICKS);
+    }
 
     @Override
     public TouristLocationStats getStatistics() {
@@ -444,6 +451,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
             case UNFAVORABLE -> this.statistics::recordAbandonedVisit;
             case LOST -> this.statistics::recordNavFailure;
             case CLOSED_EARLY -> this.statistics::recordClosedEarly;
+            case UNAFFORDABLE -> this.statistics::recordUnaffordable;
             case PAYMENT_FAILED -> this.statistics::recordPaymentFailed;
             case HURT_EN_ROUTE, HURT_ON_PREMISES -> this.statistics::recordTouristHurt;
             case KILLED_EN_ROUTE, KILLED_ON_PREMISES -> this.statistics::recordTouristKilled;

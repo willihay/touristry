@@ -80,7 +80,10 @@ public final class PlayerCommands {
                     false);
         }
         source.sendSuccess(() -> Component.literal(
-                        " - closed early: " + stats.getClosedEarly()
+                        " - closed early: " + stats.getClosedEarly()),
+                false);
+        source.sendSuccess(() -> Component.literal(
+                        " - unaffordable to tourist: " + stats.getUnaffordable()
                                 + "; failed payments: " + stats.getPaymentFailed()),
                 false);
         source.sendSuccess(() -> Component.literal(

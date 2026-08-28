@@ -10,6 +10,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
 import net.minecraft.world.phys.Vec3;
+import org.bensam.touristry.block.entity.AbstractExperienceBlockEntity;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
 import org.bensam.touristry.tourism.TourismManager;
 import org.jspecify.annotations.NonNull;
@@ -29,6 +30,15 @@ public final class DebugCommands {
                         .then(addBeaconActions(
                                 Commands.literal("nearest"),
                                 ctx -> TourCommand.requireNearestBeacon(ctx.getSource()))))
+                .then(Commands.literal("experience")
+                        .then(addExperienceActions(
+                                Commands.argument("experiencePos", BlockPosArgument.blockPos()),
+                                ctx -> TourCommand.requireExperience(
+                                        ctx.getSource(),
+                                        BlockPosArgument.getLoadedBlockPos(ctx, "experiencePos"))))
+                        .then(addExperienceActions(
+                                Commands.literal("nearest"),
+                                ctx -> TourCommand.requireNearestExperience(ctx.getSource()))))
                 .then(Commands.literal("tourismManager")
                         .then(Commands.literal("clearSchedule")
                                 .executes(ctx -> clearSpawnSchedule(ctx.getSource())))
@@ -121,6 +131,72 @@ public final class DebugCommands {
             Component message = Component.literal("Spawned tourist for ")
                     .append(beaconBlockEntity.getName().copy())
                     .append(Component.literal(" found @ " + beaconBlockEntity.getBlockPos().toShortString()));
+            source.sendSuccess(() -> message, false);
+            return 1;
+        } else {
+            source.sendFailure(Component.literal("Unable to spawn tourist here"));
+            return -1;
+        }
+    }
+
+    private static <T extends ArgumentBuilder<CommandSourceStack, T>> T addExperienceActions(
+            T parent,
+            TourCommand.ExperienceResolver resolver
+    ) {
+        return parent
+                .then(Commands.literal("reset")
+                .then(Commands.literal("allStats")
+                        .executes(ctx -> resetExperienceStats(
+                                ctx.getSource(),
+                                resolver.resolve(ctx))))
+                .then(Commands.literal("reputation")
+                        .executes(ctx -> resetExperienceReputation(
+                                ctx.getSource(),
+                                resolver.resolve(ctx)))))
+                .then(Commands.literal("spawnTouristHere")
+                        .executes(ctx -> spawnExperienceTouristHere(
+                                ctx.getSource(),
+                                resolver.resolve(ctx))));
+    }
+
+    private static int resetExperienceStats(CommandSourceStack source, @NonNull AbstractExperienceBlockEntity experienceBlockEntity) {
+        experienceBlockEntity.resetAllStats();
+        Component message = Component.literal("Reset all stats for ")
+                .append(experienceBlockEntity.getName().copy())
+                .append(Component.literal(" @ " + experienceBlockEntity.getBlockPos().toShortString()));
+        source.sendSuccess(() -> message, true);
+        return 1;
+    }
+
+    private static int resetExperienceReputation(CommandSourceStack source, @NonNull AbstractExperienceBlockEntity experienceBlockEntity) {
+        experienceBlockEntity.resetReputation();
+        Component message = Component.literal("Reset reputation for ")
+                .append(experienceBlockEntity.getName().copy())
+                .append(Component.literal(" @ " + experienceBlockEntity.getBlockPos().toShortString()));
+        source.sendSuccess(() -> message, true);
+        return 1;
+    }
+
+    private static int spawnExperienceTouristHere(CommandSourceStack source, @NonNull AbstractExperienceBlockEntity experienceBlockEntity) {
+        if (source.getLevel() != source.getLevel().getServer().overworld()) {
+            source.sendFailure(Component.literal("Tourists will only spawn in the overworld"));
+            return -1;
+        }
+
+        ServerPlayer serverPlayer = source.getPlayer();
+        if (serverPlayer == null) {
+            source.sendFailure(Component.literal("No player position available"));
+            return -1;
+        }
+
+        Vec3 lookAngle = serverPlayer.getLookAngle();
+        Vec3 horizonLookAngle = new Vec3(lookAngle.x(), 0, lookAngle.z());
+        BlockPos spawnPos = BlockPos.containing(serverPlayer.position().add(horizonLookAngle.normalize().scale(2.0)));
+
+        if (TourismManager.trySpawnTourist(source.getLevel(), spawnPos, experienceBlockEntity, false)) {
+            Component message = Component.literal("Spawned tourist for ")
+                    .append(experienceBlockEntity.getName().copy())
+                    .append(Component.literal(" found @ " + experienceBlockEntity.getBlockPos().toShortString()));
             source.sendSuccess(() -> message, false);
             return 1;
         } else {

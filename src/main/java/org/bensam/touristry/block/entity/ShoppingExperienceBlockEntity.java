@@ -5,6 +5,7 @@ import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.player.Inventory;
@@ -35,7 +36,7 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
     public static final int IDEAL_APPROACH_DISTANCE = 1; // Tourist should try to stand this far away for shopping targets
     public static final int MAX_APPROACH_DISTANCE = 4; // Skip target if tourist can't get closer than this distance
     public static final int MAX_RANGE_TO_TARGET = 100;
-    public static final int MIN_TICKS_AT_TARGET = 40;
+    public static final int MIN_TICKS_AT_TARGET = 60;
     public static final int MAX_TICKS_AT_TARGET = 100;
     public static final int TICKS_AT_BLOCK_WHEN_PURCHASING = 40;
     public static final int PAYMENT_SLOT_SIZE = 9;
@@ -108,7 +109,7 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
             }
 
             int numItemsInTargetContainer = itemsInContainer.size();
-            int minTicksAtTarget = Math.min(numItemsInTargetContainer * 10, MIN_TICKS_AT_TARGET);
+            int minTicksAtTarget = Math.min((numItemsInTargetContainer + 1) * 15, MIN_TICKS_AT_TARGET);
             if (minTicksAtTarget < MIN_TICKS_AT_TARGET) {
                 // If there are only a few, keep the visit short.
                 ticksAtBlock = minTicksAtTarget;
@@ -165,7 +166,7 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
             return itemPrice;
         }
 
-        return new ItemPrice(itemStack.copy(), this.getDefaultCost());
+        return new ItemPrice(itemStack.copyWithCount(1), this.getDefaultCost());
     }
 
     public List<ItemPrice> getItemPrices() {
@@ -187,6 +188,11 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
     @Override
     public int getPaymentSlotSize() {
         return PAYMENT_SLOT_SIZE;
+    }
+
+    @Override
+    public int getPostArrivalWaitTicks(RandomSource randomSource) {
+        return 10;
     }
 
     @Override
@@ -271,7 +277,7 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
     }
 
     public @Nullable ItemPrice lookupItemPriceFor(ItemStack itemStack) {
-        return itemPrices.get(new ItemStackKey(itemStack));
+        return this.itemPrices.get(new ItemStackKey(itemStack));
     }
 
     public boolean removeItemPrice(@NonNull ItemPrice itemPrice) {
