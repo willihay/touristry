@@ -1,20 +1,6 @@
 {
   "model": {
-    "type": "minecraft:select",
-    "property": "minecraft:block_state",
-    "block_state_property": "open_for_business",
-    "cases": [
-      {
-        "model": {
-          "type": "minecraft:model",
-          "model": "touristry:block/sightseeing_experience"
-        },
-        "when": "true"
-      }
-    ],
-    "fallback": {
-      "type": "minecraft:model",
-      "model": "touristry:block/sightseeing_experience"
-    }
+    "type": "minecraft:model",
+    "model": "touristry:block/sightseeing_experience"
   }
 }
