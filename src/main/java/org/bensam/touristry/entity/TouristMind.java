@@ -362,6 +362,16 @@ public final class TouristMind {
         return this.reportedHurtOnPremises;
     }
 
+    public boolean isItemOfInterest(ItemStack itemStack) {
+        for (TouristItemInterest interest : this.interests) {
+            if (interest.isAMatch(itemStack)) {
+                TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[TouristMind] Tourist found {} matching interest {}", itemStack.getItem().getName().getString(), interest);
+                return true;
+            }
+        }
+        return false;
+    }
+
     public void recordExperience(ServerLevel serverLevel, TouristReview review) {
         SoundEvent soundEvent = null;
 
@@ -593,6 +603,11 @@ public final class TouristMind {
         for (TouristItemInterest interest : TouristItemInterest.values()) {
             if (this.random().nextFloat() <= interest.probability()) {
                 this.interests.add(interest);
+                if (interest == TouristItemInterest.EPIC_ITEMS) {
+                    this.dailyBudgetEmeralds += 100;
+                } else if (interest == TouristItemInterest.RARE_ITEMS) {
+                    this.dailyBudgetEmeralds += 25;
+                }
             }
         }
     }
@@ -802,7 +817,7 @@ public final class TouristMind {
             case WANDERING_WORLD -> this.beginWanderingWorld();
             case WANDERING_AT_BEACON, WANDERING_AT_EXPERIENCE -> this.beginWanderingAtBlock();
             case DESPAWNING, LOST -> this.deSpawn();
-            default -> { /* not applicable or transition handled by tick() handler */ }
+            default -> { /* not applicable or post-transition handled by tick() handler */ }
         }
     }
 
@@ -1075,13 +1090,13 @@ public final class TouristMind {
         if (!entryFee.isEmpty()) {
             float feeValue = (int) TouristEconomy.getEmeraldEquivalent(entryFee);
             // TODO Use TouristEconomy to determine if entry fee is reasonable.
-            if (feeValue > this.remainingBudgetEmeralds) {
+            if (feeValue > this.remainingBudgetEmeralds && this.remainingBudgetEmeralds >= 1.0F) {
                 this.updateMood(VisitResult.UNAFFORDABLE);
                 this.recordExperience(serverLevel, new TouristReview(
                         this.state.reviewTarget(),
                         VisitResult.UNAFFORDABLE,
                         true,
-                        true,
+                        false,
                         Component.literal("found experience too expensive at"),
                         true,
                         true
@@ -1220,7 +1235,7 @@ public final class TouristMind {
         this.transitionTo(TouristState.EXPERIENCING_TARGET);
     }
 
-    public void finishTargetGoal(ServerLevel serverLevel) {
+    public void finishTargetGoal() {
         // Remove experience-specific goals.
         this.clearInjectedGoals();
 

@@ -20,6 +20,7 @@ import org.bensam.touristry.tourism.experience.TouristExperience;
 import java.util.*;
 
 public class ShoppingExperienceGoal extends LookAtTargetPosGoal {
+    private static final float CHANCE_TO_WANT_RANDOM_ITEM = 0.1F;
 
     private final TouristEntity tourist;
     private final BlockPos shoppingExperiencePos;
@@ -88,7 +89,7 @@ public class ShoppingExperienceGoal extends LookAtTargetPosGoal {
             }
 
             // Mark finished at this target.
-            this.tourist.getMind().finishTargetGoal(serverLevel);
+            this.tourist.getMind().finishTargetGoal();
         }
     }
 
@@ -153,19 +154,42 @@ public class ShoppingExperienceGoal extends LookAtTargetPosGoal {
         // Build a shopping cart of items that the tourist wants to buy.
         List<ItemPrice> shoppingCart = new ArrayList<>();
         // TODO: Make purchase decision based on items already in shopping bag, fairness of price, and interests of tourist, not random item in list.
-        int selectedIndex = this.tourist.getRandom().nextInt(itemPrices.size());
-        Map.Entry<ItemPrice, Integer> selectedEntry = null;
-        Iterator<Map.Entry<ItemPrice, Integer>> iterator = itemPrices.entrySet().iterator();
-        for (int i = 0; i <= selectedIndex; i++) {
-            selectedEntry = iterator.next();
+
+        // Look for items of interest to this tourist.
+        for (Map.Entry<ItemPrice, Integer> entry : itemPrices.entrySet()) {
+            ItemPrice itemPrice = entry.getKey();
+            ItemStack itemForSale = itemPrice.itemForSale();
+            if (tourist.getMind().isItemOfInterest(itemForSale)) {
+                //TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[ShoppingExperienceGoal] Tourist found specific item of interest: {}", itemForSale.getItem().getName().getString());
+                int qtyAvailable = entry.getValue();
+                // TODO: Use qtyAvailable to consider buying more than 1 quantity.
+                float itemValue = TouristEconomy.getEmeraldEquivalent(itemPrice.cost());
+                if (itemValue <= allowance) {
+                    shoppingCart.add(itemPrice); // only buying 1 quantity for now
+                    allowance -= itemValue;
+                    break;
+                }
+            }
         }
-        ItemPrice itemToBuy = selectedEntry.getKey();
-        int qtyAvailable = selectedEntry.getValue();
-        // TODO: Use qtyAvailable to consider buying more than 1 quantity.
-        float itemValue = TouristEconomy.getEmeraldEquivalent(itemToBuy.cost());
-        if (itemValue <= allowance) {
-            shoppingCart.add(itemToBuy); // only buying 1 quantity for now
-            allowance -= itemValue;
+
+        // If no specific item of interest was found, there's still a chance they might want something they see.
+        if (shoppingCart.isEmpty() && this.tourist.getRandom().nextFloat() <= CHANCE_TO_WANT_RANDOM_ITEM) {
+            int selectedIndex = this.tourist.getRandom().nextInt(itemPrices.size());
+            Map.Entry<ItemPrice, Integer> selectedEntry = null;
+            Iterator<Map.Entry<ItemPrice, Integer>> iterator = itemPrices.entrySet().iterator();
+            for (int i = 0; i <= selectedIndex; i++) {
+                selectedEntry = iterator.next();
+            }
+            ItemPrice itemToBuy = selectedEntry.getKey();
+            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[ShoppingExperienceGoal] Tourist found random item of interest: {}", itemToBuy.itemForSale().getItem().getName().getString());
+
+            int qtyAvailable = selectedEntry.getValue();
+            // TODO: Use qtyAvailable to consider buying more than 1 quantity.
+            float itemValue = TouristEconomy.getEmeraldEquivalent(itemToBuy.cost());
+            if (itemValue <= allowance) {
+                shoppingCart.add(itemToBuy); // only buying 1 quantity for now
+                allowance -= itemValue;
+            }
         }
 
         // Move items to buy from container to tourist's shopping bag.

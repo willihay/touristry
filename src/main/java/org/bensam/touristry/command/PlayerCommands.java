@@ -95,7 +95,7 @@ public final class PlayerCommands {
                                 + "; tourists killed: " + stats.getTouristsKilled()),
                 false);
         long lastVisitTicks = stats.getLastVisitTime();
-        String lastVisit = lastVisitTicks == 0 ? "never" : TourismManager.getFriendlyTimeOfDay(lastVisitTicks);
+        String lastVisit = lastVisitTicks == 0 ? "never" : TourismManager.getFriendlyTimeOfDay(lastVisitTicks, true);
         source.sendSuccess(() -> Component.literal(
                         " - last visit: " + lastVisit),
                 false);
@@ -197,12 +197,14 @@ public final class PlayerCommands {
         List<ExperienceTarget> targets = experienceBlockEntity.getTargets(source.getLevel());
         source.sendSuccess(() -> Component.literal(" - targets: " + targets.size())
                 .append(experienceBlockEntity.isTargetListOrdered() ? " (visited in order)" : " (visited randomly)"), false);
+        /* listing all targets is probably too much info; move to its own command if needed in the future
         for (ExperienceTarget target : targets) {
             Component targetMessage = Component.literal("   - ")
                     .append(target.getDisplayName(source.getLevel()))
                     .append(Component.literal(" @ " + target.pos().toShortString()));
             source.sendSuccess(() -> targetMessage, false);
         }
+         */
 
         // stats
         TouristLocationStats stats = experienceBlockEntity.getStatistics();
@@ -335,7 +337,7 @@ public final class PlayerCommands {
         source.sendSuccess(() -> Component.literal("Remaining tourist arrivals scheduled for today:"), false);
 
         for (TourismManager.ScheduledTouristSpawn spawn : pendingSpawns) {
-            MutableComponent message = Component.literal(" - " + TourismManager.getFriendlyTimeOfDay(spawn.timeOfDay()) + " for ");
+            MutableComponent message = Component.literal(" - " + TourismManager.getFriendlyTimeOfDay(spawn.timeOfDay(), false) + " for ");
             TouristBeaconBlockEntity beaconBlockEntity = TourismManager.getBeaconBlockEntityByUUID(spawn.beaconUUID());
             if (beaconBlockEntity != null) {
                 message.append(beaconBlockEntity.getName().copy());
@@ -364,7 +366,7 @@ public final class PlayerCommands {
         }
 
         TourismManager.ScheduledTouristSpawn nextSpawn = pendingSpawns.getFirst();
-        MutableComponent message = Component.literal("Next spawn at " + TourismManager.getFriendlyTimeOfDay(nextSpawn.timeOfDay()) + " for ");
+        MutableComponent message = Component.literal("Next spawn at " + TourismManager.getFriendlyTimeOfDay(nextSpawn.timeOfDay(), false) + " for ");
         TouristBeaconBlockEntity beaconBlockEntity = TourismManager.getBeaconBlockEntityByUUID(nextSpawn.beaconUUID());
         if (beaconBlockEntity != null) {
             message.append(beaconBlockEntity.getName().copy());
@@ -378,7 +380,7 @@ public final class PlayerCommands {
 
     private static int showTimeAndDay(CommandSourceStack source) {
         ServerLevel overworld = source.getServer().overworld();
-        source.sendSuccess(() -> Component.literal("Current time: " + TourismManager.getFriendlyTimeOfDay(overworld.getDayTime()) + " on day " + overworld.getDayCount()), false);
+        source.sendSuccess(() -> Component.literal("Current time: " + TourismManager.getFriendlyTimeOfDay(overworld.getDayTime(), true)), false);
         return 1;
     }
 }

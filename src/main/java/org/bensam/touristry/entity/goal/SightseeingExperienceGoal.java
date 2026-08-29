@@ -34,7 +34,7 @@ public class SightseeingExperienceGoal extends LookAtTargetPosGoal {
         }
 
         if (this.tickCount >= this.timeAtTarget) {
-            this.tourist.getMind().finishTargetGoal(serverLevel);
+            this.tourist.getMind().finishTargetGoal();
         }
     }
 }
