@@ -27,6 +27,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import org.bensam.touristry.ModEntities;
+import org.bensam.touristry.ModItems;
 import org.bensam.touristry.Touristry;
 import org.bensam.touristry.config.ClothingOptionsLoader;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
@@ -53,6 +54,7 @@ public class TouristEntity extends AbstractVillager {
 
     private static final EntityDataAccessor<Integer> DATA_BASE_MODEL = SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<String> DATA_CLOTHING_VARIANT = SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.STRING);
+    private static final EntityDataAccessor<Boolean> DATA_HOLDING_CAMERA = SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DATA_WAVING = SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.BOOLEAN);
 
     private int baseModelVariant;
@@ -108,6 +110,7 @@ public class TouristEntity extends AbstractVillager {
         super.defineSynchedData(builder);
         builder.define(DATA_BASE_MODEL, this.baseModelVariant);
         builder.define(DATA_CLOTHING_VARIANT, this.clothingVariantKey != null ? this.clothingVariantKey : "");
+        builder.define(DATA_HOLDING_CAMERA, false);
         builder.define(DATA_WAVING, false);
     }
 
@@ -129,12 +132,25 @@ public class TouristEntity extends AbstractVillager {
         this.entityData.set(DATA_CLOTHING_VARIANT, value);
     }
 
+    public boolean isHoldingCamera() {
+        return this.entityData.get(DATA_HOLDING_CAMERA);
+    }
+
+    public void setHoldingCamera(boolean value) {
+        if (value) {
+            this.giveItemToHold(new ItemStack(ModItems.TOURIST_CAMERA.get()));
+        } else {
+            this.clearHeldItem();
+        }
+        this.entityData.set(DATA_HOLDING_CAMERA, value);
+    }
+
     public boolean isWaving() {
         return this.entityData.get(DATA_WAVING);
     }
 
-    protected void setWaving(boolean waving) {
-        this.entityData.set(DATA_WAVING, waving);
+    protected void setWaving(boolean value) {
+        this.entityData.set(DATA_WAVING, value);
     }
 
     public void setWavingAtEntity(Entity entity, boolean wave) {

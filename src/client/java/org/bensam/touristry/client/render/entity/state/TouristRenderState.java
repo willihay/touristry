@@ -8,6 +8,9 @@ import net.minecraft.client.renderer.entity.state.HoldingEntityRenderState;
 public class TouristRenderState extends HoldingEntityRenderState implements TouristDataHolderRenderState {
     public int baseModelVariant;
     public String clothingVariantKey;
+    public boolean isArmsCrossed;
+    public boolean isCrouching;
+    public boolean isHoldingCamera;
     public boolean isUnhappy;
     public boolean isWaving;
 

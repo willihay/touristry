@@ -34,9 +34,8 @@ public class TouristOuterwearLayer<S extends LivingEntityRenderState & TouristDa
             return;
         }
 
-        M model = this.getParentModel();
         Identifier clothingVariant = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, CLOTHING_PATH + clothingKey + ".png");
-        renderColoredCutoutModel(model, clothingVariant, poseStack, submitNodeCollector, i, entityRenderState, -1, 1);
+        renderColoredCutoutModel(this.getParentModel(), clothingVariant, poseStack, submitNodeCollector, i, entityRenderState, -1, 1);
     }
 }
 

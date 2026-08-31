@@ -21,6 +21,9 @@ public final class ModItems {
     private static Item keyBlankItem;
     public static final Supplier<Item> KEY_BLANK = () -> keyBlankItem;
 
+    private static Item touristCameraItem;
+    public static final Supplier<Item> TOURIST_CAMERA = () -> touristCameraItem;
+
     public static void initialize() {
         ModServerConfig defaults = ModServerConfig.defaults();
 
@@ -34,6 +37,12 @@ public final class ModItems {
                 "key_blank",
                 Item::new,
                 new Item.Properties()
+        );
+
+        touristCameraItem = register(
+                "tourist_camera",
+                Item::new,
+                new Item.Properties().stacksTo(1)
         );
     }
 

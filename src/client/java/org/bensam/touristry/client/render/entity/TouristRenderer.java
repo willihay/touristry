@@ -10,6 +10,7 @@ import net.minecraft.client.renderer.entity.state.HoldingEntityRenderState;
 import net.minecraft.resources.Identifier;
 import org.bensam.touristry.Touristry;
 import org.bensam.touristry.client.model.entity.TouristModel;
+import org.bensam.touristry.client.render.entity.layers.TouristHeldItemLayer;
 import org.bensam.touristry.client.render.entity.layers.TouristOuterwearLayer;
 import org.bensam.touristry.client.render.entity.state.TouristRenderState;
 import org.bensam.touristry.entity.TouristEntity;
@@ -20,14 +21,11 @@ import java.util.*;
 @Environment(EnvType.CLIENT)
 public class TouristRenderer extends AgeableMobRenderer<TouristEntity, TouristRenderState, TouristModel> {
     private static final String TOURIST_BASE_PATH = "textures/entity/base/base_";
-    private Map<UUID, Variant> entityVariants = new HashMap<>();
-
-    private record Variant(int base, String clothing) {}
 
     public TouristRenderer(EntityRendererProvider.Context context) {
         super(context, new TouristModel(context.bakeLayer(TouristModel.LAYER)), new TouristModel(context.bakeLayer(TouristModel.BABY_LAYER)), 0.5F); // 0.5 shadow radius
         this.addLayer(new CustomHeadLayer<>(this, context.getModelSet(), context.getPlayerSkinRenderCache()));
-        this.addLayer(new CrossedArmsItemLayer<>(this));
+        this.addLayer(new TouristHeldItemLayer<>(this));
         this.addLayer(new TouristOuterwearLayer<>(this));
     }
 
@@ -56,23 +54,13 @@ public class TouristRenderer extends AgeableMobRenderer<TouristEntity, TouristRe
         touristRenderState.baseModelVariant = touristEntity.getBaseModelVariant();
         touristRenderState.clothingVariantKey = touristEntity.getClothingVariant();
 
-        /*
-        if (!entityVariants.containsKey(touristEntity.getUUID())) {
-            Touristry.LOGGER.info("[DEBUG-VARIANT] Rendering tourist {} base={} clothing={}", touristEntity.getUUID(), touristRenderState.baseModelVariant, touristRenderState.clothingVariantKey);
-            entityVariants.put(touristEntity.getUUID(), new Variant(touristRenderState.baseModelVariant, touristRenderState.clothingVariantKey));
-        } else {
-            Variant variants = entityVariants.get(touristEntity.getUUID());
-            if (variants.base() != touristRenderState.baseModelVariant || !variants.clothing().equals(touristRenderState.clothingVariantKey)) {
-                Touristry.LOGGER.info("[DEBUG-VARIANT] Rendering update for tourist {} base={} clothing={}", touristEntity.getUUID(), touristRenderState.baseModelVariant, touristRenderState.clothingVariantKey);
-                entityVariants.put(touristEntity.getUUID(), new Variant(touristRenderState.baseModelVariant, touristRenderState.clothingVariantKey));
-            }
-        }
-         */
-
         // Extract general mood.
         touristRenderState.isUnhappy = touristEntity.getUnhappyCounter() > 0;
 
-        // Extract waving state.
+        // Extract pose and animation states.
+        //touristRenderState.isArmsCrossed = true;
+        //touristRenderState.isCrouching = false;
+        touristRenderState.isHoldingCamera = touristEntity.isHoldingCamera();
         touristRenderState.isWaving = touristEntity.isWaving() && !touristRenderState.isUnhappy && touristRenderState.heldItem.isEmpty();
     }
 }

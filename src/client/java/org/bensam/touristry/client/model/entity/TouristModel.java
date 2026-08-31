@@ -16,7 +16,7 @@ import net.minecraft.util.Mth;
 import org.bensam.touristry.client.render.entity.state.TouristRenderState;
 
 @Environment(EnvType.CLIENT)
-public class TouristModel extends EntityModel<TouristRenderState> implements HeadedModel, VillagerLikeModel<TouristRenderState> {
+public class TouristModel extends EntityModel<TouristRenderState> implements HeadedModel, VillagerLikeModel<TouristRenderState>, CameraHoldingModel<TouristRenderState> {
     public static final MeshTransformer BABY_TRANSFORMER = MeshTransformer.scaling(0.5F);
     public static final ModelLayerLocation LAYER = new ModelLayerLocation(
             Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tourist"),
@@ -28,6 +28,7 @@ public class TouristModel extends EntityModel<TouristRenderState> implements Hea
     );
 
     private final ModelPart head;
+    private final ModelPart body;
     private final ModelPart rightLeg;
     private final ModelPart leftLeg;
     private final ModelPart arms;
@@ -39,6 +40,7 @@ public class TouristModel extends EntityModel<TouristRenderState> implements Hea
     public TouristModel(ModelPart root) {
         super(root);
         this.head = root.getChild("head");
+        this.body = root.getChild("body");
         this.rightLeg = root.getChild("right_leg");
         this.leftLeg = root.getChild("left_leg");
         this.arms = root.getChild("arms");
@@ -67,7 +69,7 @@ public class TouristModel extends EntityModel<TouristRenderState> implements Hea
                 "body", CubeListBuilder.create().texOffs(16, 20).addBox(-4.0F, 0.0F, -3.0F, 8.0F, 12.0F, 6.0F), PartPose.ZERO
         );
         body.addOrReplaceChild(
-                "jacket", CubeListBuilder.create().texOffs(0, 38).addBox(-4.0F, 0.0F, -3.0F, 8.0F, 20.0F, 6.0F, new CubeDeformation(0.5F)), PartPose.ZERO
+                "bodywear", CubeListBuilder.create().texOffs(0, 38).addBox(-4.0F, 0.0F, -3.0F, 8.0F, 16.0F, 6.0F, new CubeDeformation(0.5F)), PartPose.ZERO
         );
         PartDefinition arms = partDefinition.addOrReplaceChild(
                 "arms", CubeListBuilder.create(), PartPose.offsetAndRotation(0.0F, 2.95F, -1.05F, -0.1745F, 0.0F, 0.0F));
@@ -132,8 +134,19 @@ public class TouristModel extends EntityModel<TouristRenderState> implements Hea
         this.rightLeg.yRot = 0.0F;
         this.leftLeg.yRot = 0.0F;
 
-        this.crossedArms.visible = !entityRenderState.isWaving;
-        this.straightArms.visible = entityRenderState.isWaving;
+        this.straightArms.visible = entityRenderState.isWaving || entityRenderState.isHoldingCamera;
+        this.crossedArms.visible = !this.straightArms.visible;
+
+        if (entityRenderState.isCrouching) {
+            this.body.xRot = 0.5F;
+            this.arms.xRot += 0.4F;
+            this.rightLeg.z += 4.0F;
+            this.leftLeg.z += 4.0F;
+            this.head.y += 4.2F;
+            this.body.y += 3.2F;
+            this.arms.y += 3.2F;
+        }
+
         if (entityRenderState.isWaving) {
             float wave = Mth.sin(entityRenderState.ageInTicks * 0.4F);
             if (entityRenderState.baseModelVariant % 2 == 0) {
@@ -143,6 +156,8 @@ public class TouristModel extends EntityModel<TouristRenderState> implements Hea
                 this.rightArm.xRot = -2.67F + wave * 0.25F;
                 this.rightArm.zRot = -0.2F + wave * 0.4F;
             }
+        } else if (entityRenderState.isHoldingCamera) {
+            this.rightArm.xRot = -1.62F;
         }
     }
 
@@ -150,5 +165,14 @@ public class TouristModel extends EntityModel<TouristRenderState> implements Hea
     public void translateToArms(TouristRenderState entityRenderState, PoseStack poseStack) {
         this.root.translateAndRotate(poseStack);
         this.arms.translateAndRotate(poseStack);
+    }
+
+    @Override
+    public void translateToCameraHold(TouristRenderState entityRenderState, PoseStack poseStack) {
+        this.root.translateAndRotate(poseStack);
+        this.arms.translateAndRotate(poseStack);
+        this.straightArms.translateAndRotate(poseStack);
+        this.rightArm.translateAndRotate(poseStack);
+        poseStack.translate(0.0F, 0.65F, 0.0F);
     }
 }

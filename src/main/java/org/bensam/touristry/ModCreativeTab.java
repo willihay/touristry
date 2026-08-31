@@ -33,6 +33,7 @@ public final class ModCreativeTab {
                     output.accept(ModBlocks.SHOPPING_EXPERIENCE.get().asItem());
                     output.accept(ModBlocks.SIGHTSEEING_EXPERIENCE.get().asItem());
                     output.accept(ModItems.KEY_BLANK.get());
+                    output.accept(ModItems.TOURIST_CAMERA.get());
                 })
                 .build();
 
