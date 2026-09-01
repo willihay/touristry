@@ -853,12 +853,13 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
 
                 ItemPrice itemPrice = itemPrices.get(itemPriceIndex);
                 ItemStack itemForSale = itemPrice.itemForSale();
+                ItemStack itemCost = itemPrice.cost();
 
                 // Render item for sale.
                 guiGraphics.renderFakeItem(itemForSale, xItemForSale, yItem);
                 guiGraphics.renderItemDecorations(this.font, itemForSale, xItemForSale, yItem);
 
-                // Render item tooltip if needed, based on mouse position.
+                // Render item tooltip if mouse is hovering over item for sale.
                 if (this.isHovering(xItemForSale - this.leftPos, yItem - this.topPos, 16, 16, mouseX, mouseY)) {
                     guiGraphics.setTooltipForNextFrame(
                             this.font,
@@ -880,7 +881,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                 );
 
                 // Render cost to tourists.
-                if (itemPrice.cost() == null) {
+                if (itemCost == null) {
                     // Use default cost.
                     ItemStack defaultCost = this.menu.getSlot(ShoppingExperienceMenu.SHOPPING_DEFAULT_COST_SLOT).getItem();
 
@@ -898,11 +899,23 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                     } else {
                         guiGraphics.renderFakeItem(defaultCost, xItemCost, yItem);
                         guiGraphics.renderItemDecorations(this.font, defaultCost, xItemCost, yItem);
+
+                        // Render item tooltip if mouse is hovering over item cost.
+                        if (this.isHovering(xItemCost - this.leftPos, yItem - this.topPos, 16, 16, mouseX, mouseY)) {
+                            guiGraphics.setTooltipForNextFrame(
+                                    this.font,
+                                    this.getTooltipFromContainerItem(defaultCost),
+                                    defaultCost.getTooltipImage(),
+                                    mouseX,
+                                    mouseY,
+                                    defaultCost.get(DataComponents.TOOLTIP_STYLE)
+                            );
+                        }
                     }
 
                     // Render parentheses before and after default cost to indicate this cost is from the default cost slot.
                     guiGraphics.drawString(this.font, ")", xItemCost + 18, yItem + 5, ARGB_SCROLLBOX_BUTTON_TEXT_COLOR);
-                } else if (itemPrice.cost() == ItemStack.EMPTY) {
+                } else if (itemCost == ItemStack.EMPTY) {
                     guiGraphics.blitSprite(
                             RenderPipelines.GUI_TEXTURED,
                             FREE_COST_SPRITE,
@@ -911,8 +924,20 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                             16, 16
                     );
                 } else {
-                    guiGraphics.renderFakeItem(itemPrice.cost(), xItemCost, yItem);
-                    guiGraphics.renderItemDecorations(this.font, itemPrice.cost(), xItemCost, yItem);
+                    guiGraphics.renderFakeItem(itemCost, xItemCost, yItem);
+                    guiGraphics.renderItemDecorations(this.font, itemCost, xItemCost, yItem);
+
+                    // Render item tooltip if mouse is hovering over item cost.
+                    if (this.isHovering(xItemCost - this.leftPos, yItem - this.topPos, 16, 16, mouseX, mouseY)) {
+                        guiGraphics.setTooltipForNextFrame(
+                                this.font,
+                                this.getTooltipFromContainerItem(itemCost),
+                                itemCost.getTooltipImage(),
+                                mouseX,
+                                mouseY,
+                                itemCost.get(DataComponents.TOOLTIP_STYLE)
+                        );
+                    }
                 }
 
                 // Render dirty marker if applicable.
