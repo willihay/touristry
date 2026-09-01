@@ -364,7 +364,7 @@ public final class TouristMind {
 
     public boolean isItemOfInterest(ItemStack itemStack) {
         for (TouristItemInterest interest : this.interests) {
-            if (interest.isAMatch(itemStack)) {
+            if (interest.isAMatch(itemStack, this.tourist.level())) {
                 TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[TouristMind] Tourist found {} matching interest {}", itemStack.getItem().getName().getString(), interest);
                 return true;
             }
@@ -601,7 +601,7 @@ public final class TouristMind {
 
     private void generateInterests() {
         for (TouristItemInterest interest : TouristItemInterest.values()) {
-            if (this.random().nextFloat() <= interest.probability()) {
+            if (this.random().nextFloat() < interest.probabilityOfInterest()) {
                 this.interests.add(interest);
                 if (interest == TouristItemInterest.EPIC_ITEMS) {
                     this.dailyBudgetEmeralds += 100;
@@ -609,6 +609,10 @@ public final class TouristMind {
                     this.dailyBudgetEmeralds += 25;
                 }
             }
+        }
+
+        if (this.interests.isEmpty()) {
+            this.interests.add(TouristItemInterest.GENERAL);
         }
     }
 

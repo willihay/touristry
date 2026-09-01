@@ -24,6 +24,7 @@ import org.bensam.touristry.item.ExperienceTargetKeyItem;
 import org.bensam.touristry.network.ExperienceServerPackets;
 import org.bensam.touristry.tourism.ExperienceTargetOverlaySyncManager;
 import org.bensam.touristry.tourism.TourismManager;
+import org.bensam.touristry.tourism.TouristEconomy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,6 +68,7 @@ public class Touristry implements ModInitializer {
 		ServerWorldEvents.LOAD.register((server, serverLevel) -> {
 			if (serverLevel == server.overworld()) {
 				ModServerConfigManager.initialize(server);
+				TouristEconomy.initialize(serverLevel);
 				TourismManager.initialize(serverLevel);
 			}
 		});

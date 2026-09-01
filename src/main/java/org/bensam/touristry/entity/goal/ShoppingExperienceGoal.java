@@ -173,7 +173,7 @@ public class ShoppingExperienceGoal extends LookAtTargetPosGoal {
         }
 
         // If no specific item of interest was found, there's still a chance they might want something they see.
-        if (shoppingCart.isEmpty() && this.tourist.getRandom().nextFloat() <= CHANCE_TO_WANT_RANDOM_ITEM) {
+        if (shoppingCart.isEmpty() && this.tourist.getRandom().nextFloat() < CHANCE_TO_WANT_RANDOM_ITEM) {
             int selectedIndex = this.tourist.getRandom().nextInt(itemPrices.size());
             Map.Entry<ItemPrice, Integer> selectedEntry = null;
             Iterator<Map.Entry<ItemPrice, Integer>> iterator = itemPrices.entrySet().iterator();
