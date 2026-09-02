@@ -51,7 +51,6 @@ public class ModBlocks {
                 "shopping_experience",
                 ShoppingExperienceBlock::new,
                 BlockBehaviour.Properties.of()
-                        .noOcclusion()
                         .sound(SoundType.WOOD)
                         .strength(5.0f, 1200.0f)
         );

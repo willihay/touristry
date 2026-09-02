@@ -21,6 +21,8 @@ import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 public class ShoppingExperienceBlock extends TouristExperienceBlock {
+    private static final VoxelShape SHAPE = Block.box(2, 0, 2, 14, 8, 14);
+
     public static final MapCodec<ShoppingExperienceBlock> CODEC = simpleCodec(ShoppingExperienceBlock::new);
 
     public ShoppingExperienceBlock(Properties properties) {
@@ -46,8 +48,13 @@ public class ShoppingExperienceBlock extends TouristExperienceBlock {
     }
 
     @Override
+    protected VoxelShape getOcclusionShape(BlockState blockState) {
+        return SHAPE;
+    }
+
+    @Override
     protected VoxelShape getShape(BlockState blockState, BlockGetter blockGetter, BlockPos blockPos, CollisionContext collisionContext) {
-        return Block.box(2, 0, 2, 14, 8, 14);
+        return SHAPE;
     }
 
     @Override
@@ -58,6 +65,11 @@ public class ShoppingExperienceBlock extends TouristExperienceBlock {
     @Override
     public @Nullable BlockEntity newBlockEntity(BlockPos blockPos, BlockState blockState) {
         return new ShoppingExperienceBlockEntity(blockPos, blockState);
+    }
+
+    @Override
+    protected boolean useShapeForLightOcclusion(BlockState blockState) {
+        return true;
     }
 
     @Override
