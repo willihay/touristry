@@ -36,7 +36,7 @@ public class ShoppingExperienceGoal extends LookAtTargetPosGoal {
         this.shoppingExperiencePos = shoppingExperiencePos;
         this.targetPos = targetPos;
         this.tickCount = this.adjustedTickDelay(startingTickCount);
-        this.adjustedTimeAtTarget = this.tourist.getShoppingBag().isEmpty() ? 0 : this.adjustedTickDelay(timeAtTarget);
+        this.adjustedTimeAtTarget = (isPurchaseCounter && this.tourist.getShoppingBag().isEmpty()) ? 0 : this.adjustedTickDelay(timeAtTarget);
         this.durationAtTarget = this.adjustedTimeAtTarget == 0 ? 0 : Math.max(0, timeAtTarget - startingTickCount);
         this.isPurchaseCounter = isPurchaseCounter;
     }
@@ -60,6 +60,13 @@ public class ShoppingExperienceGoal extends LookAtTargetPosGoal {
                     experienceName.getString(),
                     this.durationAtTarget);
         } else {
+            if (this.tourist.level() instanceof ServerLevel serverLevel) {
+                if (serverLevel.getBlockEntity(this.targetPos) instanceof Container container) {
+                    container.startOpen(this.tourist);
+                    this.tourist.setOpenContainer(this.targetPos);
+                }
+            }
+
             float allowance = 0;
             if (visit != null) {
                 allowance = visit.budgetRemaining();
@@ -67,6 +74,18 @@ public class ShoppingExperienceGoal extends LookAtTargetPosGoal {
             TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[ShoppingExperienceGoal] Shopping at target with a budget of {} for {} ticks",
                     allowance,
                     this.durationAtTarget);
+        }
+    }
+
+    @Override
+    public void stop() {
+        super.stop();
+
+        if (this.tourist.level() instanceof ServerLevel serverLevel) {
+            if (serverLevel.getBlockEntity(this.targetPos) instanceof Container container) {
+                container.stopOpen(this.tourist);
+                this.tourist.setOpenContainer(null);
+            }
         }
     }
 

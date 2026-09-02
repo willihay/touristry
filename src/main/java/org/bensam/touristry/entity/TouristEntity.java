@@ -24,6 +24,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.ContainerOpenersCounter;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import org.bensam.touristry.ModEntities;
@@ -49,7 +50,7 @@ import org.jspecify.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class TouristEntity extends AbstractVillager {
+public class TouristEntity extends AbstractVillager implements ContainerUser {
     private static final int BASE_MODEL_VARIANTS = 10;
 
     private static final EntityDataAccessor<Integer> DATA_BASE_MODEL = SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.INT);
@@ -62,6 +63,7 @@ public class TouristEntity extends AbstractVillager {
     private final TouristMind mind;
     private List<ItemPrice> shoppingBag = new ArrayList<>();
 
+    private BlockPos openContainer = null;
     private boolean registeredWithTourismManager;
 
     public TouristEntity(Level level) {
@@ -102,7 +104,8 @@ public class TouristEntity extends AbstractVillager {
         return Mob.createMobAttributes()
                 .add(Attributes.MOVEMENT_SPEED, 0.3)
                 .add(Attributes.MAX_HEALTH, 20.0)
-                .add(Attributes.FOLLOW_RANGE, 32.0);
+                .add(Attributes.FOLLOW_RANGE, 32.0)
+                .add(Attributes.BLOCK_INTERACTION_RANGE, 4.5);
     }
 
     @Override
@@ -337,6 +340,11 @@ public class TouristEntity extends AbstractVillager {
         return this.mind.getConsecutiveFailedProgressChecks();
     }
 
+    @Override
+    public double getContainerInteractionRange() {
+        return this.getAttributeValue(Attributes.BLOCK_INTERACTION_RANGE);
+    }
+
     public String getCurrentLocationNameOrPos() {
         return this.mind.getLocationNameOrPos();
     }
@@ -373,6 +381,11 @@ public class TouristEntity extends AbstractVillager {
 
     public void giveItemToHold(ItemStack itemStack) {
         this.setItemSlot(EquipmentSlot.MAINHAND, itemStack);
+    }
+
+    @Override
+    public boolean hasContainerOpen(ContainerOpenersCounter containerOpenersCounter, BlockPos blockPos) {
+        return blockPos.equals(this.openContainer);
     }
 
     public boolean hasHeldItem() {
@@ -468,6 +481,10 @@ public class TouristEntity extends AbstractVillager {
     @Override
     protected void rewardTradeXp(@NonNull MerchantOffer merchantOffer) {
         // not applicable
+    }
+
+    public void setOpenContainer(BlockPos blockPos) {
+        this.openContainer = blockPos;
     }
 
     public void stopNavigation() {
