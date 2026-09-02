@@ -118,6 +118,7 @@ public class ShoppingExperienceGoal extends LookAtTargetPosGoal {
 
             for (ItemPrice purchase : this.tourist.getShoppingBag()) {
                 if (shoppingExperienceBlockEntity.tryDepositPayment(purchase.cost())) {
+                    TourismManager.recordTouristPurchase(purchase);
                     float itemValue = (int) TouristEconomy.getEmeraldEquivalent(purchase.cost());
                     this.tourist.getMind().spendBudget(itemValue);
                 } else {

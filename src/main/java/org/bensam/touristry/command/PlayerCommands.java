@@ -15,7 +15,9 @@ import org.bensam.touristry.block.entity.AbstractExperienceBlockEntity;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
 import org.bensam.touristry.entity.TouristEntity;
 import org.bensam.touristry.tourism.TourismManager;
+import org.bensam.touristry.tourism.TouristEconomy;
 import org.bensam.touristry.tourism.experience.ExperienceTarget;
+import org.bensam.touristry.tourism.experience.ItemPrice;
 import org.bensam.touristry.tourism.experience.TouristExperience;
 import org.bensam.touristry.tourism.experience.TouristLocationStats;
 
@@ -355,6 +357,28 @@ public final class PlayerCommands {
                 () -> Component.literal("Highest recorded tourist daily budget: " + String.format("%.2f", TourismManager.getRecordHighestTouristBudget()) + " emeralds"),
                 false
         );
+
+        ItemPrice mostValuablePurchase = TourismManager.getRecordMostValuablePurchase();
+        if (mostValuablePurchase.cost() != null && !mostValuablePurchase.cost().isEmpty()) {
+            float value = TouristEconomy.getEmeraldEquivalent(mostValuablePurchase.cost());
+            source.sendSuccess(
+                    () -> Component.literal("Most valuable purchase: ")
+                            .append(String.valueOf(mostValuablePurchase.itemForSale().getCount()))
+                            .append(" ")
+                            .append(mostValuablePurchase.itemForSale().getStyledHoverName())
+                            .append(" for ")
+                            .append(String.valueOf(mostValuablePurchase.cost().getCount()))
+                            .append(" ")
+                            .append(mostValuablePurchase.cost().getStyledHoverName())
+                            .append(" worth " + value + " emeralds"),
+                    false
+            );
+        } else {
+            source.sendSuccess(
+                    () -> Component.literal("Most valuable purchase: (no record)"),
+                    false
+            );
+        }
         return 1;
     }
 

@@ -35,6 +35,7 @@ public class TouristEconomy {
             return 0;
         }
 
+        // TODO Base emerald value on a more comprehensive value assessment.
         return itemStack.getCount();
     }
 
@@ -82,5 +83,9 @@ public class TouristEconomy {
             }
         }
         return false;
+    }
+
+    public static void recordTouristPurchase(ItemPrice itemPrice) {
+        // TODO Update world economics with latest purchase info.
     }
 }

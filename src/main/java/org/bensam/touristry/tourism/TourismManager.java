@@ -18,6 +18,7 @@ import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
 import org.bensam.touristry.config.ModServerConfigManager;
 import org.bensam.touristry.config.Verbosity;
 import org.bensam.touristry.entity.TouristEntity;
+import org.bensam.touristry.tourism.experience.ItemPrice;
 import org.bensam.touristry.tourism.experience.TouristExperience;
 import org.jspecify.annotations.Nullable;
 
@@ -33,6 +34,7 @@ public class TourismManager {
 
     private static @Nullable TourismSavedData tourismSavedData;
     private static float recordHighestTouristBudget;
+    private static ItemPrice recordMostValuablePurchase;
 
     private static long lastDayThreshold = -1;
     private static long lastHourThreshold = -1;
@@ -107,7 +109,8 @@ public class TourismManager {
     private static void loadPersistentState(ServerLevel serverLevel) {
         tourismSavedData = serverLevel.getDataStorage().computeIfAbsent(TourismSavedData.TYPE);
 
-        recordHighestTouristBudget = tourismSavedData.getRecordHighestTouristBudget();
+        recordHighestTouristBudget = tourismSavedData.getHighestTouristBudget();
+        recordMostValuablePurchase = tourismSavedData.getMostValuablePurchase();
 
         long currentDay = serverLevel.getDayCount();
         int currentTimeOfDay = (int)(serverLevel.getDayTime() % 24000L);
@@ -135,14 +138,14 @@ public class TourismManager {
 
         tourismSavedData.setSavedState(
                 recordHighestTouristBudget,
+                recordMostValuablePurchase,
                 lastPreparedDay,
                 pendingSpawns.stream()
                         .map(scheduledTouristSpawn -> new TourismSavedData.PendingTouristSpawnData(
                                 scheduledTouristSpawn.timeOfDay(),
                                 scheduledTouristSpawn.beaconUUID()
                         ))
-                        .toList()
-        );
+                        .toList());
     }
 
     public static Component getTouristBlockNameOrPos(Level level, TouristLocation locationType, BlockPos blockPos) {
@@ -199,6 +202,10 @@ public class TourismManager {
 
     public static float getRecordHighestTouristBudget() {
         return recordHighestTouristBudget;
+    }
+
+    public static ItemPrice getRecordMostValuablePurchase() {
+        return recordMostValuablePurchase;
     }
 
     public static @Nullable TouristExperience getTouristExperienceByPos(BlockPos blockPos) {
@@ -258,9 +265,33 @@ public class TourismManager {
     public static void recordTouristBudget(float budget) {
         if (budget > recordHighestTouristBudget) {
             recordHighestTouristBudget = budget;
-            logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "New record tourist budget: {} emeralds", String.format("%.2f", budget));
             persistSavedData();
+            logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "New record tourist budget: {} emeralds", String.format("%.2f", budget));
         }
+    }
+
+    public static void recordTouristPurchase(ItemPrice itemPrice) {
+        if (itemPrice.cost() == null) {
+            return;
+        }
+
+        // Check for new record for most valuable purchase.
+        if (!itemPrice.cost().isEmpty()) {
+            float value = TouristEconomy.getEmeraldEquivalent(itemPrice.cost());
+            if (value > TouristEconomy.getEmeraldEquivalent(recordMostValuablePurchase.cost())) {
+                recordMostValuablePurchase = itemPrice;
+                persistSavedData();
+                logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "New record purchase: {} {} for {} {} worth {} emeralds",
+                        itemPrice.itemForSale().getCount(),
+                        itemPrice.itemForSale().getHoverName().getString(),
+                        itemPrice.cost().getCount(),
+                        itemPrice.cost().getHoverName().getString(),
+                        value);
+            }
+        }
+
+        // Update the world economy.
+        TouristEconomy.recordTouristPurchase(itemPrice);
     }
 
     public static void registerTouristExperience(TouristExperience experience) {
