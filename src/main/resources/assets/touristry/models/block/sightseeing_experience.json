@@ -564,10 +564,6 @@
       "rotation": [0, 135, 0],
       "scale": [0.5, 0.5, 0.5]
     },
-    "ground": {
-      "translation": [0, 4.25, 0],
-      "scale": [0.25, 0.25, 0.25]
-    },
     "gui": {
       "rotation": [30, 225, 0],
       "translation": [0, -2.5, 0],
@@ -580,7 +576,7 @@
     "on_shelf": {
       "rotation": [0, 180, 0],
       "translation": [0, -2.75, 0],
-      "scale": [0.6, 0.6, 0.6]
+      "scale": [0.8, 0.8, 0.8]
     }
   }
 }

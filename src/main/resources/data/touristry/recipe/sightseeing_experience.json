@@ -1,14 +1,18 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    "PCP",
-    "#K#",
-    "###"
+    "OMB",
+    "CKS",
+    "#I#"
   ],
   "key": {
-    "P": "minecraft:paper",
+    "O": "minecraft:compass",
+    "M": "minecraft:map",
+    "B": "minecraft:written_book",
     "C": "minecraft:chest",
     "K": "touristry:key_blank",
+    "S": "minecraft:blackstone",
+    "I": "minecraft:stick",
     "#": "#minecraft:planks"
   },
   "result": {

@@ -27,7 +27,7 @@ import org.bensam.touristry.tourism.experience.ExperienceTarget;
 import org.jspecify.annotations.Nullable;
 
 public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEntity {
-    public static final int IDEAL_APPROACH_DISTANCE = 2; // Tourist should try to stand this far away for sightseeing targets
+    public static final int IDEAL_TARGET_APPROACH_DISTANCE = 2; // Tourist should try to stand this far away for sightseeing targets
     public static final int MAX_APPROACH_DISTANCE = 6; // Skip target if tourist can't get closer than this distance
     public static final int MAX_RANGE_TO_TARGET = 100;
     public static final int MIN_TICKS_AT_TARGET = 100;
@@ -101,7 +101,7 @@ public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEnt
 
     @Override
     public int getIdealApproachDistance() {
-        return IDEAL_APPROACH_DISTANCE;
+        return IDEAL_TARGET_APPROACH_DISTANCE;
     }
 
     @Override

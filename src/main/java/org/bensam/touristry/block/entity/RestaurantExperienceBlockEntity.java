@@ -5,15 +5,11 @@ import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.util.RandomSource;
-import net.minecraft.world.Container;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
@@ -21,19 +17,16 @@ import org.bensam.touristry.ModBlockEntities;
 import org.bensam.touristry.ModComponents;
 import org.bensam.touristry.Touristry;
 import org.bensam.touristry.entity.TouristEntity;
-import org.bensam.touristry.entity.goal.ShoppingExperienceGoal;
-import org.bensam.touristry.menu.ShoppingExperienceMenu;
 import org.bensam.touristry.tourism.experience.ExperienceTarget;
 import org.bensam.touristry.tourism.experience.ItemPrice;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 
-public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity {
-    public static final int IDEAL_TARGET_APPROACH_DISTANCE = 1; // Tourist should try to stand this far away for shopping targets
+public class RestaurantExperienceBlockEntity extends AbstractExperienceBlockEntity {
+    public static final int IDEAL_TARGET_APPROACH_DISTANCE = 1; // Tourist should try to stand this far away for restaurant dining spot targets
     public static final int MAX_APPROACH_DISTANCE = 4; // Skip target if tourist can't get closer than this distance
     public static final int MAX_RANGE_TO_TARGET = 100;
     public static final int MIN_TICKS_AT_TARGET = 60;
@@ -48,8 +41,8 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
     private ItemStack defaultCost = ItemStack.EMPTY;
     private LinkedHashMap<ItemStackKey, ItemPrice> itemPrices;
 
-    public ShoppingExperienceBlockEntity(BlockPos blockPos, BlockState blockState) {
-        super(ModBlockEntities.SHOPPING_EXPERIENCE.get(), blockPos, blockState, TOTAL_INVENTORY_SIZE);
+    public RestaurantExperienceBlockEntity(BlockPos blockPos, BlockState blockState) {
+        super(ModBlockEntities.RESTAURANT_EXPERIENCE.get(), blockPos, blockState, TOTAL_INVENTORY_SIZE);
 
         this.itemPrices = new LinkedHashMap<>();
 
@@ -74,46 +67,12 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
 
     @Override
     public @Nullable Goal createGoalForTarget(TouristEntity tourist, ServerLevel serverLevel, ExperienceTarget target) {
-        if (target.isChildExperience()) {
-            return null; // just navigate to sub-experience
-        }
-
-        int ticksAtBlock = 0;
-        boolean isPayingHere = target.pos().equals(this.getBlockPos());
-
-        // Determine how long the tourist will visibly pause at the target while making a purchase decision.
-        if (isPayingHere) {
-            ticksAtBlock = TICKS_AT_BLOCK_WHEN_PURCHASING;
-        } else {
-            // Gather all items in target container.
-            List<ItemStack> itemsInContainer = new ArrayList<>();
-            BlockEntity blockEntity = serverLevel.getBlockEntity(target.pos());
-            if (blockEntity instanceof Container container) {
-                itemsInContainer = AbstractExperienceBlockEntity.getTargetContainerContents(container);
-            }
-
-            int numItemsInTargetContainer = itemsInContainer.size();
-            int minTicksAtTarget = Math.min((numItemsInTargetContainer + 1) * 15, MIN_TICKS_AT_TARGET);
-            if (minTicksAtTarget < MIN_TICKS_AT_TARGET) {
-                // If there are only a few, keep the visit short.
-                ticksAtBlock = minTicksAtTarget;
-            } else {
-                ticksAtBlock = tourist.getRandom().nextIntBetweenInclusive(minTicksAtTarget, MAX_TICKS_AT_TARGET);
-            }
-        }
-
-        return new ShoppingExperienceGoal(
-                tourist,
-                this.getBlockPos(),
-                target.pos(),
-                tourist.getTicksAtCurrentTarget(),
-                ticksAtBlock,
-                isPayingHere);
+        return null;
     }
 
     @Override
     protected AbstractContainerMenu createMenu(int i, Inventory inventory) {
-        return new ShoppingExperienceMenu(i, inventory, this, this.data, ContainerLevelAccess.create(this.level, this.getBlockPos()));
+        return null;
     }
 
     public ItemStack getDefaultCost() {
@@ -122,7 +81,7 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
 
     @Override
     protected Component getDefaultName() {
-        return Component.translatable("block." + Touristry.MOD_ID + ".shopping_experience");
+        return Component.translatable("block." + Touristry.MOD_ID + ".restaurant_experience");
     }
 
     @Override
@@ -175,11 +134,6 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
     }
 
     @Override
-    public int getPostArrivalWaitTicks(RandomSource randomSource) {
-        return 10;
-    }
-
-    @Override
     protected int getTargetKeySlotIndex() {
         return PAYMENT_SLOT_SIZE;
     }
@@ -189,7 +143,7 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
         List<ExperienceTarget> targets = super.getTargets(serverLevel);
 
         if (!targets.isEmpty()) {
-            // Add shopping experience block entity as last target so that tourists can return here to pay for items.
+            // Add restaurant experience block entity as last target so that tourists can return here to pay for food.
             targets.add(new ExperienceTarget(
                     this.getBlockPos(),
                     this.getApproachDirection(),
@@ -207,57 +161,9 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
         return !this.inventory.get(ENTRY_FEE_INDEX).isEmpty();
     }
 
-    public int importItemsFromTargets(ServerLevel serverLevel) {
-        int numAdded = 0;
-
-        this.pruneInvalidTargets(serverLevel);
-
-        for (ExperienceTarget target : this.targets) {
-            if (target.isBlock()) {
-                BlockEntity blockEntity = serverLevel.getBlockEntity(target.pos());
-                if (blockEntity instanceof Container container) {
-                    if (container.iterator() instanceof ContainerIterator it) {
-                        while (it.hasNext()) {
-                            ItemStack itemInContainer = it.next();
-                            if (!itemInContainer.isEmpty()) {
-                                ItemStack copyOfItem = itemInContainer.copyWithCount(1);
-                                if (copyOfItem.isDamageableItem()) {
-                                    copyOfItem.setDamageValue(0);
-                                }
-                                ItemPrice itemPrice = new ItemPrice(copyOfItem, this.getDefaultCost());
-                                if (this.itemPrices.putIfAbsent(new ItemStackKey(copyOfItem), itemPrice) == null) {
-                                    numAdded++;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        if (numAdded > 0) {
-            this.setChanged();
-        }
-
-        return numAdded;
-    }
-
     @Override
     protected boolean isTargetValid(ServerLevel serverLevel, ExperienceTarget target) {
-        // Check child experiences.
-        if (target.isChildExperience()) {
-            return this.isTargetChildExperienceValid(target.childExperienceUUID());
-        }
-
-        // Check entity targets.
-        if (target.isEntity()) {
-            // There are currently no valid shopping entities.
-            return false;
-        }
-
-        // Check if block still exists and is valid for shopping.
-        BlockEntity blockEntity = serverLevel.getBlockEntity(target.pos());
-        return blockEntity instanceof Container;
+        return true;
     }
 
     public @Nullable ItemPrice lookupItemPriceFor(ItemStack itemStack) {

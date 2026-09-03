@@ -1,7 +1,6 @@
 {
   "replace": false,
   "values": [
-    "touristry:tourist_beacon",
-    "touristry:shopping_experience"
+    "touristry:tourist_beacon"
   ]
 }

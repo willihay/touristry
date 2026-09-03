@@ -6,7 +6,7 @@
       "entries": [
         {
           "type": "minecraft:item",
-          "name": "touristry:shopping_experience",
+          "name": "touristry:restaurant_experience",
           "functions": [
             {
               "function": "minecraft:copy_components",
@@ -26,7 +26,7 @@
             },
             {
               "function": "minecraft:copy_state",
-              "block": "touristry:shopping_experience",
+              "block": "touristry:restaurant_experience",
               "properties": [
                 "open_for_business"
               ]

@@ -1,6 +1,8 @@
 {
   "replace": false,
   "values": [
+    "touristry:restaurant_experience",
+    "touristry:shopping_experience",
     "touristry:sightseeing_experience"
   ]
 }

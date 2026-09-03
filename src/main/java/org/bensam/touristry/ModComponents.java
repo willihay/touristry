@@ -8,7 +8,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
-import org.bensam.touristry.block.entity.ShoppingExperienceBlockEntity;
+import org.bensam.touristry.block.entity.ItemStackKey;
 import org.bensam.touristry.tourism.experience.ExperienceTarget;
 import org.bensam.touristry.tourism.experience.ItemPrice;
 import org.bensam.touristry.tourism.experience.TouristLocationStats;
@@ -101,18 +101,18 @@ public final class ModComponents {
                     .build()
     );
 
-    public static final DataComponentType<ItemStack> SHOPPING_EXPERIENCE_DEFAULT_COST = Registry.register(
+    public static final DataComponentType<ItemStack> TOURIST_EXPERIENCE_ITEM_DEFAULT_COST = Registry.register(
             BuiltInRegistries.DATA_COMPONENT_TYPE,
-            Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "shopping_experience_default_cost"),
+            Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tourist_experience_item_default_cost"),
             DataComponentType.<ItemStack>builder()
                     .persistent(ItemStack.OPTIONAL_CODEC)
                     .build()
     );
 
-    public static final DataComponentType<LinkedHashMap<ShoppingExperienceBlockEntity.ItemStackKey, ItemPrice>> SHOPPING_EXPERIENCE_ITEM_PRICES = Registry.register(
+    public static final DataComponentType<LinkedHashMap<ItemStackKey, ItemPrice>> TOURIST_EXPERIENCE_ITEM_PRICES = Registry.register(
             BuiltInRegistries.DATA_COMPONENT_TYPE,
-            Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "shopping_experience_item_prices"),
-            DataComponentType.<LinkedHashMap<ShoppingExperienceBlockEntity.ItemStackKey, ItemPrice>>builder()
+            Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tourist_experience_item_prices"),
+            DataComponentType.<LinkedHashMap<ItemStackKey, ItemPrice>>builder()
                     .persistent(ItemPrice.MAP_CODEC)
                     .build()
     );

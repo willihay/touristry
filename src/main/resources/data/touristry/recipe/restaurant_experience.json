@@ -1,18 +1,19 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    "PCP",
+    "BCW",
     " K ",
-    "#S#"
+    "#F#"
   ],
   "key": {
-    "P": "minecraft:copper_ingot",
+    "B": "minecraft:writable_book",
+    "W": "minecraft:written_book",
     "C": "minecraft:chest",
-    "S": "minecraft:blackstone",
     "K": "touristry:key_blank",
+    "F": "minecraft:bookshelf",
     "#": "#minecraft:wooden_slabs"
   },
   "result": {
-    "id": "touristry:shopping_experience"
+    "id": "touristry:restaurant_experience"
   }
 }

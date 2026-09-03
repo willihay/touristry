@@ -7,7 +7,7 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.ItemStack;
-import org.bensam.touristry.block.entity.ShoppingExperienceBlockEntity;
+import org.bensam.touristry.block.entity.ItemStackKey;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Comparator;
@@ -21,12 +21,12 @@ public record ItemPrice (ItemStack itemForSale, @Nullable ItemStack cost) {
             ItemStack.OPTIONAL_CODEC.optionalFieldOf("cost").forGetter(itemPrice -> Optional.ofNullable(itemPrice.cost()))
     ).apply(instance, (itemForSale, cost) -> new ItemPrice(itemForSale, cost.orElse(null))));
 
-    public static final Codec<LinkedHashMap<ShoppingExperienceBlockEntity.ItemStackKey, ItemPrice>> MAP_CODEC =
+    public static final Codec<LinkedHashMap<ItemStackKey, ItemPrice>> MAP_CODEC =
             ItemPrice.CODEC.listOf().xmap(
                     list -> {
-                        LinkedHashMap<ShoppingExperienceBlockEntity.ItemStackKey, ItemPrice> map = new LinkedHashMap<>();
+                        LinkedHashMap<ItemStackKey, ItemPrice> map = new LinkedHashMap<>();
                         for (ItemPrice itemPrice : list) {
-                            map.put(new ShoppingExperienceBlockEntity.ItemStackKey(itemPrice.itemForSale()), itemPrice);
+                            map.put(new ItemStackKey(itemPrice.itemForSale()), itemPrice);
                         }
                         return map;
                     },

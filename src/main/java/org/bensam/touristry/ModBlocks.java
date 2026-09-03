@@ -14,6 +14,7 @@ import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.properties.NoteBlockInstrument;
 import net.minecraft.world.level.material.MapColor;
+import org.bensam.touristry.block.RestaurantExperienceBlock;
 import org.bensam.touristry.block.ShoppingExperienceBlock;
 import org.bensam.touristry.block.SightseeingExperienceBlock;
 import org.bensam.touristry.block.TouristBeaconBlock;
@@ -26,6 +27,9 @@ public class ModBlocks {
 
     private static TouristBeaconBlock touristBeacon;
     public static final Supplier<TouristBeaconBlock> TOURIST_BEACON = () -> touristBeacon;
+
+    private static RestaurantExperienceBlock restaurantExperience;
+    public static final Supplier<RestaurantExperienceBlock> RESTAURANT_EXPERIENCE = () -> restaurantExperience;
 
     private static ShoppingExperienceBlock shoppingExperience;
     public static final Supplier<ShoppingExperienceBlock> SHOPPING_EXPERIENCE = () -> shoppingExperience;
@@ -44,7 +48,15 @@ public class ModBlocks {
                         .lightLevel(blockState -> blockState.getValue(TouristBeaconBlock.OPEN_FOR_BUSINESS) ? 12 : 0)
                         .requiresCorrectToolForDrops()
                         .sound(SoundType.STONE)
-                        .strength(5.0f, 1200.0f)
+                        .strength(5.0F, 1200.0F)
+        );
+
+        restaurantExperience = register(
+                "restaurant_experience",
+                RestaurantExperienceBlock::new,
+                BlockBehaviour.Properties.of()
+                        .sound(SoundType.WOOD)
+                        .strength(5.0F, 1200.0F)
         );
 
         shoppingExperience = register(
@@ -52,7 +64,7 @@ public class ModBlocks {
                 ShoppingExperienceBlock::new,
                 BlockBehaviour.Properties.of()
                         .sound(SoundType.WOOD)
-                        .strength(5.0f, 1200.0f)
+                        .strength(5.0F, 1200.0F)
         );
 
         sightseeingExperience = register(
@@ -60,7 +72,7 @@ public class ModBlocks {
                 SightseeingExperienceBlock::new,
                 BlockBehaviour.Properties.of()
                         .sound(SoundType.WOOD)
-                        .strength(5.0f, 1200.0f)
+                        .strength(5.0F, 1200.0F)
         );
     }
 
