@@ -237,7 +237,6 @@ public class TourismManager {
         pruneInvalidTouristExperiences(serverLevel);
 
         return loadedExperiences.values().stream()
-                .filter(exp -> exp.getParentExperienceUUID() == null)
                 .filter(exp -> exp.getBlockPos().distSqr(beaconPos) <= radiusSq)
                 .sorted(Comparator.comparingDouble(exp -> exp.getBlockPos().distSqr(beaconPos)))
                 .toList();

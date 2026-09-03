@@ -68,14 +68,6 @@ public final class ModComponents {
                     .build()
     );
 
-    public static final DataComponentType<UUID> TOURIST_EXPERIENCE_PARENT_UUID = Registry.register(
-            BuiltInRegistries.DATA_COMPONENT_TYPE,
-            Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tourist_experience_parent_uuid"),
-            DataComponentType.<UUID>builder()
-                    .persistent(UUIDUtil.CODEC)
-                    .build()
-    );
-
     public static final DataComponentType<TouristLocationStats> TOURIST_EXPERIENCE_STATISTICS = Registry.register(
             BuiltInRegistries.DATA_COMPONENT_TYPE,
             Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tourist_experience_statistics"),

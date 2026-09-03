@@ -148,7 +148,6 @@ public class RestaurantExperienceBlockEntity extends AbstractExperienceBlockEnti
                     this.getBlockPos(),
                     this.getApproachDirection(),
                     null,
-                    null,
                     serverLevel.getDayTime()
             ));
         }

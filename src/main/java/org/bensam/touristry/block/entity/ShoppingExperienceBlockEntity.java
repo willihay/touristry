@@ -74,10 +74,6 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
 
     @Override
     public @Nullable Goal createGoalForTarget(TouristEntity tourist, ServerLevel serverLevel, ExperienceTarget target) {
-        if (target.isChildExperience()) {
-            return null; // just navigate to sub-experience
-        }
-
         int ticksAtBlock = 0;
         boolean isPayingHere = target.pos().equals(this.getBlockPos());
 
@@ -194,7 +190,6 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
                     this.getBlockPos(),
                     this.getApproachDirection(),
                     null,
-                    null,
                     serverLevel.getDayTime()
             ));
         }
@@ -244,11 +239,6 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
 
     @Override
     protected boolean isTargetValid(ServerLevel serverLevel, ExperienceTarget target) {
-        // Check child experiences.
-        if (target.isChildExperience()) {
-            return this.isTargetChildExperienceValid(target.childExperienceUUID());
-        }
-
         // Check entity targets.
         if (target.isEntity()) {
             // There are currently no valid shopping entities.

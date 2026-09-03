@@ -22,7 +22,6 @@ import net.minecraft.world.level.block.state.properties.ChestType;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import org.bensam.touristry.ModComponents;
-import org.bensam.touristry.block.entity.AbstractExperienceBlockEntity;
 import org.bensam.touristry.tourism.ExperienceTargetOverlaySyncManager;
 import org.bensam.touristry.tourism.TourismManager;
 import org.bensam.touristry.tourism.experience.TouristExperience;
@@ -84,9 +83,14 @@ public class ExperienceTargetKeyItem extends Item {
         } else {
             // Add target to experience.
             // Check if target is already linked to the experience.
-            boolean alreadyLinked = experience.hasTarget(blockPos);
-
-            if (!alreadyLinked) {
+            if (experience.hasTarget(blockPos)) {
+                player.displayClientMessage(
+                        Component.literal("Already linked to ")
+                                .append(experience.getDisplayName()),
+                        true
+                );
+                return InteractionResult.SUCCESS;
+            } else {
                 // Check if target is already linked to a different experience.
                 TouristExperience owner = TourismManager.findOwnerOfExperienceTarget(blockPos);
                 if (owner != null) {
@@ -99,34 +103,20 @@ public class ExperienceTargetKeyItem extends Item {
                     return InteractionResult.FAIL;
                 }
 
-                // Check if target is also an experience block, in which case it will become a child experience.
-                UUID childUUID = blockEntity instanceof AbstractExperienceBlockEntity childExperience ? childExperience.getUUID() : null;
-
-                // Get either the experience block's approach direction or the player's current facing direction so that it can be
-                // stored in the target, so that pathfinding goals can lead a tourist to approach from the same direction.
-                Direction approachFrom = blockEntity instanceof AbstractExperienceBlockEntity childExperience ? childExperience.getApproachDirection() : player.getDirection();
+                // Get the player's current facing direction so that it can be stored in the target, so that pathfinding
+                // goals can lead a tourist to approach from the same direction.
+                Direction approachFrom = player.getDirection();
 
                 // Try to add target to experience.
-                boolean success;
-                if (childUUID == null) {
-                    success = experience.addBlockTarget(serverLevel, blockPos, approachFrom);
-                } else {
-                    success = experience.addChildExperienceTarget(serverLevel, blockPos, approachFrom, childUUID);
-                }
-
-                if (success) {
+                if (experience.addBlockTarget(serverLevel, blockPos, approachFrom)) {
                     ExperienceTargetOverlaySyncManager.refreshPlayersHolding(serverLevel, experience.getUUID());
+                    this.displayLinkAdditionMessage(player, experience, true);
+                    return InteractionResult.SUCCESS;
+                } else {
+                    this.displayLinkAdditionMessage(player, experience, false);
+                    return InteractionResult.FAIL;
                 }
-                this.displayLinkAdditionMessage(player, experience, success);
-                return success ? InteractionResult.SUCCESS : InteractionResult.FAIL;
             }
-
-            player.displayClientMessage(
-                    Component.literal("Already linked to ")
-                            .append(experience.getDisplayName()),
-                    true
-            );
-            return InteractionResult.SUCCESS;
         }
     }
 
@@ -154,9 +144,14 @@ public class ExperienceTargetKeyItem extends Item {
         } else {
             // Add target to experience.
             // Check if target is already linked to the experience.
-            boolean alreadyLinked = experience.hasTarget(entityPos);
-
-            if (!alreadyLinked) {
+            if (experience.hasTarget(entityPos)) {
+                player.displayClientMessage(
+                        Component.literal("Already linked to ")
+                                .append(experience.getDisplayName()),
+                        true
+                );
+                return InteractionResult.SUCCESS;
+            } else {
                 // Check if target is already linked to a different experience.
                 TouristExperience owner = TourismManager.findOwnerOfExperienceTarget(entityPos);
                 if (owner != null) {
@@ -169,25 +164,21 @@ public class ExperienceTargetKeyItem extends Item {
                     return InteractionResult.FAIL;
                 }
 
-                // Get the player's facing direction so that it can be stored in the target, so that pathfinding goals can
-                // lead a tourist to approach from the same direction, if desired.
+                // Get the player's current facing direction so that it can be stored in the target, so that pathfinding
+                // goals can lead a tourist to approach from the same direction.
                 Direction playerFacing = player.getDirection();
 
                 // Try to add target to experience.
                 boolean success = experience.addEntityTarget(serverLevel, entityPos, playerFacing, entity.getUUID());
                 if (success) {
                     ExperienceTargetOverlaySyncManager.refreshPlayersHolding(serverLevel, experience.getUUID());
+                    this.displayLinkAdditionMessage(player, experience, true);
+                    return InteractionResult.SUCCESS;
+                } else {
+                    this.displayLinkAdditionMessage(player, experience, false);
+                    return InteractionResult.FAIL;
                 }
-                this.displayLinkAdditionMessage(player, experience, success);
-                return success ? InteractionResult.SUCCESS : InteractionResult.FAIL;
             }
-
-            player.displayClientMessage(
-                    Component.literal("Already linked to ")
-                            .append(experience.getDisplayName()),
-                    true
-            );
-            return InteractionResult.SUCCESS;
         }
     }
 

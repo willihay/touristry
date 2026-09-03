@@ -50,10 +50,6 @@ public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEnt
     // Helpers
     @Override
     public @Nullable Goal createGoalForTarget(TouristEntity tourist, ServerLevel serverLevel, ExperienceTarget target) {
-        if (target.isChildExperience()) {
-            return null; // just navigate to sub-experience
-        }
-
         // Calculate duration modifier as needed.
         int durationModifier = 0;
         if (target.isBlock()) {
@@ -167,11 +163,6 @@ public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEnt
 
     @Override
     protected boolean isTargetValid(ServerLevel serverLevel, ExperienceTarget target) {
-        // Check child experiences.
-        if (target.isChildExperience()) {
-            return this.isTargetChildExperienceValid(target.childExperienceUUID());
-        }
-
         // Check entity targets (paintings, item frames).
         if (target.isEntity()) {
             Entity entity = serverLevel.getEntity(target.entityUUID());

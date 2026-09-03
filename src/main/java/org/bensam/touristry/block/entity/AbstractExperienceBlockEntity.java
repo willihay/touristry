@@ -49,7 +49,6 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
 
     // persisted fields
     protected UUID uuid;
-    protected @Nullable UUID parentExperienceUUID;
     private boolean openForBusiness;
     private boolean orderedTargets;
     protected List<ExperienceTarget> targets;
@@ -108,36 +107,8 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         }
 
         long timeAdded = serverLevel.getDayTime();
-        ExperienceTarget target = new ExperienceTarget(blockPos, playerFacing, null, null, timeAdded);
+        ExperienceTarget target = new ExperienceTarget(blockPos, playerFacing, null, timeAdded);
         return this.addTarget(serverLevel, target);
-    }
-
-    @Override
-    public boolean addChildExperienceTarget(ServerLevel serverLevel, BlockPos blockPos, Direction playerFacing, UUID childUUID) {
-        if (serverLevel != serverLevel.getServer().overworld()) {
-            return false;
-        }
-
-        // Check if child experience already has a different parent.
-        TouristExperience childExperience = TourismManager.getTouristExperienceById(childUUID);
-        if (childExperience != null) {
-            UUID existingParent = childExperience.getParentExperienceUUID();
-            if (existingParent != null && !existingParent.equals(this.uuid)) {
-                return false; // already has a different parent
-            }
-        }
-
-        long timeAdded = serverLevel.getDayTime();
-        ExperienceTarget target = new ExperienceTarget(blockPos, playerFacing, childUUID, null, timeAdded);
-
-        if (this.addTarget(serverLevel, target)) {
-            // Set this experience as child's parent.
-            if (childExperience instanceof AbstractExperienceBlockEntity childExperienceBlockEntity) {
-                childExperienceBlockEntity.setParent(this.uuid);
-            }
-            return true;
-        }
-        return false;
     }
 
     @Override
@@ -147,7 +118,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         }
 
         long timeAdded = serverLevel.getDayTime();
-        ExperienceTarget target = new ExperienceTarget(entityPos, playerFacing, null, entityUUID, timeAdded);
+        ExperienceTarget target = new ExperienceTarget(entityPos, playerFacing, entityUUID, timeAdded);
         return this.addTarget(serverLevel, target);
     }
 
@@ -160,15 +131,6 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
     public void clearContent() {
         super.clearContent();
         this.setChanged();
-    }
-
-    public void clearParentExperience(ExperienceTarget target) {
-        TouristExperience childExperience = TourismManager.getTouristExperienceById(target.childExperienceUUID());
-        if (childExperience instanceof AbstractExperienceBlockEntity childBE &&
-                this.uuid.equals(childBE.getParentExperienceUUID())) {
-            childBE.setParent(null);
-            childBE.setChanged();
-        }
     }
 
     @Override
@@ -202,14 +164,6 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
     }
 
     @Override
-    public List<UUID> getChildExperienceUUIDs() {
-        return this.targets.stream()
-                .filter(ExperienceTarget::isChildExperience)
-                .map(ExperienceTarget::childExperienceUUID)
-                .toList();
-    }
-
-    @Override
     public int getContainerSize() {
         return this.inventory.size();
     }
@@ -225,11 +179,6 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
 
     public int getMaxCapacity() {
         return 10; // override in subclasses
-    }
-
-    @Override
-    public @Nullable UUID getParentExperienceUUID() {
-        return this.parentExperienceUUID;
     }
 
     public abstract int getPaymentSlotSize();
@@ -372,34 +321,6 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         return this.openForBusiness;
     }
 
-    public boolean isTargetChildExperienceValid(UUID targetUUID) {
-        if (this.uuid.equals(targetUUID)) {
-            return false; // can't link experience block to itself
-        }
-
-        // Check if adding target as child would create circular dependency.
-        Set<UUID> visited = new HashSet<>();
-        UUID current = targetUUID;
-        UUID parent = this.uuid;
-
-        while (current != null) {
-            if (visited.contains(current)) {
-                return false; // found a cycle
-            }
-
-            if (current.equals(parent)) {
-                return false; // would create a direct cycle
-            }
-
-            visited.add(current);
-
-            TouristExperience experience = TourismManager.getTouristExperienceById(current);
-            current = experience != null ? experience.getParentExperienceUUID() : null;
-        }
-
-        return true;
-    }
-
     public boolean isTargetListOrdered() {
         return this.orderedTargets;
     }
@@ -467,25 +388,12 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
             return;
         }
         
-        ExperienceTarget target = this.targets.remove(index);
-
-        // Clear parent relationship if removing a child experience.
-        if (target != null && target.isChildExperience()) {
-            this.clearParentExperience(target);
-        }
-
+        this.targets.remove(index);
         this.setChanged();
     }
 
     @Override
     public boolean removeTarget(ServerLevel serverLevel, BlockPos pos) {
-        // Clear parent relationship if removing a child experience.
-        for (ExperienceTarget target : this.targets) {
-            if (target.pos().equals(pos) && target.isChildExperience()) {
-                this.clearParentExperience(target);
-            }
-        }
-        
         boolean removed = this.targets.removeIf(target -> target.pos().equals(pos));
         if (removed) {
             this.setChanged();
@@ -494,13 +402,6 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
     }
 
     public void removeAllTargets() {
-        // Clear all parent relationships in child experience targets.
-        for (ExperienceTarget target : this.targets) {
-            if (target.isChildExperience()) {
-                this.clearParentExperience(target);
-            }
-        }
-
         this.targets.clear();
         this.setChanged();
     }
@@ -540,11 +441,6 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
 
     public void setOrderedTargets(boolean orderedTargets) {
         this.orderedTargets = orderedTargets;
-        this.setChanged();
-    }
-
-    public void setParent(@Nullable UUID parentUUID) {
-        this.parentExperienceUUID = parentUUID;
         this.setChanged();
     }
 
@@ -609,7 +505,6 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         super.loadAdditional(valueInput);
 
         valueInput.read("UUID", UUIDUtil.CODEC).ifPresent(UUID -> this.uuid = UUID);
-        valueInput.read("ParentExperienceUUID", UUIDUtil.CODEC).ifPresent(UUID -> this.parentExperienceUUID = UUID);
         this.setOpenForBusiness(valueInput.getBooleanOr("OpenForBusiness", false));
         this.setOrderedTargets(valueInput.getBooleanOr("OrderedTargets", true));
         this.targets = new ArrayList<>(valueInput.read("Targets", ExperienceTarget.CODEC.listOf()).orElse(List.of()));
@@ -627,9 +522,6 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         super.saveAdditional(valueOutput);
 
         valueOutput.store("UUID", UUIDUtil.CODEC, this.getUUID());
-        if (this.parentExperienceUUID != null) {
-            valueOutput.store("ParentExperienceUUID", UUIDUtil.CODEC, this.parentExperienceUUID);
-        }
         valueOutput.putBoolean("OpenForBusiness", this.openForBusiness);
         valueOutput.putBoolean("OrderedTargets", this.orderedTargets);
         valueOutput.store("Targets", ExperienceTarget.CODEC.listOf(), this.targets);
@@ -646,7 +538,6 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
                 ModComponents.TOURIST_EXPERIENCE_UUID,
                 this.getUUID()
         );
-        this.parentExperienceUUID = dataComponentGetter.get(ModComponents.TOURIST_EXPERIENCE_PARENT_UUID);
         this.setOpenForBusiness(dataComponentGetter.getOrDefault(
                 ModComponents.TOURIST_EXPERIENCE_STATUS,
                 false
@@ -675,9 +566,6 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
 
         // Collect additional components to save in components container in BlockItem when block breaks.
         builder.set(ModComponents.TOURIST_EXPERIENCE_UUID, this.uuid);
-        if (this.parentExperienceUUID != null) {
-            builder.set(ModComponents.TOURIST_EXPERIENCE_PARENT_UUID, this.parentExperienceUUID);
-        }
         builder.set(ModComponents.TOURIST_EXPERIENCE_STATUS, this.openForBusiness);
         builder.set(ModComponents.TOURIST_EXPERIENCE_ORDERED_TARGETS, this.orderedTargets);
         if (!this.targets.isEmpty()) {
@@ -692,7 +580,6 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
 
         // Remove raw tag entries for data that is carried by custom components in the block item form.
         valueOutput.discard("UUID");
-        valueOutput.discard("ParentExperienceUUID");
         valueOutput.discard("OpenForBusiness");
         valueOutput.discard("OrderedTargets");
         valueOutput.discard("Targets");

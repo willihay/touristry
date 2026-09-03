@@ -1018,9 +1018,7 @@ public final class TouristMind {
             return;
         }
 
-        // Check if this is a parent experience with child experience as targets.
         List<ExperienceTarget> remainingTargets = currentVisit.remainingTargets();
-
         if (remainingTargets.isEmpty()) {
             // All targets attempted - exit experience.
             VisitResult result = currentVisit.result();
@@ -1032,27 +1030,8 @@ public final class TouristMind {
             return;
         }
 
+        // Begin navigation to the target.
         this.currentExperienceTarget = remainingTargets.getFirst();
-
-        // Is this target a child experience?
-        if (this.currentExperienceTarget.isChildExperience()) {
-            UUID childUUID = this.currentExperienceTarget.childExperienceUUID();
-            TouristExperience childExperience = TourismManager.getTouristExperienceById(childUUID);
-
-            if (childExperience != null && childExperience.isOpenForBusiness()) {
-                // Navigate to child experience block position.
-                this.experienceBlockPos = this.currentExperienceTarget.pos().immutable();
-                this.transitionTo(TouristState.TRAVELING_TO_EXPERIENCE);
-            } else {
-                // Child experience unavailable - skip this target.
-                this.removeCurrentTarget(false);
-                this.transitionTo(TouristState.CHOOSING_EXPERIENCE_TARGET);
-            }
-
-            return;
-        }
-
-        // Regular target (block or entity) - navigate to it.
         this.targetPos = this.currentExperienceTarget.pos().immutable();
         this.transitionTo(TouristState.TRAVELING_TO_EXPERIENCE_TARGET);
     }
@@ -1201,13 +1180,8 @@ public final class TouristMind {
         this.currentExperienceTarget = null;
         this.currentTargetIndex = 0;
 
-        // Are we in child experience? If so, return to parent.
-        if (!this.experienceTargetTracker.isEmpty()) {
-            this.transitionTo(TouristState.CHOOSING_EXPERIENCE_TARGET);
-        } else {
-            // No parent experience - choose next experience at beacon.
-            this.transitionTo(TouristState.CHOOSING_EXPERIENCE_AT_BEACON);
-        }
+        // Choose next experience.
+        this.transitionTo(TouristState.CHOOSING_EXPERIENCE_AT_BEACON);
     }
 
     public void finishPositioning(ServerLevel serverLevel) {
