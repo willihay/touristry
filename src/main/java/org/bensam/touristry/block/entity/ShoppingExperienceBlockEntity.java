@@ -24,6 +24,7 @@ import org.bensam.touristry.entity.TouristEntity;
 import org.bensam.touristry.entity.goal.ShoppingExperienceGoal;
 import org.bensam.touristry.menu.ShoppingExperienceMenu;
 import org.bensam.touristry.tourism.experience.ExperienceTarget;
+import org.bensam.touristry.tourism.experience.ExperienceVisit;
 import org.bensam.touristry.tourism.experience.ItemPrice;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -59,14 +60,6 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
         this.inventory.set(DEFAULT_COST_INDEX, this.defaultCost.copy());
     }
 
-    // Lifecycle
-    @Override
-    public void onTouristArrival(TouristEntity tourist, ServerLevel serverLevel) {}
-
-    @Override
-    public void onTouristDeparture(TouristEntity tourist, ServerLevel serverLevel, boolean completed) {}
-
-    // Helpers
     @Override
     public boolean canSpendBudgetHere() {
         return true;
@@ -252,6 +245,32 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
 
     public @Nullable ItemPrice lookupItemPriceFor(ItemStack itemStack) {
         return this.itemPrices.get(new ItemStackKey(itemStack));
+    }
+
+    @Override
+    public ExperienceVisit prepareToLeaveEarly(ExperienceVisit visit) {
+        if (visit.remainingTargets().isEmpty()) {
+            return visit;
+        }
+
+        List<ExperienceTarget> updatedTargets = new ArrayList<>();
+        boolean haveAddedCurrentTarget = false;
+        for (ExperienceTarget target : visit.remainingTargets()) {
+            if (!haveAddedCurrentTarget || target.pos().equals(this.getBlockPos())) {
+                updatedTargets.add(target);
+                haveAddedCurrentTarget = true;
+            }
+        }
+
+        return new ExperienceVisit(
+                visit.experienceUUID(),
+                visit.budgetRemaining(),
+                updatedTargets,
+                visit.targetsCompleted(),
+                visit.totalTargets(),
+                visit.result(),
+                visit.hasReviewed()
+        );
     }
 
     public boolean removeItemPrice(@NonNull ItemPrice itemPrice) {

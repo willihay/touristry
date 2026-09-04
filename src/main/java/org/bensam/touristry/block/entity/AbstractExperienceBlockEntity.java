@@ -28,12 +28,12 @@ import net.minecraft.world.level.storage.ValueOutput;
 import org.bensam.touristry.ModComponents;
 import org.bensam.touristry.ModItems;
 import org.bensam.touristry.block.TouristExperienceBlock;
+import org.bensam.touristry.entity.TouristEntity;
 import org.bensam.touristry.tourism.TourismManager;
 import org.bensam.touristry.tourism.TouristReview;
 import org.bensam.touristry.tourism.VisitResult;
 import org.bensam.touristry.tourism.experience.*;
 import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 import java.util.stream.IntStream;
@@ -341,6 +341,33 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         this.targets.add(toIndex, targetToMove);
         this.setChanged();
         return true;
+    }
+
+    @Override
+    public void onTouristArrival(TouristEntity tourist, ServerLevel serverLevel) {}
+
+    @Override
+    public void onTouristDeparture(TouristEntity tourist, ServerLevel serverLevel, boolean completed) {}
+
+    @Override
+    public ExperienceVisit prepareToLeaveEarly(ExperienceVisit visit) {
+        if (visit.remainingTargets().size() <= 1) {
+            // There are no remaining targets, or none after the current target, so just return the current visit unchanged.
+            return visit;
+        }
+
+        List<ExperienceTarget> updatedTargets = new ArrayList<>();
+        updatedTargets.add(visit.remainingTargets().getFirst());
+
+        return new ExperienceVisit(
+                visit.experienceUUID(),
+                visit.budgetRemaining(),
+                updatedTargets,
+                visit.targetsCompleted(),
+                visit.totalTargets(),
+                visit.result(),
+                visit.hasReviewed()
+        );
     }
 
     protected void pruneInvalidTargets() {

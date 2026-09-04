@@ -514,6 +514,7 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
         }
 
         if (TourismManager.shouldForceDespawn(this)) {
+            this.dropAll();
             this.mind.onForcedDespawn();
             return;
         }

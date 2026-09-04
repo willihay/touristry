@@ -6,6 +6,9 @@ import org.bensam.touristry.tourism.TouristLocation;
 
 import java.util.Locale;
 
+// When adding new states, be sure to update the following:
+// - TouristMind::getStateForLogging
+// - TouristMind::getStateTargetName
 public enum TouristState implements StringRepresentable {
     IDLE(false, false, TouristLocation.WORLD, TouristLocation.WORLD),
     TRAVELING_TO_BEACON(true, false, TouristLocation.WORLD, TouristLocation.BEACON),
@@ -18,7 +21,6 @@ public enum TouristState implements StringRepresentable {
     TRAVELING_TO_EXPERIENCE_TARGET(false, true, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
     POSITIONING_AT_TARGET(false, true, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
     EXPERIENCING_TARGET(false, true, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
-    LEAVING_EXPERIENCE(false, false, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
     WANDERING_AT_BEACON(true, false, TouristLocation.BEACON, TouristLocation.BEACON),
     WANDERING_AT_EXPERIENCE(false, true, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
     WANDERING_WORLD(false, false, TouristLocation.WORLD, TouristLocation.WORLD),

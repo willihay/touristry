@@ -14,7 +14,8 @@ public record ExperienceVisit(
         List<ExperienceTarget> remainingTargets,
         int targetsCompleted,
         int totalTargets,
-        VisitResult result
+        VisitResult result,
+        boolean hasReviewed
 ) {
     public static final Codec<ExperienceVisit> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             UUIDUtil.CODEC.fieldOf("experience_uuid").forGetter(ExperienceVisit::experienceUUID),
@@ -22,7 +23,8 @@ public record ExperienceVisit(
             ExperienceTarget.CODEC.listOf().fieldOf("remaining_targets").forGetter(ExperienceVisit::remainingTargets),
             Codec.INT.fieldOf("targets_completed").forGetter(ExperienceVisit::targetsCompleted),
             Codec.INT.fieldOf("total_targets").forGetter(ExperienceVisit::totalTargets),
-            VisitResult.CODEC.fieldOf("result").forGetter(ExperienceVisit::result)
+            VisitResult.CODEC.fieldOf("result").forGetter(ExperienceVisit::result),
+            Codec.BOOL.fieldOf("has_reviewed").forGetter(ExperienceVisit::hasReviewed)
     ).apply(instance, ExperienceVisit::new));
 
     public boolean allTargetsCompleted() {

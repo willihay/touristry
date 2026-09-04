@@ -40,20 +40,12 @@ public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEnt
         super(ModBlockEntities.SIGHTSEEING_EXPERIENCE.get(), blockPos, blockState, TOTAL_INVENTORY_SIZE);
     }
 
-    // Lifecycle
-    @Override
-    public void onTouristArrival(TouristEntity tourist, ServerLevel serverLevel) {}
-
-    @Override
-    public void onTouristDeparture(TouristEntity tourist, ServerLevel serverLevel, boolean completed) {}
-
-    // Helpers
     @Override
     public @Nullable Goal createGoalForTarget(TouristEntity tourist, ServerLevel serverLevel, ExperienceTarget target) {
         // Calculate duration modifier as needed.
         int durationModifier = 0;
         if (target.isBlock()) {
-            BlockEntity blockEntity = this.level.getBlockEntity(target.pos());
+            BlockEntity blockEntity = serverLevel.getBlockEntity(target.pos());
             // Extend duration of lectern targets that have books by the number of written pages in the book.
             if (blockEntity instanceof LecternBlockEntity lectern) {
                 ItemStack book = lectern.getBook();
@@ -113,32 +105,6 @@ public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEnt
     @Override
     public int getPaymentSlotSize() {
         return PAYMENT_SLOT_SIZE;
-    }
-
-    public Component getTargetDisplayName(ExperienceTarget target) {
-        BlockEntity blockEntity = this.level.getBlockEntity(target.pos());
-        if (!(blockEntity instanceof LecternBlockEntity lectern)) {
-            return Component.literal("Unknown");
-        }
-
-        // Priority 1: Check if the lectern block itself has a custom name
-        ItemStack lecternItem = new ItemStack(blockEntity.getBlockState().getBlock());
-        lecternItem.applyComponents(blockEntity.collectComponents());
-        if (lecternItem.has(net.minecraft.core.component.DataComponents.CUSTOM_NAME)) {
-            return lecternItem.getHoverName().copy();
-        }
-
-        // Priority 2: Check if lectern has a book with a custom name
-        ItemStack book = lectern.getBook();
-        if (!book.isEmpty() && book.has(net.minecraft.core.component.DataComponents.WRITTEN_BOOK_CONTENT)) {
-            WrittenBookContent content = book.get(net.minecraft.core.component.DataComponents.WRITTEN_BOOK_CONTENT);
-            if (content != null) {
-                return Component.literal(content.title().get(true));
-            }
-        }
-
-        // Priority 3: Use translated block name (e.g., "Lectern")
-        return blockEntity.getBlockState().getBlock().getName();
     }
 
     @Override

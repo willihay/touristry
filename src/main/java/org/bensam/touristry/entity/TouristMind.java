@@ -77,6 +77,7 @@ public final class TouristMind {
     private List<UUID> availableExperienceUUIDs = new ArrayList<>(); // experiences at current beacon (cached on arrival)
     private Set<UUID> visitedExperienceUUIDs = new HashSet<>(); // set of experiences already visited at current beacon
     private int ticksAtCurrentExperience;
+    private boolean hasPreparedToLeaveEarly; // (not persisted)
 
     // Experience target-related
     private BlockPos targetPos; // position of the specific target within an experience (only for TRAVELING_TO_EXPERIENCE_TARGET)
@@ -123,6 +124,8 @@ public final class TouristMind {
     private void resetDailyStats() {
         this.eveningDespawnTimeTicks = 12000 + this.random().nextInt(1000);
         this.goodExperiencesToday = 0;
+        this.hasPreparedToLeaveEarly = false;
+        this.isHungry = true;
         this.isStayingOvernight = false;
         this.lastMapToggleTicks = 0;
         this.mood = this.generateRandomStartingMood();
@@ -143,7 +146,7 @@ public final class TouristMind {
      * after mind.readAdditionalSaveData() completes.</p>
      */
     public void onEntityLoaded(ServerLevel serverLevel) {
-       if (this.state == TouristState.EXPERIENCING_TARGET) {
+       if (this.state.isAtTarget()) {
            this.reconstructExperienceGoals(serverLevel);
        } else if (this.state == TouristState.POSITIONING_AT_TARGET) {
            this.reconstructPositioningGoal(serverLevel);
@@ -438,18 +441,34 @@ public final class TouristMind {
 
         // Time-based despawn check
         if (this.isTimeToDespawn()) {
-            this.clearBeaconSession();
-            this.transitionTo(TouristState.DESPAWNING);
-            return;
+            if (this.state.isAtExperience()) {
+                if (!this.hasPreparedToLeaveEarly) {
+                    this.updateExperienceVisitResult(VisitResult.GOOD);
+                    this.prepareToLeaveExperienceEarly();
+                }
+            } else {
+                this.transitionTo(TouristState.DESPAWNING);
+                return;
+            }
         }
 
         // Mood check
         if (this.isTimeToCheckMood() && this.nextMoodCheckTicks <= 0) {
             if (this.isInMoodToDespawn()) {
-                this.leaveEarly(serverLevel);
-                return;
+                if (this.state.isAtExperience()) {
+                    if (!this.hasPreparedToLeaveEarly) {
+                        this.recordBadMood(serverLevel);
+                        this.updateExperienceVisitReviewed();
+                        this.prepareToLeaveExperienceEarly();
+                    }
+                } else {
+                    this.recordBadMood(serverLevel);
+                    this.transitionTo(TouristState.DESPAWNING);
+                    return;
+                }
+            } else {
+                this.nextMoodCheckTicks = CHECK_MOOD_INTERVAL_TICKS;
             }
-            this.nextMoodCheckTicks = CHECK_MOOD_INTERVAL_TICKS;
         } else {
             this.nextMoodCheckTicks--;
         }
@@ -513,19 +532,23 @@ public final class TouristMind {
             return;
         }
 
-        if (!experience.isOpenForBusiness()) {
-            this.updateMood(VisitResult.CLOSED_EARLY);
-            this.recordExperience(serverLevel, new TouristReview(
-                    this.state.reviewTarget(),
-                    VisitResult.CLOSED_EARLY,
-                    true,
-                    true,
-                    Component.literal("left experience that closed early at"),
-                    true,
-                    true
-            ));
-            this.exitCurrentExperience(serverLevel, VisitResult.UNFAVORABLE, false, null);
-            return;
+        if (!this.hasPreparedToLeaveEarly) {
+            if (!experience.isOpenForBusiness()) {
+                if (!currentVisit.hasReviewed()) {
+                    this.updateMood(VisitResult.CLOSED_EARLY);
+                    this.recordExperience(serverLevel, new TouristReview(
+                            this.state.reviewTarget(),
+                            VisitResult.CLOSED_EARLY,
+                            true,
+                            true,
+                            Component.literal("is leaving experience that closed early at"),
+                            true,
+                            true
+                    ));
+                }
+                this.updateExperienceVisitReviewed();
+                this.prepareToLeaveExperienceEarly();
+            }
         }
 
         this.ticksAtCurrentTarget++;
@@ -722,7 +745,8 @@ public final class TouristMind {
                 currentVisit.remainingTargets(),
                 currentVisit.targetsCompleted(),
                 currentVisit.totalTargets(),
-                currentVisit.result()
+                currentVisit.result(),
+                currentVisit.hasReviewed()
         );
 
         this.experienceTargetTracker.push(updatedVisit);
@@ -742,7 +766,29 @@ public final class TouristMind {
                 currentVisit.remainingTargets(),
                 currentVisit.targetsCompleted(),
                 currentVisit.totalTargets(),
-                newResult
+                newResult,
+                currentVisit.hasReviewed()
+        );
+
+        this.experienceTargetTracker.push(updatedVisit);
+    }
+
+    public void updateExperienceVisitReviewed() {
+        if (this.experienceTargetTracker.isEmpty()) {
+            return;
+        }
+
+        // Pop current visit, update it, push it back.
+        ExperienceVisit currentVisit = this.experienceTargetTracker.pollFirst();
+
+        ExperienceVisit updatedVisit = new ExperienceVisit(
+                currentVisit.experienceUUID(),
+                currentVisit.budgetRemaining(),
+                currentVisit.remainingTargets(),
+                currentVisit.targetsCompleted(),
+                currentVisit.totalTargets(),
+                currentVisit.result(),
+                true
         );
 
         this.experienceTargetTracker.push(updatedVisit);
@@ -789,7 +835,8 @@ public final class TouristMind {
 
         if (newState == TouristState.TRAVELING_TO_EXPERIENCE_TARGET ||
                 newState == TouristState.POSITIONING_AT_TARGET ||
-                newState == TouristState.EXPERIENCING_TARGET) {
+                newState == TouristState.EXPERIENCING_TARGET
+        ) {
             if (this.targetPos == null) {
                 TouristEntity.logActivity(Verbosity.GAMEPLAY_WARNINGS, "[TouristMind] Cannot transition to {} - target BlockPos not available", newState);
                 this.removeCurrentTarget(false);
@@ -1129,7 +1176,8 @@ public final class TouristMind {
                 new ArrayList<>(targets),
                 0,
                 targets.size(),
-                VisitResult.ARRIVED
+                VisitResult.ARRIVED,
+                false
         );
         this.experienceTargetTracker.push(visit);
 
@@ -1160,17 +1208,19 @@ public final class TouristMind {
             // Call experience lifecycle method.
             experience.onTouristDeparture(this.tourist, serverLevel, completed);
 
-            // Record experience for tourist.
-            this.updateMood(result);
-            this.recordExperience(serverLevel, new TouristReview(
-                    this.state.reviewTarget(),
-                    result,
-                    true,
-                    false,
-                    customMessage != null ? customMessage : Component.literal("is exiting experience"),
-                    true,
-                    true
-            ));
+            if (!currentVisit.hasReviewed()) {
+                // Record experience for tourist.
+                this.updateMood(result);
+                this.recordExperience(serverLevel, new TouristReview(
+                        this.state.reviewTarget(),
+                        result,
+                        true,
+                        false,
+                        customMessage != null ? customMessage : Component.literal("is exiting experience"),
+                        true,
+                        true
+                ));
+            }
         }
 
         // Clear experience-specific goals.
@@ -1180,8 +1230,12 @@ public final class TouristMind {
         this.currentExperienceTarget = null;
         this.currentTargetIndex = 0;
 
-        // Choose next experience.
-        this.transitionTo(TouristState.CHOOSING_EXPERIENCE_AT_BEACON);
+        if (this.hasPreparedToLeaveEarly) {
+            this.transitionTo(TouristState.DESPAWNING);
+        } else {
+            // Choose next experience.
+            this.transitionTo(TouristState.CHOOSING_EXPERIENCE_AT_BEACON);
+        }
     }
 
     public void finishPositioning(ServerLevel serverLevel) {
@@ -1224,9 +1278,7 @@ public final class TouristMind {
         this.transitionTo(TouristState.CHOOSING_EXPERIENCE_TARGET);
     }
 
-    private void leaveEarly(ServerLevel serverLevel) {
-        this.clearBeaconSession();
-
+    private void recordBadMood(ServerLevel serverLevel) {
         Component moodMessage;
         boolean appendTargetName = true;
         if (this.state.isAtTouristLocation()) {
@@ -1241,14 +1293,12 @@ public final class TouristMind {
                 this.state.reviewTarget(),
                 VisitResult.UNFAVORABLE,
                 false,
-                true,
+                false,
                 moodMessage,
                 true,
                 appendTargetName
         );
         this.recordExperience(serverLevel, review);
-
-        this.transitionTo(TouristState.DESPAWNING);
     }
 
     public void onForcedDespawn() {
@@ -1289,7 +1339,6 @@ public final class TouristMind {
 
     public void onStoppedSleeping(ServerLevel serverLevel) {
         this.resetDailyStats();
-        this.isHungry = true;
 
         int tickTimeOfDay = (int) (serverLevel.getDayTime() % 24000L);
         if (tickTimeOfDay <= 1000 && !this.reportedHurtOnPremises) {
@@ -1399,6 +1448,24 @@ public final class TouristMind {
         }
     }
 
+    private void prepareToLeaveExperienceEarly() {
+        this.hasPreparedToLeaveEarly = true;
+
+        if (this.experienceTargetTracker.isEmpty()) {
+            return;
+        }
+
+        // Pop current visit, update it, push it back.
+        ExperienceVisit currentVisit = this.experienceTargetTracker.pollFirst();
+        TouristExperience experience = TourismManager.getTouristExperienceById(currentVisit.experienceUUID());
+        if (experience == null) {
+            this.experienceTargetTracker.push(currentVisit); // no experience -> no update
+            return;
+        }
+        ExperienceVisit updatedVisit = experience.prepareToLeaveEarly(currentVisit);
+        this.experienceTargetTracker.push(updatedVisit);
+    }
+
     private void removeCurrentTarget(boolean markCompleted) {
         if (this.experienceTargetTracker.isEmpty()) {
             return;
@@ -1418,7 +1485,8 @@ public final class TouristMind {
                 remainingTargets,
                 markCompleted ? currentVisit.targetsCompleted() + 1 : currentVisit.targetsCompleted(),
                 currentVisit.totalTargets(),
-                currentVisit.result()
+                currentVisit.result(),
+                currentVisit.hasReviewed()
         );
 
         this.experienceTargetTracker.push(updatedVisit);
