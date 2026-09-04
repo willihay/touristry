@@ -366,10 +366,19 @@ public final class TouristMind {
     }
 
     public boolean isItemOfInterest(ItemStack itemStack) {
+        boolean itemDamaged = itemStack.isDamaged();
+        boolean usedOkay = this.interests.contains(TouristItemInterest.SECONDHAND_ITEMS);
+
         for (TouristItemInterest interest : this.interests) {
+            if (interest == TouristItemInterest.SECONDHAND_ITEMS) {
+                continue;
+            }
+
             if (interest.isAMatch(itemStack, this.tourist.level())) {
-                TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[TouristMind] Tourist found {} matching interest {}", itemStack.getItem().getName().getString(), interest);
-                return true;
+                if (!itemDamaged || usedOkay) {
+                    TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[TouristMind] Tourist found {} matching interest {}", itemStack.getItem().getName().getString(), interest);
+                    return true;
+                }
             }
         }
         return false;

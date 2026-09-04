@@ -15,6 +15,7 @@ import java.util.Locale;
 
 public enum TouristItemInterest implements StringRepresentable {
     GENERAL(0.0F),
+    SECONDHAND_ITEMS(0.2F),
     ARMOR(0.1F),
     BOOKS(0.2F),
     ENCHANTED_ITEMS(0.2F),
@@ -49,6 +50,8 @@ public enum TouristItemInterest implements StringRepresentable {
         // Use assignment to make compiler catch forgotten updates when new TouristItemInterest enums are added.
         boolean match = switch (this) {
             case GENERAL -> level.getRandom().nextFloat() < PROBABILITY_INTEREST_IN_ANY_ITEM;
+
+            case SECONDHAND_ITEMS -> itemStack.isDamaged();
 
             case ARMOR -> !itemStack.is(ItemTags.WOOL_CARPETS) &&
                     (itemStack.has(DataComponents.TRIM) || itemStack.has(DataComponents.EQUIPPABLE));
