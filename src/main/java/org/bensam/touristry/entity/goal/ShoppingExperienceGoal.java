@@ -113,28 +113,29 @@ public class ShoppingExperienceGoal extends LookAtTargetPosGoal {
     }
 
     private void payForItems(ServerLevel serverLevel) {
+        boolean paymentCompleted = false;
         if (serverLevel.getBlockEntity(this.targetPos) instanceof ShoppingExperienceBlockEntity shoppingExperienceBlockEntity) {
-            boolean paymentFailed = false;
-
             for (ItemPrice purchase : this.tourist.getShoppingBag()) {
                 if (shoppingExperienceBlockEntity.tryDepositPayment(purchase.cost())) {
                     TourismManager.recordTouristPurchase(purchase);
                     float itemValue = (int) TouristEconomy.getEmeraldEquivalent(purchase.cost());
                     this.tourist.getMind().spendBudget(itemValue);
+                    this.tourist.removeFromShoppingBag(purchase);
+                    paymentCompleted = true;
                 } else {
-                    paymentFailed = true;
-                    // TODO: Decide what to do with shopping bag items that couldn't be paid for.
+                    paymentCompleted = false;
+                    break;
                 }
-            }
-
-            if (paymentFailed) {
-                this.tourist.getMind().updateExperienceVisitResult(VisitResult.PAYMENT_FAILED);
-            } else {
-                this.tourist.getMind().updateExperienceVisitResult(VisitResult.GOOD);
             }
         }
 
-        this.tourist.clearShoppingBag();
+        if (paymentCompleted) {
+            this.tourist.clearShoppingBag();
+            this.tourist.getMind().updateExperienceVisitResult(VisitResult.GOOD);
+        } else {
+            this.tourist.dropAll();
+            this.tourist.getMind().updateExperienceVisitResult(VisitResult.PAYMENT_FAILED);
+        }
     }
 
     private void makePurchaseDecision(ServerLevel serverLevel) {

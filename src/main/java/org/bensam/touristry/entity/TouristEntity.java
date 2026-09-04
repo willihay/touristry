@@ -214,6 +214,10 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
         this.shoppingBag.add(newItem);
     }
 
+    public void removeFromShoppingBag(ItemPrice itemPrice) {
+        this.shoppingBag.remove(itemPrice);
+    }
+
     public void applyExperienceToWorld(
             ServerLevel serverLevel,
             TouristReview review,
@@ -312,7 +316,7 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
         super.die(damageSource);
     }
 
-    protected void dropAll() {
+    public void dropAll() {
         // Drop contents of shopping bag.
         if (!this.shoppingBag.isEmpty()) {
             for (ItemPrice bagItem : this.shoppingBag) {
