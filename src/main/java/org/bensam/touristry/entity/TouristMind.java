@@ -39,8 +39,8 @@ public final class TouristMind {
     private static final int CHECK_MOOD_INTERVAL_TICKS = 250;
     private static final double MIN_MOOD = -3.0;
     private static final double MAX_MOOD = 4.0;
-    private static final int MIN_ACTIVITY_INTERVAL_TICKS = 500;
-    private static final int MAX_ACTIVITY_INTERVAL_TICKS = 2000;
+    private static final int MIN_ACTIVITY_INTERVAL_TICKS = 200;
+    private static final int MAX_ACTIVITY_INTERVAL_TICKS = 1000;
     private static final long MIN_TICKS_BEFORE_MAP_TOGGLE = 20;
     private static final int MIN_WAIT_AT_BEACON_AFTER_ARRIVAL_TICKS = 40;
     private static final int MAX_WAIT_AT_BEACON_AFTER_ARRIVAL_TICKS = 80;
@@ -441,7 +441,7 @@ public final class TouristMind {
 
         // Time-based despawn check
         if (this.isTimeToDespawn()) {
-            if (this.state.isAtExperience()) {
+            if (this.state.isAtExperience() && this.state != TouristState.WANDERING_AT_EXPERIENCE) {
                 if (!this.hasPreparedToLeaveEarly) {
                     this.updateExperienceVisitResult(VisitResult.GOOD);
                     this.prepareToLeaveExperienceEarly();
@@ -455,10 +455,8 @@ public final class TouristMind {
         // Mood check
         if (this.isTimeToCheckMood() && this.nextMoodCheckTicks <= 0) {
             if (this.isInMoodToDespawn()) {
-                if (this.state.isAtExperience()) {
+                if (this.state.isAtExperience() && this.state != TouristState.WANDERING_AT_EXPERIENCE) {
                     if (!this.hasPreparedToLeaveEarly) {
-                        this.recordBadMood(serverLevel);
-                        this.updateExperienceVisitReviewed();
                         this.prepareToLeaveExperienceEarly();
                     }
                 } else {
@@ -1001,7 +999,9 @@ public final class TouristMind {
     private void beginWanderingAtBlock() {
         this.tourist.clearHeldItem();
         this.lastMapToggleTicks = this.tourist.level().getDayTime();
-        this.waitTicks = this.getRandomWaitTicks(MIN_ACTIVITY_INTERVAL_TICKS, MAX_ACTIVITY_INTERVAL_TICKS);
+        if (this.waitTicks <= 0) {
+            this.waitTicks = this.getRandomWaitTicks(MIN_ACTIVITY_INTERVAL_TICKS, MAX_ACTIVITY_INTERVAL_TICKS);
+        }
     }
 
     private void beginWanderingWorld() {
@@ -1231,7 +1231,10 @@ public final class TouristMind {
         this.currentTargetIndex = 0;
 
         if (this.hasPreparedToLeaveEarly) {
-            this.transitionTo(TouristState.DESPAWNING);
+            this.hasPreparedToLeaveEarly = false;
+            // Let tick() have a chance to run before choosing another experience, in case tourist wants to leave now.
+            this.waitTicks = 1;
+            this.transitionTo(TouristState.WANDERING_AT_EXPERIENCE);
         } else {
             // Choose next experience.
             this.transitionTo(TouristState.CHOOSING_EXPERIENCE_AT_BEACON);
