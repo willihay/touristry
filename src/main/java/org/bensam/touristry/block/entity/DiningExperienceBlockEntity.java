@@ -27,8 +27,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 
-public class RestaurantExperienceBlockEntity extends AbstractExperienceBlockEntity {
-    public static final int IDEAL_TARGET_APPROACH_DISTANCE = 1; // Tourist should try to stand this far away for restaurant dining spot targets
+public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
+    public static final int IDEAL_TARGET_APPROACH_DISTANCE = 1; // Tourist should try to stand this far away for dining spot targets
     public static final int MAX_APPROACH_DISTANCE = 4; // Skip target if tourist can't get closer than this distance
     public static final int MAX_RANGE_TO_TARGET = 100;
     public static final int MIN_TICKS_AT_TARGET = 60;
@@ -43,8 +43,8 @@ public class RestaurantExperienceBlockEntity extends AbstractExperienceBlockEnti
     private ItemStack defaultCost = ItemStack.EMPTY;
     private LinkedHashMap<ItemStackKey, ItemPrice> itemPrices;
 
-    public RestaurantExperienceBlockEntity(BlockPos blockPos, BlockState blockState) {
-        super(ModBlockEntities.RESTAURANT_EXPERIENCE.get(), blockPos, blockState, TOTAL_INVENTORY_SIZE);
+    public DiningExperienceBlockEntity(BlockPos blockPos, BlockState blockState) {
+        super(ModBlockEntities.DINING_EXPERIENCE.get(), blockPos, blockState, TOTAL_INVENTORY_SIZE);
 
         this.itemPrices = new LinkedHashMap<>();
 
@@ -75,7 +75,7 @@ public class RestaurantExperienceBlockEntity extends AbstractExperienceBlockEnti
 
     @Override
     protected Component getDefaultName() {
-        return Component.translatable("block." + Touristry.MOD_ID + ".restaurant_experience");
+        return Component.translatable("block." + Touristry.MOD_ID + ".dining_experience");
     }
 
     @Override
@@ -137,7 +137,7 @@ public class RestaurantExperienceBlockEntity extends AbstractExperienceBlockEnti
         List<ExperienceTarget> targets = super.getTargets(serverLevel);
 
         if (!targets.isEmpty()) {
-            // Add restaurant experience block entity as last target so that tourists can return here to pay for food.
+            // Add dining experience block entity as last target so that tourists can return here to pay for food.
             targets.add(new ExperienceTarget(
                     this.getBlockPos(),
                     this.getApproachDirection(),

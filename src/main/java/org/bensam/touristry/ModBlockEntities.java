@@ -5,7 +5,7 @@ import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import org.bensam.touristry.block.entity.RestaurantExperienceBlockEntity;
+import org.bensam.touristry.block.entity.DiningExperienceBlockEntity;
 import org.bensam.touristry.block.entity.ShoppingExperienceBlockEntity;
 import org.bensam.touristry.block.entity.SightseeingExperienceBlockEntity;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
@@ -18,8 +18,8 @@ public final class ModBlockEntities {
     private static BlockEntityType<TouristBeaconBlockEntity> touristBeacon;
     public static final Supplier<BlockEntityType<TouristBeaconBlockEntity>> TOURIST_BEACON = () -> touristBeacon;
 
-    private static BlockEntityType<RestaurantExperienceBlockEntity> restaurantExperience;
-    public static final Supplier<BlockEntityType<RestaurantExperienceBlockEntity>> RESTAURANT_EXPERIENCE = () -> restaurantExperience;
+    private static BlockEntityType<DiningExperienceBlockEntity> diningExperience;
+    public static final Supplier<BlockEntityType<DiningExperienceBlockEntity>> DINING_EXPERIENCE = () -> diningExperience;
 
     private static BlockEntityType<ShoppingExperienceBlockEntity> shoppingExperience;
     public static final Supplier<BlockEntityType<ShoppingExperienceBlockEntity>> SHOPPING_EXPERIENCE = () -> shoppingExperience;
@@ -37,12 +37,12 @@ public final class ModBlockEntities {
                 ).build()
         );
 
-        restaurantExperience = Registry.register(
+        diningExperience = Registry.register(
                 BuiltInRegistries.BLOCK_ENTITY_TYPE,
-                Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "restaurant_experience"),
+                Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "dining_experience"),
                 FabricBlockEntityTypeBuilder.create(
-                        RestaurantExperienceBlockEntity::new,
-                        ModBlocks.RESTAURANT_EXPERIENCE.get()
+                        DiningExperienceBlockEntity::new,
+                        ModBlocks.DINING_EXPERIENCE.get()
                 ).build()
         );
 

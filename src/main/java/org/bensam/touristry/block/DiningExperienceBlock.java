@@ -14,13 +14,13 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import org.bensam.touristry.block.entity.RestaurantExperienceBlockEntity;
+import org.bensam.touristry.block.entity.DiningExperienceBlockEntity;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Map;
 
-public class RestaurantExperienceBlock extends TouristExperienceBlock {
+public class DiningExperienceBlock extends TouristExperienceBlock {
     private static final VoxelShape BASE = Block.column(14.0, 0.0, 2.0);
     private static final VoxelShape SHELVES = Block.box(3.0, 2.0, 4.0, 13.0, 14.0, 13.0);
     private static final VoxelShape SHAPE_COLLISION = Shapes.or(BASE, SHELVES);
@@ -30,9 +30,9 @@ public class RestaurantExperienceBlock extends TouristExperienceBlock {
             )
     );
 
-    public static final MapCodec<RestaurantExperienceBlock> CODEC = simpleCodec(RestaurantExperienceBlock::new);
+    public static final MapCodec<DiningExperienceBlock> CODEC = simpleCodec(DiningExperienceBlock::new);
 
-    public RestaurantExperienceBlock(Properties properties) {
+    public DiningExperienceBlock(Properties properties) {
         super(properties);
     }
 
@@ -48,8 +48,8 @@ public class RestaurantExperienceBlock extends TouristExperienceBlock {
 
     @Override
     protected int getAnalogOutputSignal(@NonNull BlockState blockState, Level level, @NonNull BlockPos blockPos, @NonNull Direction direction) {
-        if (level.getBlockEntity(blockPos) instanceof RestaurantExperienceBlockEntity restaurantExperienceBlockEntity) {
-            return restaurantExperienceBlockEntity.isOpenForBusiness() ? 15 : 0;
+        if (level.getBlockEntity(blockPos) instanceof DiningExperienceBlockEntity diningExperienceBlockEntity) {
+            return diningExperienceBlockEntity.isOpenForBusiness() ? 15 : 0;
         }
         return 0;
     }
@@ -76,7 +76,7 @@ public class RestaurantExperienceBlock extends TouristExperienceBlock {
 
     @Override
     public @Nullable BlockEntity newBlockEntity(BlockPos blockPos, BlockState blockState) {
-        return new RestaurantExperienceBlockEntity(blockPos, blockState);
+        return new DiningExperienceBlockEntity(blockPos, blockState);
     }
 
     @Override

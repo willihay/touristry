@@ -172,21 +172,22 @@ public class ShoppingExperienceGoal extends LookAtTargetPosGoal {
             return;
         }
 
-        // Build a shopping cart of items that the tourist wants to buy.
-        List<ItemPrice> shoppingCart = new ArrayList<>();
-        // TODO: Make purchase decision based on items already in shopping bag, fairness of price, and interests of tourist, not random item in list.
+        List<ItemPrice> shoppingBag = this.tourist.getShoppingBag();
+
+        // Build a shopping cart of new items that the tourist wants to buy.
+        List<ItemPrice> newItems = new ArrayList<>();
 
         // Look for items of interest to this tourist.
         for (Map.Entry<ItemPrice, Integer> entry : itemPrices.entrySet()) {
             ItemPrice itemPrice = entry.getKey();
             ItemStack itemForSale = itemPrice.itemForSale();
-            if (tourist.getMind().isItemOfInterest(itemForSale)) {
-                //TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[ShoppingExperienceGoal] Tourist found specific item of interest: {}", itemForSale.getItem().getName().getString());
+            // TODO: Check fairness of price, too.
+            if (!shoppingBag.contains(itemPrice) && tourist.getMind().isItemOfInterest(itemForSale)) {
                 int qtyAvailable = entry.getValue();
                 // TODO: Use qtyAvailable to consider buying more than 1 quantity.
                 float itemValue = TouristEconomy.getEmeraldEquivalent(itemPrice.cost());
                 if (itemValue <= allowance) {
-                    shoppingCart.add(itemPrice); // only buying 1 quantity for now
+                    newItems.add(itemPrice); // only buying 1 quantity for now
                     allowance -= itemValue;
                     break;
                 }
@@ -194,7 +195,7 @@ public class ShoppingExperienceGoal extends LookAtTargetPosGoal {
         }
 
         // If no specific item of interest was found, there's still a chance they might want something they see.
-        if (shoppingCart.isEmpty() && this.tourist.getRandom().nextFloat() < CHANCE_TO_WANT_RANDOM_ITEM) {
+        if (newItems.isEmpty() && this.tourist.getRandom().nextFloat() < CHANCE_TO_WANT_RANDOM_ITEM) {
             int selectedIndex = this.tourist.getRandom().nextInt(itemPrices.size());
             Map.Entry<ItemPrice, Integer> selectedEntry = null;
             Iterator<Map.Entry<ItemPrice, Integer>> iterator = itemPrices.entrySet().iterator();
@@ -202,19 +203,22 @@ public class ShoppingExperienceGoal extends LookAtTargetPosGoal {
                 selectedEntry = iterator.next();
             }
             ItemPrice itemToBuy = selectedEntry.getKey();
-            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[ShoppingExperienceGoal] Tourist found random item of interest: {}", itemToBuy.itemForSale().getItem().getName().getString());
 
-            int qtyAvailable = selectedEntry.getValue();
-            // TODO: Use qtyAvailable to consider buying more than 1 quantity.
-            float itemValue = TouristEconomy.getEmeraldEquivalent(itemToBuy.cost());
-            if (itemValue <= allowance) {
-                shoppingCart.add(itemToBuy); // only buying 1 quantity for now
-                allowance -= itemValue;
+            if (!shoppingBag.contains(itemToBuy)) {
+                TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[ShoppingExperienceGoal] Tourist found random item of interest: {}", itemToBuy.itemForSale().getItem().getName().getString());
+
+                int qtyAvailable = selectedEntry.getValue();
+                // TODO: Use qtyAvailable to consider buying more than 1 quantity.
+                float itemValue = TouristEconomy.getEmeraldEquivalent(itemToBuy.cost());
+                if (itemValue <= allowance) {
+                    newItems.add(itemToBuy); // only buying 1 quantity for now
+                    allowance -= itemValue;
+                }
             }
         }
 
         // Move items to buy from container to tourist's shopping bag.
-        for (ItemPrice purchase : shoppingCart) {
+        for (ItemPrice purchase : newItems) {
             if (((Container) blockEntity).iterator() instanceof Container.ContainerIterator it) {
                 ItemStack itemBuying = purchase.itemForSale();
                 int countBuying = itemBuying.getCount();

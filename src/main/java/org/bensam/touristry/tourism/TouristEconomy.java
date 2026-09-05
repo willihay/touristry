@@ -54,7 +54,7 @@ public class TouristEconomy {
     }
 
     /**
-     * Returns a value judgment based on the current, broad tourist economy.
+     * Returns a value judgment based on the current, broad tourist economy, and taking into account any damage to the item for sale.
      * A positive value indicates a price better than market rates, whereas
      * a negative value indicates a price worse than going rates for the item for sale.
      */
