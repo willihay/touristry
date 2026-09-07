@@ -7,12 +7,16 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
@@ -24,6 +28,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.entity.ContainerOpenersCounter;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
@@ -52,6 +57,7 @@ import java.util.List;
 
 public class TouristEntity extends AbstractVillager implements ContainerUser {
     private static final int BASE_MODEL_VARIANTS = 10;
+    protected static final Identifier TOURIST_SPEED_VARIATION_ID = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tourist_speed_variation");
 
     private static final EntityDataAccessor<Integer> DATA_BASE_MODEL = SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<String> DATA_CLOTHING_VARIANT = SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.STRING);
@@ -97,7 +103,11 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
     }
 
     private double generateSpeedModifier() {
-        return 0.75 + (0.5 * this.random.nextDouble());
+        double modifier = this.random.nextGaussian() * 0.03;
+        if (this.random.nextFloat() < 0.05) {
+            modifier += this.random.nextGaussian() * 0.05;
+        }
+        return Math.clamp(modifier, -0.1, 0.1);
     }
 
     public static AttributeSupplier.Builder createTouristAttributes() {
@@ -106,6 +116,21 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
                 .add(Attributes.MAX_HEALTH, 20.0)
                 .add(Attributes.FOLLOW_RANGE, 32.0)
                 .add(Attributes.BLOCK_INTERACTION_RANGE, 4.5);
+    }
+
+    @Override
+    public @Nullable SpawnGroupData finalizeSpawn(ServerLevelAccessor serverLevelAccessor, DifficultyInstance difficultyInstance, EntitySpawnReason entitySpawnReason, @Nullable SpawnGroupData spawnGroupData) {
+        // Customize this tourist's movement speed.
+        AttributeInstance speedAttribute = this.getAttribute(Attributes.MOVEMENT_SPEED);
+        if (speedAttribute != null) {
+            speedAttribute.addPermanentModifier(new AttributeModifier(
+                    TOURIST_SPEED_VARIATION_ID,
+                    this.generateSpeedModifier(),
+                    AttributeModifier.Operation.ADD_VALUE
+            ));
+        }
+
+        return super.finalizeSpawn(serverLevelAccessor, difficultyInstance, entitySpawnReason, spawnGroupData);
     }
 
     @Override

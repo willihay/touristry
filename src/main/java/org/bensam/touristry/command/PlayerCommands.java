@@ -8,6 +8,7 @@ import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import org.bensam.touristry.Touristry;
@@ -21,6 +22,7 @@ import org.bensam.touristry.tourism.experience.ItemPrice;
 import org.bensam.touristry.tourism.experience.TouristExperience;
 import org.bensam.touristry.tourism.experience.TouristLocationStats;
 
+import javax.naming.directory.Attribute;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -317,6 +319,9 @@ public final class PlayerCommands {
                     .append(touristEntity.getName())
                     .append(" @ " + touristEntity.blockPosition().toShortString());
             source.sendSuccess(() -> message, false);
+
+            Component attributesMessage = Component.literal("   - Speed: " + String.format("%.2f", touristEntity.getAttributeValue(Attributes.MOVEMENT_SPEED)));
+            source.sendSuccess(() -> attributesMessage, false);
 
             Component stateMessage = Component.literal("   - State: ")
                     .append(touristEntity.getMind().getStateForLogging());
