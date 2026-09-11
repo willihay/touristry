@@ -33,7 +33,7 @@ public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
     public static final int MAX_RANGE_TO_TARGET = 100;
     public static final int MIN_TICKS_AT_TARGET = 60;
     public static final int MAX_TICKS_AT_TARGET = 100;
-    public static final int TICKS_AT_BLOCK_WHEN_PURCHASING = 40;
+    public static final int TICKS_AT_BLOCK_WHEN_PAYING = 40;
     public static final int PAYMENT_SLOT_SIZE = 9;
     public static final int TARGET_KEY_INDEX = PAYMENT_SLOT_SIZE;
     public static final int ENTRY_FEE_INDEX = TARGET_KEY_INDEX + 1;

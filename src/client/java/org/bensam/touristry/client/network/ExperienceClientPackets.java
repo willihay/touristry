@@ -1,6 +1,7 @@
 package org.bensam.touristry.client.network;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import org.bensam.touristry.menu.AbstractExperienceMenu;
 import org.bensam.touristry.menu.ShoppingExperienceMenu;
 import org.bensam.touristry.client.render.ExperienceTargetOverlayRenderer;
 import org.bensam.touristry.network.SyncItemPricesS2CPayload;
@@ -17,7 +18,7 @@ public final class ExperienceClientPackets {
                         return;
                     }
 
-                    if (!(context.client().player.containerMenu instanceof ShoppingExperienceMenu menu)) {
+                    if (!(context.client().player.containerMenu instanceof AbstractExperienceMenu<?> menu)) {
                         return;
                     }
 

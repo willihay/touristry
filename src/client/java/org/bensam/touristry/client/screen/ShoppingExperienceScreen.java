@@ -52,8 +52,6 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     };
 
     // Sprites and textures
-    private static final Identifier ON_OFF_SLIDER_TEXTURE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "textures/gui/on_off_slider.png");
-    private static final Identifier OUT_OF_STOCK_TEXTURE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "textures/gui/out_of_stock.png");
     private static final Identifier WIDE_CHEST_TEXTURE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "textures/gui/wide_chest.png");
     private static final Identifier FREE_COST_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "free_cost");
     private static final Identifier TRADE_ARROW_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "trade_arrow");
@@ -114,6 +112,8 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     private static final Component TARGET_KEY_LABEL = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.target_key.label");
     private static final Component ENTRY_FEE_LABEL = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.entry_fee.label");
     private static final Component STATUS_LABEL = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.status.label");
+    private static final Component OPEN_FOR_BUSINESS_MESSAGE = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.status.open_for_business");
+    private static final Component CLOSED_FOR_BUSINESS_MESSAGE = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.status.closed_for_business");
     private static final int REPUTATION_LABEL_X = 8;
     private static final int REPUTATION_LABEL_Y = 17;
     private static final int PAYMENTS_BOX_WIDTH = 54;
@@ -239,7 +239,8 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     private TabDisplay selectedTab = TabDisplay.STATUS;
 
     // Status screen fields
-    private GuiEventListener statusToggleButton;
+    private boolean openForBusiness;
+    private OnOffSliderButton statusToggleButton;
 
     // Targets screen fields
     private int selectedTargetIndex;
@@ -298,6 +299,14 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     protected void containerTick() {
         super.containerTick();
 
+        if (this.menu.isOpenForBusiness() != this.openForBusiness) {
+            this.openForBusiness = this.menu.isOpenForBusiness();
+
+            if (this.statusToggleButton != null) {
+                this.statusToggleButton.setState(this.openForBusiness);
+            }
+        }
+
         if (this.menu.getSyncedItemPricesRevision() != this.lastItemPricesRevision) {
             this.lastItemPricesRevision = this.menu.getSyncedItemPricesRevision();
 
@@ -323,10 +332,25 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
 
     private void addStatusToggleButton() {
         if (this.statusToggleButton == null) {
-            this.statusToggleButton = this.addRenderableWidget(new TourismStatusToggleButton(
+            this.statusToggleButton = this.addRenderableWidget(new OnOffSliderButton(
+                    this.openForBusiness, // open == on, closed == off
                     this.leftPos + ON_OFF_SLIDER_X,
                     this.topPos + ON_OFF_SLIDER_Y,
-                    this.menu, ON_OFF_SLIDER_TEXTURE)
+                    OPEN_FOR_BUSINESS_MESSAGE,
+                    CLOSED_FOR_BUSINESS_MESSAGE,
+                    button -> {
+                        if (button instanceof OnOffSliderButton onOffSliderButton) {
+                            this.openForBusiness = !this.menu.isOpenForBusiness();
+                            onOffSliderButton.setState(this.openForBusiness);
+
+                            ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
+                                    this.menu.getContainerId(),
+                                    ExperienceScreenAction.SET_OPEN_STATUS,
+                                    this.openForBusiness ? 1 : 0,
+                                    -1
+                            ));
+                        }
+                    })
             );
         }
     }
@@ -1374,7 +1398,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
         if (minecraft.player != null && minecraft.gameMode != null) {
             minecraft.gameMode.handleInventoryButtonClick(
                     this.menu.getContainerId(),
-                    ShoppingExperienceMenu.buttonForTab(tab.getMenuTab())
+                    tab.getMenuTab().ordinal()
             );
         }
     }

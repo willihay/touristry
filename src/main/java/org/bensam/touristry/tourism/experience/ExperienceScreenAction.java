@@ -6,6 +6,7 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 
 public enum ExperienceScreenAction {
+    SET_OPEN_STATUS,
     REQUEST_TARGETS,
     MOVE_TARGET,
     REMOVE_TARGET,
@@ -23,7 +24,7 @@ public enum ExperienceScreenAction {
     public static final StreamCodec<RegistryFriendlyByteBuf, ExperienceScreenAction> STREAM_CODEC =
             adapt(ByteBufCodecs.VAR_INT.map(
                     ordinal -> ExperienceScreenAction.values()[ordinal],
-                    action -> action.ordinal()
+                    Enum::ordinal
                     )
             );
 
