@@ -108,11 +108,6 @@ public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEnt
     }
 
     @Override
-    protected int getTargetKeySlotIndex() {
-        return PAYMENT_SLOT_SIZE;
-    }
-
-    @Override
     public boolean hasEntryFee() {
         return !this.inventory.get(ENTRY_FEE_INDEX).isEmpty();
     }

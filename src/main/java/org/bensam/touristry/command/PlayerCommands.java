@@ -22,7 +22,6 @@ import org.bensam.touristry.tourism.experience.ItemPrice;
 import org.bensam.touristry.tourism.experience.TouristExperience;
 import org.bensam.touristry.tourism.experience.TouristLocationStats;
 
-import javax.naming.directory.Attribute;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;

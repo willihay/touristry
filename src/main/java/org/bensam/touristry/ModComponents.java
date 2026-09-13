@@ -60,6 +60,14 @@ public final class ModComponents {
                     .build()
     );
 
+    public static final DataComponentType<ItemStack> TOURIST_EXPERIENCE_ENTRY_FEE = Registry.register(
+            BuiltInRegistries.DATA_COMPONENT_TYPE,
+            Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tourist_experience_entry_fee"),
+            DataComponentType.<ItemStack>builder()
+                    .persistent(ItemStack.CODEC)
+                    .build()
+    );
+
     public static final DataComponentType<Boolean> TOURIST_EXPERIENCE_ORDERED_TARGETS = Registry.register(
             BuiltInRegistries.DATA_COMPONENT_TYPE,
             Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tourist_experience_ordered_targets"),

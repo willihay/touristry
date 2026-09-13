@@ -10,6 +10,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
@@ -20,6 +21,7 @@ import org.bensam.touristry.entity.TouristEntity;
 import org.bensam.touristry.tourism.experience.ExperienceTarget;
 import org.bensam.touristry.tourism.experience.ExperienceVisit;
 import org.bensam.touristry.tourism.experience.ItemPrice;
+import org.bensam.touristry.tourism.experience.TouristExperience;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -128,13 +130,8 @@ public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
     }
 
     @Override
-    protected int getTargetKeySlotIndex() {
-        return PAYMENT_SLOT_SIZE;
-    }
-
-    @Override
-    public List<ExperienceTarget> getTargets(ServerLevel serverLevel) {
-        List<ExperienceTarget> targets = super.getTargets(serverLevel);
+    public List<ExperienceTarget> getTargetsForVisit(ServerLevel serverLevel) {
+        List<ExperienceTarget> targets = super.getTargetsForVisit(serverLevel);
 
         if (!targets.isEmpty()) {
             // Add dining experience block entity as last target so that tourists can return here to pay for food.
@@ -156,7 +153,8 @@ public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
 
     @Override
     protected boolean isTargetValid(ServerLevel serverLevel, ExperienceTarget target) {
-        return true;
+        BlockEntity blockEntity = serverLevel.getBlockEntity(target.pos());
+        return !(blockEntity instanceof TouristExperience);
     }
 
     public @Nullable ItemPrice lookupItemPriceFor(ItemStack itemStack) {

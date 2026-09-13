@@ -27,7 +27,7 @@ public interface TouristExperience {
     int getMaxApproachDistance();
     int getMaxRangeToTarget();
     TouristLocationStats getStatistics();
-    List<ExperienceTarget> getTargets(ServerLevel serverLevel);
+    List<ExperienceTarget> getTargetsForVisit(ServerLevel serverLevel);
     List<TargetOverlayView> getTargetOverlayViews(ServerLevel serverLevel);
     boolean hasBeds(); // return true if this experience has beds where the tourists can spend the night (does not guarantee availability of beds)
     boolean hasEntryFee();

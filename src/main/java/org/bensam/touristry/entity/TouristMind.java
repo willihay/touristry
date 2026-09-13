@@ -1167,7 +1167,7 @@ public final class TouristMind {
         this.currentTargetIndex = 0;
 
         // Get experience targets.
-        List<ExperienceTarget> targets = experience.getTargets(serverLevel);
+        List<ExperienceTarget> targets = experience.getTargetsForVisit(serverLevel);
 
         if (targets.isEmpty()) {
             // Experience has no targets. Just wander here briefly.

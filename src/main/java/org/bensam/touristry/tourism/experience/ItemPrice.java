@@ -49,4 +49,9 @@ public record ItemPrice (ItemStack itemForSale, @Nullable ItemStack cost) {
     ).thenComparingInt(
             itemPrice -> ItemStack.hashItemAndComponents(itemPrice.itemForSale())
     );
+
+    public ItemPrice(ItemStack itemForSale, @Nullable ItemStack cost) {
+        this.itemForSale = itemForSale.copy();
+        this.cost = cost == null ? null : cost.copy();
+    }
 }

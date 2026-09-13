@@ -51,6 +51,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
     protected UUID uuid;
     private boolean openForBusiness;
     private boolean orderedTargets;
+    private ItemStack entryFee = ItemStack.EMPTY;
     protected List<ExperienceTarget> targets;
     protected TouristLocationStats statistics;
     protected NonNullList<ItemStack> inventory;
@@ -88,7 +89,6 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         this.targets = new ArrayList<>();
         this.statistics = new TouristLocationStats();
         this.inventory = NonNullList.withSize(inventorySize, ItemStack.EMPTY);
-        this.setItem(this.getTargetKeySlotIndex(), this.createTargetKey());
     }
 
     protected boolean addTarget(ServerLevel serverLevel, ExperienceTarget target) {
@@ -173,6 +173,11 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
     }
 
     @Override
+    public ItemStack getEntryFee() {
+        return this.entryFee.copy();
+    }
+
+    @Override
     protected @NonNull NonNullList<ItemStack> getItems() {
         return this.inventory;
     }
@@ -223,10 +228,13 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         return contents;
     }
 
-    protected abstract int getTargetKeySlotIndex();
+    public List<ExperienceTarget> getTargets(ServerLevel serverLevel) {
+        this.pruneInvalidTargets(serverLevel);
+        return List.copyOf(this.targets);
+    }
 
     @Override
-    public List<ExperienceTarget> getTargets(ServerLevel serverLevel) {
+    public List<ExperienceTarget> getTargetsForVisit(ServerLevel serverLevel) {
         if (serverLevel != serverLevel.getServer().overworld()) {
             return Collections.emptyList();
         }
@@ -309,6 +317,11 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
 
     public boolean hasCapacity() {
         return this.getCurrentCapacity() < this.getMaxCapacity();
+    }
+
+    @Override
+    public boolean hasEntryFee() {
+        return !this.entryFee.isEmpty();
     }
 
     @Override
@@ -452,6 +465,11 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         this.setChanged();
     }
 
+    public void setEntryFee(ItemStack itemStack) {
+        this.entryFee = itemStack.copy();
+        this.setChanged();
+    }
+
     @Override
     protected void setItems(NonNullList<ItemStack> nonNullList) {
         this.inventory = nonNullList;
@@ -534,14 +552,13 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         valueInput.read("UUID", UUIDUtil.CODEC).ifPresent(UUID -> this.uuid = UUID);
         this.setOpenForBusiness(valueInput.getBooleanOr("OpenForBusiness", false));
         this.setOrderedTargets(valueInput.getBooleanOr("OrderedTargets", true));
+        this.entryFee = valueInput.read("EntryFee", ItemStack.CODEC).orElse(ItemStack.EMPTY);
         this.targets = new ArrayList<>(valueInput.read("Targets", ExperienceTarget.CODEC.listOf()).orElse(List.of()));
         valueInput.read("Statistics", TouristLocationStats.CODEC).ifPresent(statistics -> this.statistics = statistics);
         this.inventory = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
         ContainerHelper.loadAllItems(valueInput, this.inventory);
 
-        this.setItem(this.getTargetKeySlotIndex(), this.createTargetKey());
-        
-        // Registration happens in clearRemoved() after level is set, not here (level is still null).
+        // Tourism registration happens in clearRemoved() after level is set, not here (level is still null).
     }
 
     @Override
@@ -551,6 +568,9 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         valueOutput.store("UUID", UUIDUtil.CODEC, this.getUUID());
         valueOutput.putBoolean("OpenForBusiness", this.openForBusiness);
         valueOutput.putBoolean("OrderedTargets", this.orderedTargets);
+        if (!this.entryFee.isEmpty()) {
+            valueOutput.store("EntryFee", ItemStack.CODEC, this.entryFee);
+        }
         valueOutput.store("Targets", ExperienceTarget.CODEC.listOf(), this.targets);
         valueOutput.store("Statistics", TouristLocationStats.CODEC, this.statistics);
         ContainerHelper.saveAllItems(valueOutput, this.inventory);
@@ -573,6 +593,10 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
                 ModComponents.TOURIST_EXPERIENCE_ORDERED_TARGETS,
                 true
         ));
+        this.entryFee = dataComponentGetter.getOrDefault(
+                ModComponents.TOURIST_EXPERIENCE_ENTRY_FEE,
+                ItemStack.EMPTY
+        );
         this.targets = new ArrayList<>(dataComponentGetter.getOrDefault(
                 ModComponents.TOURIST_EXPERIENCE_TARGETS,
                 List.of()
@@ -582,7 +606,6 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
                 new TouristLocationStats()
         );
 
-        this.setItem(this.getTargetKeySlotIndex(), this.createTargetKey());
         this.pruneInvalidTargets();
         this.syncTourismRegistration();
     }
@@ -595,6 +618,9 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         builder.set(ModComponents.TOURIST_EXPERIENCE_UUID, this.uuid);
         builder.set(ModComponents.TOURIST_EXPERIENCE_STATUS, this.openForBusiness);
         builder.set(ModComponents.TOURIST_EXPERIENCE_ORDERED_TARGETS, this.orderedTargets);
+        if (!this.entryFee.isEmpty()) {
+            builder.set(ModComponents.TOURIST_EXPERIENCE_ENTRY_FEE, this.entryFee);
+        }
         if (!this.targets.isEmpty()) {
             builder.set(ModComponents.TOURIST_EXPERIENCE_TARGETS, List.copyOf(this.targets));
         }
@@ -609,6 +635,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         valueOutput.discard("UUID");
         valueOutput.discard("OpenForBusiness");
         valueOutput.discard("OrderedTargets");
+        valueOutput.discard("EntryFee");
         valueOutput.discard("Targets");
         valueOutput.discard("Statistics");
     }

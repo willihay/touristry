@@ -22,7 +22,8 @@ public abstract class AbstractExperienceMenu<T extends Enum<T>> extends Abstract
     private static final int SLOT_SIDE_LENGTH = 18;
 
     private final ContainerLevelAccess containerLevelAccess;
-    private final Container experienceInventory;
+    private final Container configurationContainer;
+    private final Container experienceContainer;
     private final ContainerData experienceContainerData;
     private final Container playerInventory;
     private T selectedTab;
@@ -38,13 +39,15 @@ public abstract class AbstractExperienceMenu<T extends Enum<T>> extends Abstract
             MenuType<?> menuType,
             int containerId,
             Inventory playerInventory,
-            Container experienceInventory,
+            Container experienceContainer,
+            Container configurationContainer,
             ContainerData data,
             ContainerLevelAccess access
     ) {
         super(menuType, containerId);
+        this.configurationContainer = configurationContainer;
         this.containerLevelAccess = access;
-        this.experienceInventory = experienceInventory;
+        this.experienceContainer = experienceContainer;
         this.experienceContainerData = data;
         this.playerInventory = playerInventory;
         this.selectedTab = this.getDefaultTab();
@@ -57,7 +60,7 @@ public abstract class AbstractExperienceMenu<T extends Enum<T>> extends Abstract
                 int slotId = col + row * 3;
                 this.addSlot(new TabbedMenuSlot<>(
                         this,
-                        this.experienceInventory,
+                        this.experienceContainer,
                         slotId,
                         x + col * SLOT_SIDE_LENGTH,
                         y + row * SLOT_SIDE_LENGTH,
@@ -66,8 +69,27 @@ public abstract class AbstractExperienceMenu<T extends Enum<T>> extends Abstract
         }
     }
 
-    protected void addPlayerInventorySlots(Predicate<AbstractExperienceMenu<T>> visibleWhen, int globalSlotStart, int x, int y) {
-        this.playerInventorySlotStartId = globalSlotStart;
+    protected void addEntryFeeSlot(T tab, int configurationSlotId, int x, int y) {
+        this.addSlot(new CloneSlot<>(
+                this,
+                this.configurationContainer,
+                configurationSlotId,
+                x,
+                y,
+                menu -> menu.isSelectedTab(tab)
+        ) {
+            @Override
+            public void setChanged() {
+                super.setChanged();
+                if (AbstractExperienceMenu.this.getExperienceContainer() instanceof AbstractExperienceBlockEntity experienceBlockEntity) {
+                    experienceBlockEntity.setEntryFee(this.getItem());
+                }
+            }
+        });
+    }
+
+    protected void addPlayerInventorySlots(Predicate<AbstractExperienceMenu<T>> visibleWhen, int x, int y) {
+        this.playerInventorySlotStartId = this.slots.size();
 
         // Add standard 9-col, 3-row inventory.
         for (int row = 0; row < 3; row++) {
@@ -95,13 +117,13 @@ public abstract class AbstractExperienceMenu<T extends Enum<T>> extends Abstract
         }
     }
 
-    protected void addTargetKeySlot(T tab, int globalSlotId, int x, int y) {
-        this.targetKeySlotId = globalSlotId;
+    protected void addTargetKeySlot(T tab, int configurationSlotId, int x, int y) {
+        this.targetKeySlotId = this.slots.size();
 
         this.addSlot(new TabbedMenuSlot<>(
                 this,
-                this.experienceInventory,
-                globalSlotId,
+                this.configurationContainer,
+                configurationSlotId,
                 x,
                 y,
                 menu -> menu.isSelectedTab(tab)) {
@@ -123,7 +145,7 @@ public abstract class AbstractExperienceMenu<T extends Enum<T>> extends Abstract
 
                 // If the target keys are exactly the same, swallow the placed key out of convenience to the player
                 // instead of increasing the count here, since this block entity provides infinite target keys.
-                itemStack.shrink(itemStack.getCount());
+                itemStack.shrink(amount);
                 return itemStack;
             }
         });
@@ -149,14 +171,18 @@ public abstract class AbstractExperienceMenu<T extends Enum<T>> extends Abstract
         super.clicked(slotId, button, clickType, player);
     }
 
+    protected Container getConfigurationContainer() {
+        return this.configurationContainer;
+    }
+
     public int getContainerId() {
         return this.containerId;
     }
 
     protected abstract T getDefaultTab();
 
-    protected Container getExperienceInventory() {
-        return this.experienceInventory;
+    protected Container getExperienceContainer() {
+        return this.experienceContainer;
     }
 
     public double getReputation() {
@@ -248,7 +274,7 @@ public abstract class AbstractExperienceMenu<T extends Enum<T>> extends Abstract
                 return;
             }
 
-            if (!(this.getExperienceInventory() instanceof AbstractExperienceBlockEntity experienceBlockEntity)) {
+            if (!(this.getExperienceContainer() instanceof AbstractExperienceBlockEntity experienceBlockEntity)) {
                 return;
             }
 
@@ -298,7 +324,7 @@ public abstract class AbstractExperienceMenu<T extends Enum<T>> extends Abstract
     }
 
     protected void onKeyTake() {
-        if (this.hasTargetKey() && this.experienceInventory instanceof AbstractExperienceBlockEntity experienceBlockEntity) {
+        if (this.hasTargetKey() && this.experienceContainer instanceof AbstractExperienceBlockEntity experienceBlockEntity) {
             Slot slot = this.getSlot(this.targetKeySlotId);
             slot.set(experienceBlockEntity.createTargetKey());
         }

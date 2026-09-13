@@ -27,30 +27,34 @@ import java.util.List;
 
 public class ShoppingExperienceMenu extends AbstractExperienceMenu<ShoppingExperienceMenu.Tab> {
     // Slot layout
+    private static final int CONFIGURATION_SLOT_COUNT = 3; // target key + entry fee + default cost
     private static final int EXPERIENCE_PAYMENT_SLOT_COUNT = ShoppingExperienceBlockEntity.PAYMENT_SLOT_SIZE;
-    private static final int EXPERIENCE_SLOT_COUNT = ShoppingExperienceBlockEntity.TOTAL_INVENTORY_SIZE + ItemPricingContainer.ITEM_PRICING_SLOTS;
     private static final int EXPERIENCE_PAYMENT_SLOT_START_X = 216;
     private static final int EXPERIENCE_PAYMENT_SLOT_START_Y = 17;
-    private static final int EXPERIENCE_TARGET_KEY_SLOT = ShoppingExperienceBlockEntity.TARGET_KEY_INDEX;
+    private static final int EXPERIENCE_TARGET_KEY_SLOT = EXPERIENCE_PAYMENT_SLOT_COUNT;
+    private static final int CONFIGURATION_TARGET_KEY_SLOT = 0;
     private static final int EXPERIENCE_TARGET_KEY_SLOT_X = 180;
     private static final int EXPERIENCE_TARGET_KEY_SLOT_Y = 35;
-    private static final int EXPERIENCE_ENTRY_FEE_SLOT = ShoppingExperienceBlockEntity.ENTRY_FEE_INDEX;
+    private static final int EXPERIENCE_ENTRY_FEE_SLOT = EXPERIENCE_TARGET_KEY_SLOT + 1;
+    private static final int CONFIGURATION_ENTRY_FEE_SLOT = 1;
     private static final int EXPERIENCE_ENTRY_FEE_SLOT_X = 180;
     private static final int EXPERIENCE_ENTRY_FEE_SLOT_Y = 53;
-    public static final int SHOPPING_DEFAULT_COST_SLOT = ShoppingExperienceBlockEntity.DEFAULT_COST_INDEX;
+    public static final int SHOPPING_DEFAULT_COST_SLOT = EXPERIENCE_ENTRY_FEE_SLOT + 1;
+    private static final int CONFIGURATION_DEFAULT_COST_SLOT = 2;
     public static final int SHOPPING_DEFAULT_COST_SLOT_X = 220;
     public static final int SHOPPING_DEFAULT_COST_SLOT_Y = 19;
-    public static final int SHOPPING_ITEM_FOR_SALE_SLOT = ShoppingExperienceBlockEntity.TOTAL_INVENTORY_SIZE;
+    public static final int SHOPPING_ITEM_FOR_SALE_SLOT = SHOPPING_DEFAULT_COST_SLOT + 1;
     private static final int SHOPPING_ITEM_FOR_SALE_SLOT_X = 162;
     private static final int SHOPPING_ITEM_FOR_SALE_SLOT_Y = 51;
     public static final int SHOPPING_COST_SLOT = SHOPPING_ITEM_FOR_SALE_SLOT + 1;
     public static final int SHOPPING_COST_SLOT_X = 220;
     public static final int SHOPPING_COST_SLOT_Y = 51;
+    private static final int EXPERIENCE_SLOT_COUNT = EXPERIENCE_PAYMENT_SLOT_COUNT + CONFIGURATION_SLOT_COUNT + ItemPricingContainer.ITEM_PRICING_SLOTS;
 
     // Player inventory layout
+    private static final int PLAYER_SLOT_START = EXPERIENCE_SLOT_COUNT;
     private static final int PLAYER_INVENTORY_ROW_X = 108;
     private static final int PLAYER_INVENTORY_ROW_Y = 84;
-    private static final int PLAYER_SLOT_START = EXPERIENCE_SLOT_COUNT;
 
     // Tab layout
     public enum Tab {
@@ -80,7 +84,7 @@ public class ShoppingExperienceMenu extends AbstractExperienceMenu<ShoppingExper
 
     // Server-side constructor:
     public ShoppingExperienceMenu(int containerId, Inventory playerInventory, Container experienceInventory, ContainerData data, ContainerLevelAccess access) {
-        super(ModMenus.SHOPPING_EXPERIENCE_MENU.get(), containerId, playerInventory, experienceInventory, data, access);
+        super(ModMenus.SHOPPING_EXPERIENCE_MENU.get(), containerId, playerInventory, experienceInventory, createConfigurationContainer(experienceInventory), data, access);
         this.containerLevelAccess = access;
         ItemPricingContainer itemPricingContainer = new ItemPricingContainer(this);
 
@@ -88,23 +92,16 @@ public class ShoppingExperienceMenu extends AbstractExperienceMenu<ShoppingExper
         this.add3x3PaymentSlots(Tab.STATUS, EXPERIENCE_PAYMENT_SLOT_START_X, EXPERIENCE_PAYMENT_SLOT_START_Y);
 
         // Add target key slot.
-        this.addTargetKeySlot(Tab.STATUS, EXPERIENCE_TARGET_KEY_SLOT, EXPERIENCE_TARGET_KEY_SLOT_X, EXPERIENCE_TARGET_KEY_SLOT_Y);
+        this.addTargetKeySlot(Tab.STATUS, CONFIGURATION_TARGET_KEY_SLOT, EXPERIENCE_TARGET_KEY_SLOT_X, EXPERIENCE_TARGET_KEY_SLOT_Y);
 
         // Add entry fee slot.
-        this.addSlot(new CloneSlot<>(
-                this,
-                experienceInventory,
-                EXPERIENCE_ENTRY_FEE_SLOT,
-                EXPERIENCE_ENTRY_FEE_SLOT_X,
-                EXPERIENCE_ENTRY_FEE_SLOT_Y,
-                menu -> menu.isSelectedTab(Tab.STATUS)
-        ));
+        this.addEntryFeeSlot(Tab.STATUS, CONFIGURATION_ENTRY_FEE_SLOT, EXPERIENCE_ENTRY_FEE_SLOT_X, EXPERIENCE_ENTRY_FEE_SLOT_Y);
 
         // Add default cost slot.
         this.addSlot(new CloneSlot<>(
                 this,
-                experienceInventory,
-                SHOPPING_DEFAULT_COST_SLOT,
+                this.getConfigurationContainer(),
+                CONFIGURATION_DEFAULT_COST_SLOT,
                 SHOPPING_DEFAULT_COST_SLOT_X,
                 SHOPPING_DEFAULT_COST_SLOT_Y,
                 menu -> menu.isSelectedTab(Tab.PRICING)
@@ -112,8 +109,8 @@ public class ShoppingExperienceMenu extends AbstractExperienceMenu<ShoppingExper
             @Override
             public void setChanged() {
                 super.setChanged();
-                if (ShoppingExperienceMenu.this.getExperienceInventory() instanceof ShoppingExperienceBlockEntity shoppingExperienceBlockEntity) {
-                    shoppingExperienceBlockEntity.setDefaultCost(this.getItem().copy());
+                if (ShoppingExperienceMenu.this.getExperienceContainer() instanceof ShoppingExperienceBlockEntity shoppingExperienceBlockEntity) {
+                    shoppingExperienceBlockEntity.setDefaultCost(this.getItem());
                 }
             }
         });
@@ -140,12 +137,21 @@ public class ShoppingExperienceMenu extends AbstractExperienceMenu<ShoppingExper
         // Add the player inventory slots.
         this.addPlayerInventorySlots(
                 menu -> menu.isSelectedTab(ShoppingExperienceMenu.Tab.STATUS) || menu.isSelectedTab(ShoppingExperienceMenu.Tab.PRICING),
-                PLAYER_SLOT_START,
                 PLAYER_INVENTORY_ROW_X,
                 PLAYER_INVENTORY_ROW_Y);
 
         // Add data slots for data sync.
         this.addDataSlots(data);
+    }
+
+    private static Container createConfigurationContainer(Container experienceInventory) {
+        SimpleContainer configurationContainer = new SimpleContainer(CONFIGURATION_SLOT_COUNT);
+        if (experienceInventory instanceof ShoppingExperienceBlockEntity shoppingExperienceBlockEntity) {
+            configurationContainer.setItem(CONFIGURATION_TARGET_KEY_SLOT, shoppingExperienceBlockEntity.createTargetKey());
+            configurationContainer.setItem(CONFIGURATION_ENTRY_FEE_SLOT, shoppingExperienceBlockEntity.getEntryFee());
+            configurationContainer.setItem(CONFIGURATION_DEFAULT_COST_SLOT, shoppingExperienceBlockEntity.getDefaultCost());
+        }
+        return configurationContainer;
     }
 
     @Override
@@ -191,7 +197,7 @@ public class ShoppingExperienceMenu extends AbstractExperienceMenu<ShoppingExper
                 return;
             }
 
-            if (!(this.getExperienceInventory() instanceof ShoppingExperienceBlockEntity shoppingExperienceBlockEntity)) {
+            if (!(this.getExperienceContainer() instanceof ShoppingExperienceBlockEntity shoppingExperienceBlockEntity)) {
                 return;
             }
 
@@ -282,7 +288,7 @@ public class ShoppingExperienceMenu extends AbstractExperienceMenu<ShoppingExper
                 return;
             }
 
-            if (!(this.getExperienceInventory() instanceof ShoppingExperienceBlockEntity shoppingExperienceBlockEntity)) {
+            if (!(this.getExperienceContainer() instanceof ShoppingExperienceBlockEntity shoppingExperienceBlockEntity)) {
                 return;
             }
 
@@ -331,6 +337,7 @@ public class ShoppingExperienceMenu extends AbstractExperienceMenu<ShoppingExper
 
         ItemStack sourceStack = slot.getItem();
 
+        // Player inventory -> experience slot
         if (slotId >= PLAYER_SLOT_START) {
             if (this.isSelectedTab(Tab.STATUS)) {
                 if (!this.moveItemStackTo(sourceStack, 0, EXPERIENCE_PAYMENT_SLOT_COUNT, false)) {
