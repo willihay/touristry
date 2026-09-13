@@ -275,7 +275,7 @@ public final class PlayerCommands {
 
         for (TouristBeaconBlockEntity beaconBlockEntity : loadedBeacons) {
             Component message = Component.literal(" - ")
-                    .append(beaconBlockEntity.getName().copy())
+                    .append(beaconBlockEntity.getName())
                     .append(Component.literal(" @ " + beaconBlockEntity.getBlockPos().toShortString() + " ("))
                     .append(Component.translatable("message." + Touristry.MOD_ID
                             + (beaconBlockEntity.isOpenForBusiness() ? ".tourist_block.status.open_for_business" : ".tourist_block.status.closed_for_business")))
@@ -295,9 +295,14 @@ public final class PlayerCommands {
         source.sendSuccess(() -> Component.literal("Tourist experiences:"), false);
 
         for (TouristExperience experience : loadedExperiences) {
+            MutableComponent name = experience.getDisplayName().copy();
+            if (experience.hasCustomName()) {
+                name.append(" (")
+                        .append(experience.getDefaultName())
+                        .append(")");
+            }
             Component message = Component.literal(" - ")
-                    .append(experience.getDisplayName())
-                    .append(" (" + experience.getClass().getSimpleName() + ")")
+                    .append(name)
                     .append(Component.literal(" @ " + experience.getBlockPos().toShortString()));
             source.sendSuccess(() -> message, false);
         }

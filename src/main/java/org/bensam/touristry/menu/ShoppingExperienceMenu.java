@@ -83,8 +83,8 @@ public class ShoppingExperienceMenu extends AbstractExperienceMenu<ShoppingExper
     }
 
     // Server-side constructor:
-    public ShoppingExperienceMenu(int containerId, Inventory playerInventory, Container experienceInventory, ContainerData data, ContainerLevelAccess access) {
-        super(ModMenus.SHOPPING_EXPERIENCE_MENU.get(), containerId, playerInventory, experienceInventory, createConfigurationContainer(experienceInventory), data, access);
+    public ShoppingExperienceMenu(int containerId, Inventory playerInventory, Container experienceContainer, ContainerData data, ContainerLevelAccess access) {
+        super(ModMenus.SHOPPING_EXPERIENCE_MENU.get(), containerId, playerInventory, experienceContainer, createConfigurationContainer(experienceContainer), data, access);
         this.containerLevelAccess = access;
         ItemPricingContainer itemPricingContainer = new ItemPricingContainer(this);
 
@@ -144,9 +144,9 @@ public class ShoppingExperienceMenu extends AbstractExperienceMenu<ShoppingExper
         this.addDataSlots(data);
     }
 
-    private static Container createConfigurationContainer(Container experienceInventory) {
+    private static Container createConfigurationContainer(Container experienceContainer) {
         SimpleContainer configurationContainer = new SimpleContainer(CONFIGURATION_SLOT_COUNT);
-        if (experienceInventory instanceof ShoppingExperienceBlockEntity shoppingExperienceBlockEntity) {
+        if (experienceContainer instanceof ShoppingExperienceBlockEntity shoppingExperienceBlockEntity) {
             configurationContainer.setItem(CONFIGURATION_TARGET_KEY_SLOT, shoppingExperienceBlockEntity.createTargetKey());
             configurationContainer.setItem(CONFIGURATION_ENTRY_FEE_SLOT, shoppingExperienceBlockEntity.getEntryFee());
             configurationContainer.setItem(CONFIGURATION_DEFAULT_COST_SLOT, shoppingExperienceBlockEntity.getDefaultCost());

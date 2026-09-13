@@ -1,7 +1,6 @@
 package org.bensam.touristry.client.screen;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.RenderPipelines;
@@ -10,14 +9,21 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import org.bensam.touristry.Touristry;
 import org.bensam.touristry.menu.SightseeingExperienceMenu;
-import org.bensam.touristry.menu.TourismMenu;
 import org.bensam.touristry.network.ExperienceScreenActionC2SPayload;
 import org.bensam.touristry.tourism.experience.ExperienceScreenAction;
 import org.jspecify.annotations.NonNull;
 
 public class SightseeingExperienceScreen extends AbstractContainerScreen<SightseeingExperienceMenu> {
+    //region Constants: Sprites & Textures
+    // Screen textures
     private static final Identifier BG_TEXTURE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "textures/gui/tourist_experience.png");
+    //endregion
 
+    //region Constants: Common
+    private static final int ARGB_SCREEN_TEXT_COLOR = 0xFF404040; // gray
+    //endregion
+
+    //region Constants: Status Tab
     // Status screen constants
     private static final Component OPEN_FOR_BUSINESS_MESSAGE = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.status.open_for_business");
     private static final Component CLOSED_FOR_BUSINESS_MESSAGE = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.status.closed_for_business");
@@ -31,6 +37,7 @@ public class SightseeingExperienceScreen extends AbstractContainerScreen<Sightse
     private static final int STATUS_LABEL_Y = 72;
     private static final int ON_OFF_SLIDER_X = 152;
     private static final int ON_OFF_SLIDER_Y = 72;
+    //endregion
 
     // Status screen fields
     private boolean openForBusiness;
@@ -72,19 +79,6 @@ public class SightseeingExperienceScreen extends AbstractContainerScreen<Sightse
                             this.openForBusiness = !this.menu.isOpenForBusiness();
                             onOffSliderButton.setState(this.openForBusiness);
 
-                            Minecraft minecraft = Minecraft.getInstance();
-                            if (minecraft.player != null
-                                    && minecraft.gameMode != null
-                                    && this.menu.clickMenuButton(minecraft.player, SightseeingExperienceMenu.BUTTON_TOGGLE_OPEN_FOR_BUSINESS)) {
-                                minecraft.gameMode.handleInventoryButtonClick(this.menu.getContainerId(), SightseeingExperienceMenu.BUTTON_TOGGLE_OPEN_FOR_BUSINESS);
-                            }
-                        }
-
-                        /*
-                        if (button instanceof OnOffSliderButton onOffSliderButton) {
-                            this.openForBusiness = !this.menu.isOpenForBusiness();
-                            onOffSliderButton.setState(this.openForBusiness);
-
                             ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
                                     this.menu.getContainerId(),
                                     ExperienceScreenAction.SET_OPEN_STATUS,
@@ -92,7 +86,6 @@ public class SightseeingExperienceScreen extends AbstractContainerScreen<Sightse
                                     -1
                             ));
                         }
-                         */
                     })
             );
         }
@@ -145,7 +138,7 @@ public class SightseeingExperienceScreen extends AbstractContainerScreen<Sightse
                 targetKeyLabel,
                 TARGET_KEY_LABEL_X,
                 TARGET_KEY_LABEL_Y,
-                0xFF404040, // gray
+                ARGB_SCREEN_TEXT_COLOR,
                 false
         );
 
@@ -155,7 +148,7 @@ public class SightseeingExperienceScreen extends AbstractContainerScreen<Sightse
                 entryFeeLabel,
                 ENTRY_FEE_LABEL_X,
                 ENTRY_FEE_LABEL_Y,
-                0xFF404040, // gray
+                ARGB_SCREEN_TEXT_COLOR,
                 false
         );
 
@@ -165,7 +158,7 @@ public class SightseeingExperienceScreen extends AbstractContainerScreen<Sightse
                 statusLabel,
                 STATUS_LABEL_X,
                 STATUS_LABEL_Y,
-                0xFF404040, // gray
+                ARGB_SCREEN_TEXT_COLOR,
                 false
         );
     }

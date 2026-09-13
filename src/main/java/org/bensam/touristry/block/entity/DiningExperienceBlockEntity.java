@@ -76,7 +76,7 @@ public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
     }
 
     @Override
-    protected Component getDefaultName() {
+    public Component getDefaultName() {
         return Component.translatable("block." + Touristry.MOD_ID + ".dining_experience");
     }
 

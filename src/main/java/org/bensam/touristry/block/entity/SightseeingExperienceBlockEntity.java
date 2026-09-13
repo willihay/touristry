@@ -78,13 +78,8 @@ public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEnt
     }
 
     @Override
-    protected Component getDefaultName() {
+    public Component getDefaultName() {
         return Component.translatable("block." + Touristry.MOD_ID + ".sightseeing_experience");
-    }
-
-    @Override
-    public ItemStack getEntryFee() {
-        return this.inventory.get(ENTRY_FEE_INDEX).copy();
     }
 
     @Override
@@ -105,11 +100,6 @@ public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEnt
     @Override
     public int getPaymentSlotSize() {
         return PAYMENT_SLOT_SIZE;
-    }
-
-    @Override
-    public boolean hasEntryFee() {
-        return !this.inventory.get(ENTRY_FEE_INDEX).isEmpty();
     }
 
     private boolean isSightseeingBlock(BlockState blockState) {

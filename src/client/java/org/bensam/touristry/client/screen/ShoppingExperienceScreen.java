@@ -7,7 +7,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.ImageButton;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.components.WidgetSprites;
-import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
@@ -80,10 +79,9 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     //endregion
 
     //region Constants: Common
-    // Common constants
-    private static final int ARGB_SCREEN_TEXT_COLOR = 0xFF404040;
-    private static final int ARGB_SCROLLBOX_BUTTON_TEXT_COLOR = 0xFFFFFFFF;
-    private static final int ARGB_DIRTY_MARKER_COLOR = 0xFFFF0000;
+    private static final int ARGB_SCREEN_TEXT_COLOR = 0xFF404040; // gray
+    private static final int ARGB_SCROLLBOX_BUTTON_TEXT_COLOR = 0xFFFFFFFF; // white
+    private static final int ARGB_DIRTY_MARKER_COLOR = 0xFFFF0000; // red
     private static final int BG_TEXTURE_WIDTH = 512;
     private static final int BG_TEXTURE_HEIGHT = 256;
     private static final int BG_SCREEN_WIDTH = 276;

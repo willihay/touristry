@@ -12,7 +12,7 @@ import org.bensam.touristry.ModMenus;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
 import org.jspecify.annotations.NonNull;
 
-public class TouristBeaconMenu extends AbstractContainerMenu implements TourismMenu {
+public class TouristBeaconMenu extends AbstractContainerMenu implements TourismBlockMenu {
     public static final int BUTTON_TOGGLE_OPEN_FOR_BUSINESS = 0;
 
     // Player inventory layout

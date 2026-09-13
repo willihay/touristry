@@ -4,6 +4,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.Nameable;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.item.ItemStack;
 import org.bensam.touristry.entity.TouristEntity;
@@ -13,10 +14,10 @@ import org.jspecify.annotations.Nullable;
 import java.util.List;
 import java.util.UUID;
 
-public interface TouristExperience {
+public interface TouristExperience extends Nameable {
     UUID getUUID();
     BlockPos getBlockPos();
-    Component getDisplayName();
+    Component getDefaultName();
 
     boolean addBlockTarget(ServerLevel serverLevel, BlockPos blockPos, Direction playerFacing);
     boolean addEntityTarget(ServerLevel serverLevel, BlockPos entityPos, Direction playerFacing, UUID entityUUID);

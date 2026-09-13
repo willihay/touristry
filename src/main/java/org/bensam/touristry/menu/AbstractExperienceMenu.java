@@ -18,7 +18,7 @@ import org.jspecify.annotations.NonNull;
 import java.util.List;
 import java.util.function.Predicate;
 
-public abstract class AbstractExperienceMenu<T extends Enum<T>> extends AbstractContainerMenu implements TourismMenu {
+public abstract class AbstractExperienceMenu<T extends Enum<T>> extends AbstractContainerMenu implements TourismBlockMenu {
     private static final int SLOT_SIDE_LENGTH = 18;
 
     private final ContainerLevelAccess containerLevelAccess;
