@@ -16,9 +16,12 @@ public enum ExperienceScreenAction {
     IMPORT_ITEMS_FROM_TARGETS,
     RESET_DEFAULT_COST,
     SELECT_ITEM_PRICE,
+    ADD_TO_FOR_SALE_QTY,
+    ADD_TO_COST_QTY,
     ACCEPT_ITEM_PRICE,
     CLEAR_ITEM_PRICE,
     REMOVE_ITEM_PRICE,
+    REMOVE_DEFAULT_ITEM_PRICES,
     REMOVE_ALL_ITEM_PRICES;
 
     public static final StreamCodec<RegistryFriendlyByteBuf, ExperienceScreenAction> STREAM_CODEC =

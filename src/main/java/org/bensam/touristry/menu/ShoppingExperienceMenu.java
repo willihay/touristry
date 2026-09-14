@@ -41,13 +41,13 @@ public class ShoppingExperienceMenu extends AbstractExperienceMenu<ShoppingExper
     private static final int EXPERIENCE_ENTRY_FEE_SLOT_Y = 53;
     public static final int SHOPPING_DEFAULT_COST_SLOT = EXPERIENCE_ENTRY_FEE_SLOT + 1;
     private static final int CONFIGURATION_DEFAULT_COST_SLOT = 2;
-    public static final int SHOPPING_DEFAULT_COST_SLOT_X = 220;
+    public static final int SHOPPING_DEFAULT_COST_SLOT_X = 216;
     public static final int SHOPPING_DEFAULT_COST_SLOT_Y = 19;
     public static final int SHOPPING_ITEM_FOR_SALE_SLOT = SHOPPING_DEFAULT_COST_SLOT + 1;
     private static final int SHOPPING_ITEM_FOR_SALE_SLOT_X = 162;
     private static final int SHOPPING_ITEM_FOR_SALE_SLOT_Y = 51;
     public static final int SHOPPING_COST_SLOT = SHOPPING_ITEM_FOR_SALE_SLOT + 1;
-    public static final int SHOPPING_COST_SLOT_X = 220;
+    public static final int SHOPPING_COST_SLOT_X = 216;
     public static final int SHOPPING_COST_SLOT_Y = 51;
     private static final int EXPERIENCE_SLOT_COUNT = EXPERIENCE_PAYMENT_SLOT_COUNT + CONFIGURATION_SLOT_COUNT + ItemPricingContainer.ITEM_PRICING_SLOTS;
 
@@ -205,6 +205,7 @@ public class ShoppingExperienceMenu extends AbstractExperienceMenu<ShoppingExper
                 case REQUEST_ITEM_PRICES -> this.syncItemPrices(serverPlayer, shoppingExperienceBlockEntity);
 
                 case IMPORT_ITEMS_FROM_TARGETS -> {
+                    // Update item price list by searching all target containers and adding items that are not already defined in the list.
                     int numAdded = shoppingExperienceBlockEntity.importItemsFromTargets(serverLevel);
                     this.syncItemPrices(serverPlayer, shoppingExperienceBlockEntity);
                     this.clearItemPriceSlots();
@@ -215,24 +216,59 @@ public class ShoppingExperienceMenu extends AbstractExperienceMenu<ShoppingExper
                 }
 
                 case RESET_DEFAULT_COST -> {
+                    // Reset default cost of items to original value (i.e. 1 emerald).
                     shoppingExperienceBlockEntity.resetDefaultCost();
                     int newStateId = this.incrementStateId();
                     this.setItem(SHOPPING_DEFAULT_COST_SLOT, newStateId, shoppingExperienceBlockEntity.getDefaultCost().copy());
                 }
 
                 case SELECT_ITEM_PRICE -> {
+                    // Place selected item pricing in item price slots (e.g. for editing).
                     ItemPrice itemPrice = shoppingExperienceBlockEntity.getItemPrice(payload.primary());
                     if (itemPrice != null) {
                         this.setItemPriceSlots(itemPrice);
                     }
                 }
 
+                case ADD_TO_FOR_SALE_QTY -> {
+                    if (this.getSlot(SHOPPING_ITEM_FOR_SALE_SLOT).hasItem()) {
+                        // Adjust quantity of item in item for sale slot.
+                        int qtyToAdd = payload.primary();
+                        ItemStack itemForSale = this.getSlot(SHOPPING_ITEM_FOR_SALE_SLOT).getItem().copy();
+                        if (itemForSale.getCount() + qtyToAdd > 0) {
+                            itemForSale.grow(qtyToAdd);
+                            int newStateId = this.incrementStateId();
+                            this.setItem(SHOPPING_ITEM_FOR_SALE_SLOT, newStateId, itemForSale.copy());
+                        }
+                    }
+                }
+
+                case ADD_TO_COST_QTY -> {
+                    int qtyToAdd = payload.primary();
+                    if (this.getSlot(SHOPPING_COST_SLOT).hasItem()) {
+                        // Adjust quantity of item in cost slot.
+                        ItemStack itemCost = this.getSlot(SHOPPING_COST_SLOT).getItem().copy();
+                        if (itemCost.getCount() + qtyToAdd > 0) {
+                            itemCost.grow(qtyToAdd);
+                            int newStateId = this.incrementStateId();
+                            this.setItem(SHOPPING_COST_SLOT, newStateId, itemCost.copy());
+                        }
+                    } else {
+                        if (qtyToAdd > 0) {
+                            // Update cost from 'free' to default cost.
+                            int newStateId = this.incrementStateId();
+                            this.setCostSlot(null, newStateId);
+                        }
+                    }
+                }
+
                 case ACCEPT_ITEM_PRICE -> {
                     if (this.getSlot(SHOPPING_ITEM_FOR_SALE_SLOT).hasItem()) {
+                        // Add a new item price, or update an existing item price from item pricing slots.
                         ItemStack itemForSale = this.getSlot(SHOPPING_ITEM_FOR_SALE_SLOT).getItem();
                         ItemPrice itemPrice = new ItemPrice(
-                                itemForSale.copy(),
-                                this.getSlot(SHOPPING_COST_SLOT).getItem().copy()
+                                itemForSale,
+                                this.getSlot(SHOPPING_COST_SLOT).getItem()
                         );
                         shoppingExperienceBlockEntity.updateItemPrice(itemPrice);
                         this.syncItemPrices(serverPlayer, shoppingExperienceBlockEntity);
@@ -249,6 +285,13 @@ public class ShoppingExperienceMenu extends AbstractExperienceMenu<ShoppingExper
                         this.syncItemPrices(serverPlayer, shoppingExperienceBlockEntity);
                         this.clearItemPriceSlots();
                     }
+                }
+
+                case REMOVE_DEFAULT_ITEM_PRICES -> {
+                    // Remove all item prices that are set to default values (i.e. item for sale quantity of 1 and default cost).
+                    shoppingExperienceBlockEntity.removeDefaultItemPrices();
+                    this.syncItemPrices(serverPlayer, shoppingExperienceBlockEntity);
+                    this.clearItemPriceSlots();
                 }
 
                 case REMOVE_ALL_ITEM_PRICES -> {

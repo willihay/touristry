@@ -30,9 +30,7 @@ import org.bensam.touristry.tourism.experience.TouristExperience;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
+import java.util.*;
 
 public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity {
     public static final int IDEAL_TARGET_APPROACH_DISTANCE = 1; // Tourist should try to stand this far away for shopping targets
@@ -263,8 +261,34 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
     }
 
     public void removeAllItemPrices() {
-        this.itemPrices.clear();
-        this.setChanged();
+        if (!this.itemPrices.isEmpty()) {
+            this.itemPrices.clear();
+            this.setChanged();
+        }
+    }
+
+    public void removeDefaultItemPrices() {
+        ItemStack defaultCost = this.getDefaultCost();
+        Iterator<Map.Entry<ItemStackKey, ItemPrice>> iterator = this.itemPrices.entrySet().iterator();
+        boolean removed = false;
+
+        while (iterator.hasNext()) {
+            Map.Entry<ItemStackKey, ItemPrice> entry = iterator.next();
+            ItemPrice price = entry.getValue();
+
+            if (price.itemForSale().getCount() > 1) {
+                continue;
+            }
+
+            if (price.cost() == null || ItemStack.matches(price.cost(), defaultCost)) {
+                iterator.remove();
+                removed = true;
+            }
+        }
+
+        if (removed) {
+            this.setChanged();
+        }
     }
 
     public void resetDefaultCost() {

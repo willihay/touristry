@@ -34,6 +34,7 @@
   "screen.touristry.tourist_block.pricing.accept.tooltip": "Set item price",
   "screen.touristry.tourist_block.pricing.cancel.tooltip": "Cancel changes to item price",
   "screen.touristry.tourist_block.pricings.remove_all.tooltip": "Remove ALL prices from list",
+  "screen.touristry.tourist_block.pricings.remove_defaults.tooltip": "Remove prices with default values",
   "screen.touristry.tourist_block.target.move_up.tooltip": "Move selected target up",
   "screen.touristry.tourist_block.target.move_down.tooltip": "Move selected target down",
   "screen.touristry.tourist_block.target.remove.tooltip": "Remove selected target from list",

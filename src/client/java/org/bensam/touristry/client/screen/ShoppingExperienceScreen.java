@@ -151,6 +151,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
 
     //region Constants: Pricing Tab
     // Pricing screen constants
+    private static final boolean PRICING_SHOW_REMOVE_ALL_BUTTON = false;
     private static final Component PRICING_SCREEN_TITLE = Component.translatable("screen.touristry.tourist_block.tab.pricing");
     private static final Component PRICING_IMPORT_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.pricing.import.tooltip");
     private static final Component PRICING_DEFAULT_LABEL = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.pricing.default.label");
@@ -160,20 +161,27 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     private static final Component PRICING_ACCEPT_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.pricing.accept.tooltip");
     private static final Component PRICING_CANCEL_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.pricing.cancel.tooltip");
     private static final Component PRICING_REMOVE_ALL_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.pricings.remove_all.tooltip");
+    private static final Component PRICING_REMOVE_DEFAULTS_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.pricings.remove_defaults.tooltip");
     private static final int PRICING_IMPORT_BUTTON_X = 107;
     private static final int PRICING_IMPORT_BUTTON_Y = SCROLLBOX_TOP_Y;
-    private static final int PRICING_DEFAULT_LABEL_RIGHT_X = 211;
+    private static final int PRICING_DEFAULT_LABEL_RIGHT_X = 210;
     private static final int PRICING_DEFAULT_LABEL_Y = 22;
-    private static final int PRICING_RESET_DEFAULT_BUTTON_X = 238;
+    private static final int PRICING_RESET_DEFAULT_BUTTON_X = 234;
     private static final int PRICING_RESET_DEFAULT_BUTTON_Y = 26;
-    private static final int PRICING_ACCEPT_BUTTON_X = 242;
-    private static final int PRICING_ACCEPT_BUTTON_Y = 50;
-    private static final int PRICING_CANCEL_BUTTON_X = 242;
-    private static final int PRICING_CANCEL_BUTTON_Y = 59;
-    private static final int PRICING_REMOVE_BUTTON_X = 254;
-    private static final int PRICING_REMOVE_BUTTON_Y = 53;
+    private static final int PRICING_REMOVE_DEFAULTS_BUTTON_X = 107;
+    private static final int PRICING_REMOVE_DEFAULTS_BUTTON_Y = PRICING_SHOW_REMOVE_ALL_BUTTON ? 37 : 55;
     private static final int PRICING_REMOVE_ALL_BUTTON_X = 107;
-    private static final int PRICING_REMOVE_ALL_BUTTON_Y = 51;
+    private static final int PRICING_REMOVE_ALL_BUTTON_Y = 55;
+    private static final int PRICING_CHANGE_FOR_SALE_QTY_BUTTON_X = 180;
+    private static final int PRICING_CHANGE_FOR_SALE_QTY_BUTTON_Y = 50;
+    private static final int PRICING_CHANGE_COST_QTY_BUTTON_X = 234;
+    private static final int PRICING_CHANGE_COST_QTY_BUTTON_Y = 50;
+    private static final int PRICING_ACCEPT_BUTTON_X = 243;
+    private static final int PRICING_ACCEPT_BUTTON_Y = 50;
+    private static final int PRICING_CANCEL_BUTTON_X = 243;
+    private static final int PRICING_CANCEL_BUTTON_Y = 59;
+    private static final int PRICING_REMOVE_BUTTON_X = 255;
+    private static final int PRICING_REMOVE_BUTTON_Y = 55;
     //endregion
 
     private enum TabDisplay {
@@ -245,8 +253,8 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     private int targetsScrolledOff;
     private final ExperienceScrollBoxButton[] targetButtons = new ExperienceScrollBoxButton[SCROLLBOX_ROWS];
     private TargetOrderedButton targetOrderedToggleButton;
-    private MoveTargetOrderButton targetOrderUpButton;
-    private MoveTargetOrderButton targetOrderDownButton;
+    private ImageButton targetOrderUpButton;
+    private ImageButton targetOrderDownButton;
     private ImageButton targetRemoveButton;
     private ImageButton targetRemoveAllButton;
 
@@ -260,9 +268,14 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     private ImageButton itemImportButton;
     private ImageButton itemPriceRemoveButton;
     private ImageButton itemPriceResetDefaultButton;
+    private ImageButton itemPriceRemoveDefaultsButton;
+    private ImageButton itemPriceRemoveAllButton;
+    private ImageButton itemPriceForSaleQtyUpButton;
+    private ImageButton itemPriceForSaleQtyDownButton;
+    private ImageButton itemPriceCostQtyUpButton;
+    private ImageButton itemPriceCostQtyDownButton;
     private ImageButton itemPriceAcceptButton;
     private ImageButton itemPriceCancelButton;
-    private ImageButton itemPriceRemoveAllButton;
 
     public ShoppingExperienceScreen(ShoppingExperienceMenu container, Inventory inventory, Component title) {
         super(container, inventory, title);
@@ -408,10 +421,11 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
         // Add target move up button.
         buttonX = this.leftPos + TARGET_CHANGE_ORDER_BUTTON_X;
         buttonY = this.topPos + TARGET_CHANGE_ORDER_BUTTON_Y;
-        int u = 18;
-        int v = 4;
-        this.targetOrderUpButton = this.addRenderableWidget(new MoveTargetOrderButton(
+        int u = 17;
+        int v = 6;
+        this.targetOrderUpButton = this.addRenderableWidget(new NoFocusImageButton(
                 buttonX, buttonY,
+                14, 8,
                 u, v,
                 new WidgetSprites(MOVE_UP_SPRITE, MOVE_UP_HIGHLIGHTED_SPRITE),
                 button -> {
@@ -432,9 +446,10 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
 
         // Add target move down button.
         buttonY += 12;
-        v = 20;
-        this.targetOrderDownButton = this.addRenderableWidget(new MoveTargetOrderButton(
+        v = 18;
+        this.targetOrderDownButton = this.addRenderableWidget(new NoFocusImageButton(
                 buttonX, buttonY,
+                14, 8,
                 u, v,
                 new WidgetSprites(MOVE_DOWN_SPRITE, MOVE_DOWN_HIGHLIGHTED_SPRITE),
                 button -> {
@@ -498,9 +513,9 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                     ));
                     this.targetsScrolledOff = 0;
                     this.selectTargetIndex(-1);
-                }
+                },
+                TARGET_REMOVE_ALL_TOOLTIP
         ));
-        this.targetRemoveAllButton.setTooltip(Tooltip.create(TARGET_REMOVE_ALL_TOOLTIP));
     }
 
     private void removeTargetButtons() {
@@ -558,9 +573,9 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                     ));
                     this.pricesScrolledOff = 0;
                     this.selectPricingIndex(-1);
-                }
+                },
+                PRICING_IMPORT_TOOLTIP
         ));
-        this.itemImportButton.setTooltip(Tooltip.create(PRICING_IMPORT_TOOLTIP));
 
         buttonX = this.leftPos + PRICING_RESET_DEFAULT_BUTTON_X;
         buttonY = this.topPos + PRICING_RESET_DEFAULT_BUTTON_Y;
@@ -575,70 +590,32 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                             -1,
                             -1
                     ));
-                }
+                },
+                PRICING_RESET_DEFAULT_TOOLTIP
         ));
-        this.itemPriceResetDefaultButton.setTooltip(Tooltip.create(PRICING_RESET_DEFAULT_TOOLTIP));
 
-        buttonX = this.leftPos + PRICING_ACCEPT_BUTTON_X;
-        buttonY = this.topPos + PRICING_ACCEPT_BUTTON_Y;
-        this.itemPriceAcceptButton = this.addRenderableWidget(new NoFocusImageButton(
+        buttonX = this.leftPos + PRICING_REMOVE_DEFAULTS_BUTTON_X;
+        buttonY = this.topPos + PRICING_REMOVE_DEFAULTS_BUTTON_Y;
+        this.itemPriceRemoveDefaultsButton = this.addRenderableWidget(new NoFocusImageButton(
                 buttonX, buttonY,
-                9, 9,
-                new WidgetSprites(ACCEPT_SPRITE, ACCEPT_HIGHLIGHTED_SPRITE),
+                32, 16,
+                new WidgetSprites(REMOVE_ALL_SPRITE, REMOVE_ALL_HIGHLIGHTED_SPRITE),
                 button -> {
-                    ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
-                            this.menu.getContainerId(),
-                            ExperienceScreenAction.ACCEPT_ITEM_PRICE,
-                            -1,
-                            -1
-                    ));
-                }
-        ));
-        this.itemPriceAcceptButton.setTooltip(Tooltip.create(PRICING_ACCEPT_TOOLTIP));
-
-        buttonX = this.leftPos + PRICING_CANCEL_BUTTON_X;
-        buttonY = this.topPos + PRICING_CANCEL_BUTTON_Y;
-        this.itemPriceCancelButton = this.addRenderableWidget(new NoFocusImageButton(
-                buttonX, buttonY,
-                9, 9,
-                new WidgetSprites(CANCEL_SPRITE, CANCEL_HIGHLIGHTED_SPRITE),
-                button -> {
-                    ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
-                            this.menu.getContainerId(),
-                            ExperienceScreenAction.CLEAR_ITEM_PRICE,
-                            -1,
-                            -1
-                    ));
-                    this.selectPricingIndex(-1);
-                }
-        ));
-        this.itemPriceCancelButton.setTooltip(Tooltip.create(PRICING_CANCEL_TOOLTIP));
-
-        buttonX = this.leftPos + PRICING_REMOVE_BUTTON_X;
-        buttonY = this.topPos + PRICING_REMOVE_BUTTON_Y;
-        this.itemPriceRemoveButton = this.addRenderableWidget(new NoFocusImageButton(
-                buttonX, buttonY,
-                12, 12,
-                new WidgetSprites(TRASH_SPRITE, TRASH_HIGHLIGHTED_SPRITE),
-                button -> {
-                    if (!this.isItemPriceSelected()) {
+                    if (this.menu.getSyncedItemPrices().isEmpty()) {
+                        // No item prices to remove.
                         return;
                     }
                     ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
                             this.menu.getContainerId(),
-                            ExperienceScreenAction.REMOVE_ITEM_PRICE,
-                            this.selectedItemPriceIndex,
+                            ExperienceScreenAction.REMOVE_DEFAULT_ITEM_PRICES,
+                            -1,
                             -1
                     ));
-                    // Adjust scroll position as needed.
-                    int numPrices = this.menu.getSyncedItemPrices().size() - 1;
-                    if ((numPrices - this.pricesScrolledOff) < SCROLLBOX_ROWS) {
-                        this.pricesScrolledOff = Math.max(0, this.pricesScrolledOff - 1);
-                    }
+                    this.pricesScrolledOff = 0;
                     this.selectPricingIndex(-1);
-                }
+                },
+                PRICING_REMOVE_DEFAULTS_TOOLTIP
         ));
-        this.itemPriceRemoveButton.setTooltip(Tooltip.create(PRICING_REMOVE_TOOLTIP));
 
         buttonX = this.leftPos + PRICING_REMOVE_ALL_BUTTON_X;
         buttonY = this.topPos + PRICING_REMOVE_ALL_BUTTON_Y;
@@ -659,9 +636,158 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                     ));
                     this.pricesScrolledOff = 0;
                     this.selectPricingIndex(-1);
+                },
+                PRICING_REMOVE_ALL_TOOLTIP
+        ));
+        this.itemPriceRemoveAllButton.visible = PRICING_SHOW_REMOVE_ALL_BUTTON;
+
+        buttonX = this.leftPos + PRICING_CHANGE_FOR_SALE_QTY_BUTTON_X;
+        buttonY = this.topPos + PRICING_CHANGE_FOR_SALE_QTY_BUTTON_Y;
+        int u = 16;
+        int v = 0;
+        this.itemPriceForSaleQtyUpButton = this.addRenderableWidget(new NoFocusImageButton(
+                buttonX, buttonY,
+                8, 8,
+                u, v,
+                16, 16,
+                new WidgetSprites(MOVE_UP_SPRITE, MOVE_UP_HIGHLIGHTED_SPRITE),
+                button -> {
+                    if (!this.menu.getSlot(ShoppingExperienceMenu.SHOPPING_ITEM_FOR_SALE_SLOT).hasItem()) {
+                        // No item in for sale slot.
+                        return;
+                    }
+                    ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
+                            this.menu.getContainerId(),
+                            ExperienceScreenAction.ADD_TO_FOR_SALE_QTY,
+                            1,
+                            -1
+                    ));
                 }
         ));
-        this.itemPriceRemoveAllButton.setTooltip(Tooltip.create(PRICING_REMOVE_ALL_TOOLTIP));
+
+        buttonY += 9;
+        v = 16;
+        this.itemPriceForSaleQtyDownButton = this.addRenderableWidget(new NoFocusImageButton(
+                buttonX, buttonY,
+                8, 8,
+                u, v,
+                16, 16,
+                new WidgetSprites(MOVE_DOWN_SPRITE, MOVE_DOWN_HIGHLIGHTED_SPRITE),
+                button -> {
+                    if (!this.menu.getSlot(ShoppingExperienceMenu.SHOPPING_ITEM_FOR_SALE_SLOT).hasItem()) {
+                        // No item in for sale slot.
+                        return;
+                    }
+                    ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
+                            this.menu.getContainerId(),
+                            ExperienceScreenAction.ADD_TO_FOR_SALE_QTY,
+                            -1,
+                            -1
+                    ));
+                }
+        ));
+
+        buttonX = this.leftPos + PRICING_CHANGE_COST_QTY_BUTTON_X;
+        buttonY = this.topPos + PRICING_CHANGE_COST_QTY_BUTTON_Y;
+        v = 0;
+        this.itemPriceCostQtyUpButton = this.addRenderableWidget(new NoFocusImageButton(
+                buttonX, buttonY,
+                8, 8,
+                u, v,
+                16, 16,
+                new WidgetSprites(MOVE_UP_SPRITE, MOVE_UP_HIGHLIGHTED_SPRITE),
+                button -> {
+                    ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
+                            this.menu.getContainerId(),
+                            ExperienceScreenAction.ADD_TO_COST_QTY,
+                            1,
+                            -1
+                    ));
+                }
+        ));
+
+        buttonY += 9;
+        v = 16;
+        this.itemPriceCostQtyDownButton = this.addRenderableWidget(new NoFocusImageButton(
+                buttonX, buttonY,
+                8, 8,
+                u, v,
+                16, 16,
+                new WidgetSprites(MOVE_DOWN_SPRITE, MOVE_DOWN_HIGHLIGHTED_SPRITE),
+                button -> {
+                    if (!this.menu.getSlot(ShoppingExperienceMenu.SHOPPING_COST_SLOT).hasItem()) {
+                        // No item in cost slot.
+                        return;
+                    }
+                    ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
+                            this.menu.getContainerId(),
+                            ExperienceScreenAction.ADD_TO_COST_QTY,
+                            -1,
+                            -1
+                    ));
+                }
+        ));
+
+        buttonX = this.leftPos + PRICING_ACCEPT_BUTTON_X;
+        buttonY = this.topPos + PRICING_ACCEPT_BUTTON_Y;
+        this.itemPriceAcceptButton = this.addRenderableWidget(new NoFocusImageButton(
+                buttonX, buttonY,
+                9, 9,
+                new WidgetSprites(ACCEPT_SPRITE, ACCEPT_HIGHLIGHTED_SPRITE),
+                button -> {
+                    ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
+                            this.menu.getContainerId(),
+                            ExperienceScreenAction.ACCEPT_ITEM_PRICE,
+                            -1,
+                            -1
+                    ));
+                },
+                PRICING_ACCEPT_TOOLTIP
+        ));
+
+        buttonX = this.leftPos + PRICING_CANCEL_BUTTON_X;
+        buttonY = this.topPos + PRICING_CANCEL_BUTTON_Y;
+        this.itemPriceCancelButton = this.addRenderableWidget(new NoFocusImageButton(
+                buttonX, buttonY,
+                9, 9,
+                new WidgetSprites(CANCEL_SPRITE, CANCEL_HIGHLIGHTED_SPRITE),
+                button -> {
+                    ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
+                            this.menu.getContainerId(),
+                            ExperienceScreenAction.CLEAR_ITEM_PRICE,
+                            -1,
+                            -1
+                    ));
+                    this.selectPricingIndex(-1);
+                },
+                PRICING_CANCEL_TOOLTIP
+        ));
+
+        buttonX = this.leftPos + PRICING_REMOVE_BUTTON_X;
+        buttonY = this.topPos + PRICING_REMOVE_BUTTON_Y;
+        this.itemPriceRemoveButton = this.addRenderableWidget(new NoFocusImageButton(
+                buttonX, buttonY,
+                8, 8,
+                new WidgetSprites(TRASH_SPRITE, TRASH_HIGHLIGHTED_SPRITE),
+                button -> {
+                    if (!this.isItemPriceSelected()) {
+                        return;
+                    }
+                    ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
+                            this.menu.getContainerId(),
+                            ExperienceScreenAction.REMOVE_ITEM_PRICE,
+                            this.selectedItemPriceIndex,
+                            -1
+                    ));
+                    // Adjust scroll position as needed.
+                    int numPrices = this.menu.getSyncedItemPrices().size() - 1;
+                    if ((numPrices - this.pricesScrolledOff) < SCROLLBOX_ROWS) {
+                        this.pricesScrolledOff = Math.max(0, this.pricesScrolledOff - 1);
+                    }
+                    this.selectPricingIndex(-1);
+                },
+                PRICING_REMOVE_TOOLTIP
+        ));
     }
 
     private void removePricingButtons() {
@@ -679,10 +805,15 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
 
         this.removeWidget(this.itemImportButton);
         this.removeWidget(this.itemPriceResetDefaultButton);
+        this.removeWidget(this.itemPriceRemoveDefaultsButton);
+        this.removeWidget(this.itemPriceRemoveAllButton);
+        this.removeWidget(this.itemPriceForSaleQtyUpButton);
+        this.removeWidget(this.itemPriceForSaleQtyDownButton);
+        this.removeWidget(this.itemPriceCostQtyUpButton);
+        this.removeWidget(this.itemPriceCostQtyDownButton);
         this.removeWidget(this.itemPriceAcceptButton);
         this.removeWidget(this.itemPriceCancelButton);
         this.removeWidget(this.itemPriceRemoveButton);
-        this.removeWidget(this.itemPriceRemoveAllButton);
     }
 
     @Override
@@ -752,10 +883,18 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
                     this.leftPos + PRICING_IMPORT_BUTTON_X + 16,
                     this.topPos + PRICING_IMPORT_BUTTON_Y);
 
-            // Render trash can for remove all button.
+            // Render trash cans for remove defaults button and remove all button.
             guiGraphics.blitSprite(
                     RenderPipelines.GUI_TEXTURED,
-                    this.itemPriceRemoveAllButton.isHovered() ? TRASH_HIGHLIGHTED_SPRITE : TRASH_SPRITE,
+                    this.itemPriceRemoveDefaultsButton.isHovered() ? TRASH_HIGHLIGHTED_SPRITE : TRASH_SPRITE,
+                    this.leftPos + PRICING_REMOVE_DEFAULTS_BUTTON_X + 18,
+                    this.topPos + PRICING_REMOVE_DEFAULTS_BUTTON_Y,
+                    12, 12
+            );
+
+            guiGraphics.blitSprite(
+                    RenderPipelines.GUI_TEXTURED,
+                    this.itemPriceRemoveAllButton.visible && this.itemPriceRemoveAllButton.isHovered() ? TRASH_HIGHLIGHTED_SPRITE : TRASH_SPRITE,
                     this.leftPos + PRICING_REMOVE_ALL_BUTTON_X + 18,
                     this.topPos + PRICING_REMOVE_ALL_BUTTON_Y,
                     12, 12
