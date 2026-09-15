@@ -18,10 +18,10 @@ public class TouristHeldItemLayer<S extends TouristRenderState, M extends Entity
 
     @Override
     protected void applyTranslation(S holdingEntityRenderState, PoseStack poseStack) {
-        if (holdingEntityRenderState.isHoldingCamera) {
+        if (holdingEntityRenderState.isUsingCamera) {
             this.getParentModel().translateToCameraHold(holdingEntityRenderState, poseStack);
             poseStack.mulPose(Axis.YP.rotation((float) Math.PI));
-            poseStack.mulPose(Axis.XP.rotation(1.45F));
+            poseStack.mulPose(Axis.XP.rotation(1.35F));
             poseStack.scale(1.3F, 1.3F, 1.3F);
             poseStack.translate(0.0F, 0.1F, 0.11F);
         } else {

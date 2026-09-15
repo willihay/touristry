@@ -10,7 +10,7 @@ public class TouristRenderState extends HoldingEntityRenderState implements Tour
     public String clothingVariantKey;
     public boolean isArmsCrossed;
     public boolean isCrouching;
-    public boolean isHoldingCamera;
+    public boolean isUsingCamera;
     public boolean isUnhappy;
     public boolean isWaving;
 

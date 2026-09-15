@@ -4,7 +4,6 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.renderer.entity.AgeableMobRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
-import net.minecraft.client.renderer.entity.layers.CrossedArmsItemLayer;
 import net.minecraft.client.renderer.entity.layers.CustomHeadLayer;
 import net.minecraft.client.renderer.entity.state.HoldingEntityRenderState;
 import net.minecraft.resources.Identifier;
@@ -15,8 +14,6 @@ import org.bensam.touristry.client.render.entity.layers.TouristOuterwearLayer;
 import org.bensam.touristry.client.render.entity.state.TouristRenderState;
 import org.bensam.touristry.entity.TouristEntity;
 import org.jspecify.annotations.NonNull;
-
-import java.util.*;
 
 @Environment(EnvType.CLIENT)
 public class TouristRenderer extends AgeableMobRenderer<TouristEntity, TouristRenderState, TouristModel> {
@@ -59,8 +56,8 @@ public class TouristRenderer extends AgeableMobRenderer<TouristEntity, TouristRe
 
         // Extract pose and animation states.
         //touristRenderState.isArmsCrossed = true;
-        //touristRenderState.isCrouching = false;
-        touristRenderState.isHoldingCamera = touristEntity.isHoldingCamera();
+        touristRenderState.isCrouching = touristEntity.isCrouching();
+        touristRenderState.isUsingCamera = touristEntity.isUsingCamera();
         touristRenderState.isWaving = touristEntity.isWaving() && !touristRenderState.isUnhappy && touristRenderState.heldItem.isEmpty();
     }
 }

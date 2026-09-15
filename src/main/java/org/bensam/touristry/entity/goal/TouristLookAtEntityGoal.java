@@ -33,7 +33,9 @@ public class TouristLookAtEntityGoal extends LookAtPlayerGoal {
         super.tick();
 
         if (this.canWaveAtEntity && this.lookAt != null && !this.tourist.isWaving() && this.lookAt instanceof LivingEntity entity) {
-            if (this.tourist.isLookingAtMe(entity, WAVING_FOV, true, true, this.tourist.getEyeY())) {
+            if (this.tourist.isLookingAtMe(entity, WAVING_FOV, true, true, this.tourist.getEyeY()) &&
+                    entity.isLookingAtMe(this.tourist, WAVING_FOV, true, true, entity.getEyeY())
+            ) {
                 this.tourist.setWavingAtEntity(entity, true);
             }
         }

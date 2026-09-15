@@ -51,6 +51,7 @@ public class Touristry implements ModInitializer {
 		ModBlocks.initialize();
 		ModBlockEntities.initialize();
 		ModEntities.initialize();
+		ModSounds.initialize();
 		ModMenus.initialize();
 		ModCreativeTab.initialize();
 

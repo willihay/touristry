@@ -49,5 +49,7 @@
   "screen.touristry.tourist_block.status.label": "Status:",
   "screen.touristry.tourist_block.status.open_for_business": "Open for business",
   "screen.touristry.tourist_block.status.closed_for_business": "Closed for business",
-  "screen.touristry.tourist_block.target_key.label": "Target Key:"
+  "screen.touristry.tourist_block.target_key.label": "Target Key:",
+
+  "sound.touristry.tourist_camera": "Tourist is taking a photo"
 }

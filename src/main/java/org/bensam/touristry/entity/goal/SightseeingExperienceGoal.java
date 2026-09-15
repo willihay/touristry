@@ -11,7 +11,7 @@ public class SightseeingExperienceGoal extends LookAtTargetPosGoal {
     private final int adjustedTimeAtTarget;
 
     public SightseeingExperienceGoal(TouristEntity tourist, BlockPos targetPos, int startingTickCount, int timeAtTarget) {
-        super(tourist, targetPos, false);
+        super(tourist, targetPos, false, true);
         this.tourist = tourist;
         this.tickCount = this.adjustedTickDelay(startingTickCount);
         this.adjustedTimeAtTarget = this.adjustedTickDelay(timeAtTarget);
@@ -35,7 +35,7 @@ public class SightseeingExperienceGoal extends LookAtTargetPosGoal {
             return;
         }
 
-        if (this.tickCount >= this.adjustedTimeAtTarget) {
+        if (this.tickCount >= this.adjustedTimeAtTarget && (!this.tourist.isUsingCamera() || (this.tickCount - this.adjustedTimeAtTarget) > this.adjustedTickDelay(20))) {
             this.tourist.getMind().finishTargetGoal();
         }
     }

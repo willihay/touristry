@@ -31,7 +31,7 @@ public class ShoppingExperienceGoal extends LookAtTargetPosGoal {
     private final boolean isPurchaseCounter;
 
     public ShoppingExperienceGoal(TouristEntity tourist, BlockPos shoppingExperiencePos, BlockPos targetPos, int startingTickCount, int timeAtTarget, boolean isPurchaseCounter) {
-        super(tourist, targetPos, true);
+        super(tourist, targetPos, true, false);
         this.tourist = tourist;
         this.shoppingExperiencePos = shoppingExperiencePos;
         this.targetPos = targetPos;

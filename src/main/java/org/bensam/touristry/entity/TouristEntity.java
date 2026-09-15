@@ -34,6 +34,7 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import org.bensam.touristry.ModEntities;
 import org.bensam.touristry.ModItems;
+import org.bensam.touristry.ModSounds;
 import org.bensam.touristry.Touristry;
 import org.bensam.touristry.config.ClothingOptionsLoader;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
@@ -61,7 +62,8 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
 
     private static final EntityDataAccessor<Integer> DATA_BASE_MODEL = SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<String> DATA_CLOTHING_VARIANT = SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.STRING);
-    private static final EntityDataAccessor<Boolean> DATA_HOLDING_CAMERA = SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Boolean> DATA_CROUCHING = SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Boolean> DATA_USING_CAMERA = SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DATA_WAVING = SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.BOOLEAN);
 
     private int baseModelVariant;
@@ -138,7 +140,8 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
         super.defineSynchedData(builder);
         builder.define(DATA_BASE_MODEL, this.baseModelVariant);
         builder.define(DATA_CLOTHING_VARIANT, this.clothingVariantKey != null ? this.clothingVariantKey : "");
-        builder.define(DATA_HOLDING_CAMERA, false);
+        builder.define(DATA_CROUCHING, false);
+        builder.define(DATA_USING_CAMERA, false);
         builder.define(DATA_WAVING, false);
     }
 
@@ -160,25 +163,35 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
         this.entityData.set(DATA_CLOTHING_VARIANT, value);
     }
 
-    public boolean isHoldingCamera() {
-        return this.entityData.get(DATA_HOLDING_CAMERA);
+    public boolean isCrouching() {
+        return this.entityData.get(DATA_CROUCHING);
     }
 
-    public void setHoldingCamera(boolean value) {
-        if (value) {
-            this.giveItemToHold(new ItemStack(ModItems.TOURIST_CAMERA.get()));
+    public void setCrouching(boolean crouching) {
+        this.entityData.set(DATA_CROUCHING, crouching);
+    }
+
+    public boolean isUsingCamera() {
+        return this.entityData.get(DATA_USING_CAMERA);
+    }
+
+    public void setUsingCamera(boolean usingCamera) {
+        if (usingCamera && !this.isBaby()) {
+            this.giveItemToHold(this.getCamera());
         } else {
-            this.clearHeldItem();
+            if (this.hasHeldItem() && ItemStack.isSameItem(this.getMainHandItem(), this.getCamera())) {
+                this.clearHeldItem();
+            }
         }
-        this.entityData.set(DATA_HOLDING_CAMERA, value);
+        this.entityData.set(DATA_USING_CAMERA, usingCamera);
     }
 
     public boolean isWaving() {
         return this.entityData.get(DATA_WAVING);
     }
 
-    protected void setWaving(boolean value) {
-        this.entityData.set(DATA_WAVING, value);
+    protected void setWaving(boolean waving) {
+        this.entityData.set(DATA_WAVING, waving);
     }
 
     public void setWavingAtEntity(Entity entity, boolean wave) {
@@ -361,6 +374,10 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
         return null; // not applicable
     }
 
+    protected ItemStack getCamera() {
+        return new ItemStack(ModItems.TOURIST_CAMERA.get());
+    }
+
     public double getClosestDistanceToTarget() {
         return this.mind.getClosestDistanceToDestination();
     }
@@ -526,6 +543,18 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
 
         if (this.level() instanceof ServerLevel serverLevel) {
             this.mind.onStoppedSleeping(serverLevel);
+        }
+    }
+
+    public void takePicture() {
+        if (this.level().isClientSide()) {
+            return;
+        }
+
+        if (this.isUsingCamera()) {
+            ItemStack camera = this.getCamera();
+            // TODO Play camera's picture-taking sound.
+            this.playSound(ModSounds.TOURIST_TAKING_PHOTO, 1.0F, 1.0F);
         }
     }
 
