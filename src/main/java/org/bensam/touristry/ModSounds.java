@@ -6,7 +6,12 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvent;
 
 public class ModSounds {
-    public static final SoundEvent TOURIST_TAKING_PHOTO = register("tourist_camera");
+    public static final SoundEvent CAMERA = register("tourist_camera");
+    public static final SoundEvent CAMERA_FLASH = register("tourist_camera_flash");
+    public static final SoundEvent CAMERA_CELLPHONE = register("tourist_camera_cellphone");
+    public static final SoundEvent CAMERA_CELLPHONE_FLASH = register("tourist_camera_cellphone_flash");
+    public static final SoundEvent CAMERA_INSTAMATIC = register("tourist_camera_instamatic");
+    public static final SoundEvent CAMERA_INSTAMATIC_FLASH = register("tourist_camera_instamatic_flash");
 
     private ModSounds() {}
 

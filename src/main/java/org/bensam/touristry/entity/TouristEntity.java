@@ -1,6 +1,7 @@
 package org.bensam.touristry.entity;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -32,10 +33,8 @@ import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.entity.ContainerOpenersCounter;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
-import org.bensam.touristry.ModEntities;
-import org.bensam.touristry.ModItems;
-import org.bensam.touristry.ModSounds;
-import org.bensam.touristry.Touristry;
+import net.minecraft.world.phys.Vec3;
+import org.bensam.touristry.*;
 import org.bensam.touristry.config.ClothingOptionsLoader;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
 import org.bensam.touristry.config.ModServerConfigManager;
@@ -44,6 +43,7 @@ import org.bensam.touristry.entity.goal.MoveToTargetGoal;
 import org.bensam.touristry.entity.goal.TouristLookAtEntityGoal;
 import org.bensam.touristry.entity.goal.TouristRandomLookAroundGoal;
 import org.bensam.touristry.entity.goal.TouristRandomStrollGoal;
+import org.bensam.touristry.item.CameraModelType;
 import org.bensam.touristry.tourism.TourismManager;
 import org.bensam.touristry.tourism.TouristLocation;
 import org.bensam.touristry.tourism.TouristReview;
@@ -62,13 +62,18 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
 
     private static final EntityDataAccessor<Integer> DATA_BASE_MODEL = SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<String> DATA_CLOTHING_VARIANT = SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.STRING);
+
+    private static final EntityDataAccessor<Boolean> DATA_CAMERA_ON_STICK = SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DATA_CROUCHING = SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DATA_USING_CAMERA = SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DATA_WAVING = SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.BOOLEAN);
 
+    private final TouristMind mind;
     private int baseModelVariant;
     private String clothingVariantKey = ClothingOptionsLoader.DEFAULT_KEY;
-    private final TouristMind mind;
+    private CameraModelType cameraModel;
+    private ItemStack baseCamera;
+    private ItemStack flashCamera;
     private List<ItemPrice> shoppingBag = new ArrayList<>();
 
     private BlockPos openContainer = null;
@@ -90,10 +95,47 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
             this.setClothingVariant(this.generateClothingVariant());
         }
         this.mind = new TouristMind(this);
+        this.selectCameraModel();
         this.getNavigation().setCanOpenDoors(true);
         this.getNavigation().setCanFloat(true);
         this.getNavigation().setRequiredPathLength(48.0F);
         logActivity(Verbosity.LEVEL_1_DIAGNOSTICS, "Constructed tourist {} base={} clothing={}", this.uuid, this.baseModelVariant, this.clothingVariantKey);
+    }
+
+    // Instance creation helpers
+    public static AttributeSupplier.Builder createTouristAttributes() {
+        return Mob.createMobAttributes()
+                .add(Attributes.MOVEMENT_SPEED, 0.3)
+                .add(Attributes.MAX_HEALTH, 20.0)
+                .add(Attributes.FOLLOW_RANGE, 32.0)
+                .add(Attributes.BLOCK_INTERACTION_RANGE, 4.5);
+    }
+
+    @Override
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(DATA_BASE_MODEL, this.baseModelVariant);
+        builder.define(DATA_CLOTHING_VARIANT, this.clothingVariantKey != null ? this.clothingVariantKey : "");
+
+        builder.define(DATA_CAMERA_ON_STICK, false);
+        builder.define(DATA_CROUCHING, false);
+        builder.define(DATA_USING_CAMERA, false);
+        builder.define(DATA_WAVING, false);
+    }
+
+    @Override
+    public @Nullable SpawnGroupData finalizeSpawn(ServerLevelAccessor serverLevelAccessor, DifficultyInstance difficultyInstance, EntitySpawnReason entitySpawnReason, @Nullable SpawnGroupData spawnGroupData) {
+        // Customize this tourist's movement speed.
+        AttributeInstance speedAttribute = this.getAttribute(Attributes.MOVEMENT_SPEED);
+        if (speedAttribute != null) {
+            speedAttribute.addPermanentModifier(new AttributeModifier(
+                    TOURIST_SPEED_VARIATION_ID,
+                    this.generateSpeedModifier(),
+                    AttributeModifier.Operation.ADD_VALUE
+            ));
+        }
+
+        return super.finalizeSpawn(serverLevelAccessor, difficultyInstance, entitySpawnReason, spawnGroupData);
     }
 
     private int generateBaseModelVariant() {
@@ -112,39 +154,21 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
         return Math.clamp(modifier, -0.1, 0.1);
     }
 
-    public static AttributeSupplier.Builder createTouristAttributes() {
-        return Mob.createMobAttributes()
-                .add(Attributes.MOVEMENT_SPEED, 0.3)
-                .add(Attributes.MAX_HEALTH, 20.0)
-                .add(Attributes.FOLLOW_RANGE, 32.0)
-                .add(Attributes.BLOCK_INTERACTION_RANGE, 4.5);
-    }
+    private void selectCameraModel() {
+        this.cameraModel = CameraModelType.getRandom(this.random);
 
-    @Override
-    public @Nullable SpawnGroupData finalizeSpawn(ServerLevelAccessor serverLevelAccessor, DifficultyInstance difficultyInstance, EntitySpawnReason entitySpawnReason, @Nullable SpawnGroupData spawnGroupData) {
-        // Customize this tourist's movement speed.
-        AttributeInstance speedAttribute = this.getAttribute(Attributes.MOVEMENT_SPEED);
-        if (speedAttribute != null) {
-            speedAttribute.addPermanentModifier(new AttributeModifier(
-                    TOURIST_SPEED_VARIATION_ID,
-                    this.generateSpeedModifier(),
-                    AttributeModifier.Operation.ADD_VALUE
-            ));
+        this.baseCamera = new ItemStack(this.cameraModel.getItem());
+        if (this.cameraModel.hasBaseModelVariants()) {
+            this.baseCamera.set(DataComponents.CUSTOM_MODEL_DATA, this.cameraModel.getRandomBaseModelData(this.random));
         }
 
-        return super.finalizeSpawn(serverLevelAccessor, difficultyInstance, entitySpawnReason, spawnGroupData);
+        this.flashCamera = new ItemStack(this.cameraModel.getItem());
+        if (this.cameraModel.hasFlashModelVariants()) {
+            this.flashCamera.set(DataComponents.CUSTOM_MODEL_DATA, this.cameraModel.getRandomFlashModelData(this.random));
+        }
     }
 
-    @Override
-    protected void defineSynchedData(SynchedEntityData.Builder builder) {
-        super.defineSynchedData(builder);
-        builder.define(DATA_BASE_MODEL, this.baseModelVariant);
-        builder.define(DATA_CLOTHING_VARIANT, this.clothingVariantKey != null ? this.clothingVariantKey : "");
-        builder.define(DATA_CROUCHING, false);
-        builder.define(DATA_USING_CAMERA, false);
-        builder.define(DATA_WAVING, false);
-    }
-
+    // Entity data helpers
     public int getBaseModelVariant() {
         return this.entityData.get(DATA_BASE_MODEL);
     }
@@ -175,15 +199,22 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
         return this.entityData.get(DATA_USING_CAMERA);
     }
 
+    public boolean isCameraOnStick() {
+        return this.entityData.get(DATA_CAMERA_ON_STICK);
+    }
+
     public void setUsingCamera(boolean usingCamera) {
+        ItemStack camera = this.getCamera();
+
         if (usingCamera && !this.isBaby()) {
-            this.giveItemToHold(this.getCamera());
+            this.giveItemToHold(camera);
         } else {
-            if (this.hasHeldItem() && ItemStack.isSameItem(this.getMainHandItem(), this.getCamera())) {
+            if (this.hasHeldItem() && ItemStack.isSameItem(this.getMainHandItem(), camera)) {
                 this.clearHeldItem();
             }
         }
         this.entityData.set(DATA_USING_CAMERA, usingCamera);
+        this.entityData.set(DATA_CAMERA_ON_STICK, CameraModelType.isModelOnSelfieStick(camera.get(DataComponents.CUSTOM_MODEL_DATA)));
     }
 
     public boolean isWaving() {
@@ -202,6 +233,7 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
         return entity instanceof Player || entity instanceof AbstractVillager;
     }
 
+    // Goal helpers
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
@@ -222,6 +254,7 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
         this.goalSelector.removeGoal(goal);
     }
 
+    // Logging helpers
     public static void logActivity(Verbosity verbosityLevel, String message) {
         Verbosity verbosityConfig = ModServerConfigManager.getConfig().touristEntityConfig().getVerbosityLevel();
         if (verbosityLevel == Verbosity.ERRORS) {
@@ -240,6 +273,7 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
         }
     }
 
+    // Other helpers
     public void addToShoppingBag(ItemPrice newItem) {
         for (ItemPrice bagItem : this.shoppingBag) {
             if (bagItem.equals(newItem)) {
@@ -375,7 +409,7 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
     }
 
     protected ItemStack getCamera() {
-        return new ItemStack(ModItems.TOURIST_CAMERA.get());
+        return this.isCameraFlashNeeded() ? this.flashCamera : this.baseCamera;
     }
 
     public double getClosestDistanceToTarget() {
@@ -480,6 +514,12 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
         return this.mind.getState().isAtTouristLocation();
     }
 
+    private boolean isCameraFlashNeeded() {
+        Vec3 eyePos = this.position().add(0, this.getEyeHeight(), 0);
+        BlockPos eyeBlockPos = BlockPos.containing(eyePos);
+        return this.level().getMaxLocalRawBrightness(eyeBlockPos) <= 10;
+    }
+
     public boolean isTraveling() {
         return this.mind.getState().isTraveling();
     }
@@ -552,9 +592,11 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
         }
 
         if (this.isUsingCamera()) {
-            ItemStack camera = this.getCamera();
-            // TODO Play camera's picture-taking sound.
-            this.playSound(ModSounds.TOURIST_TAKING_PHOTO, 1.0F, 1.0F);
+            if (this.isCameraFlashNeeded()) {
+                this.playSound(this.cameraModel.getWithFlashSound());
+            } else {
+                this.playSound(this.cameraModel.getBaseSound());
+            }
         }
     }
 
@@ -611,6 +653,9 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
         super.addAdditionalSaveData(valueOutput);
         valueOutput.putInt("BaseModelVariant", this.baseModelVariant);
         valueOutput.putString("ClothingVariantKey", this.clothingVariantKey);
+        valueOutput.store("CameraModelVariant", CameraModelType.CODEC, this.cameraModel);
+        valueOutput.store("BaseCamera", ItemStack.CODEC, this.baseCamera);
+        valueOutput.store("FlashCamera", ItemStack.CODEC, this.flashCamera);
         if (!this.shoppingBag.isEmpty()) {
             valueOutput.store("ShoppingBag", ItemPrice.CODEC.listOf(), List.copyOf(this.shoppingBag));
         }
@@ -622,6 +667,9 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
         super.readAdditionalSaveData(valueInput);
         this.setBaseModelVariant(valueInput.getIntOr("BaseModelVariant", this.baseModelVariant));
         this.setClothingVariant(valueInput.getStringOr("ClothingVariantKey", this.clothingVariantKey));
+        this.cameraModel = valueInput.read("CameraModelVariant", CameraModelType.CODEC).orElse(this.cameraModel);
+        this.baseCamera = valueInput.read("BaseCamera", ItemStack.CODEC).orElse(this.baseCamera);
+        this.flashCamera = valueInput.read("FlashCamera", ItemStack.CODEC).orElse(this.flashCamera);
         this.shoppingBag = new ArrayList<>(
                 valueInput.read("ShoppingBag", ItemPrice.CODEC.listOf()).orElse(List.of())
         );

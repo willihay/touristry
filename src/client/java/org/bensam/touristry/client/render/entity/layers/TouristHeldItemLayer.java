@@ -22,8 +22,12 @@ public class TouristHeldItemLayer<S extends TouristRenderState, M extends Entity
             this.getParentModel().translateToCameraHold(holdingEntityRenderState, poseStack);
             poseStack.mulPose(Axis.YP.rotation((float) Math.PI));
             poseStack.mulPose(Axis.XP.rotation(1.35F));
-            poseStack.scale(1.3F, 1.3F, 1.3F);
-            poseStack.translate(0.0F, 0.1F, 0.11F);
+            poseStack.scale(1.25F, 1.25F, 1.25F);
+            if (holdingEntityRenderState.isCameraOnStick) {
+                poseStack.translate(-0.04F, 0.16F, 0.05F);
+            } else {
+                poseStack.translate(-0.12F, 0.16F, 0.05F);
+            }
         } else {
             super.applyTranslation(holdingEntityRenderState, poseStack);
         }

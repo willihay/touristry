@@ -24,6 +24,12 @@ public final class ModItems {
     private static Item touristCameraItem;
     public static final Supplier<Item> TOURIST_CAMERA = () -> touristCameraItem;
 
+    private static Item touristCameraInstamaticItem;
+    public static final Supplier<Item> TOURIST_CAMERA_INSTAMATIC = () -> touristCameraInstamaticItem;
+
+    private static Item touristPhoneItem;
+    public static final Supplier<Item> TOURIST_PHONE = () -> touristPhoneItem;
+
     public static void initialize() {
         ModServerConfig defaults = ModServerConfig.defaults();
 
@@ -41,6 +47,18 @@ public final class ModItems {
 
         touristCameraItem = register(
                 "tourist_camera",
+                Item::new,
+                new Item.Properties().stacksTo(1)
+        );
+
+        touristCameraInstamaticItem = register(
+                "tourist_camera_instamatic",
+                Item::new,
+                new Item.Properties().stacksTo(1)
+        );
+
+        touristPhoneItem = register(
+                "tourist_phone",
                 Item::new,
                 new Item.Properties().stacksTo(1)
         );

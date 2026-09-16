@@ -448,6 +448,21 @@ public final class TouristMind {
             return;
         }
 
+        // TODO: remove temp debug code
+        if (this.state == TouristState.IDLE) {
+            if (!this.tourist.isUsingCamera()) {
+                this.tourist.setUsingCamera(true);
+            }
+
+            if (serverLevel.getDayTime() % 20L == 0) {
+                this.tourist.setUsingCamera(true);
+            }
+
+            if (serverLevel.getDayTime() % 60L == 0) {
+                this.tourist.takePicture();
+            }
+        }
+
         // Time-based despawn check
         if (this.isTimeToDespawn()) {
             if (this.state.isAtExperience() && this.state != TouristState.WANDERING_AT_EXPERIENCE) {

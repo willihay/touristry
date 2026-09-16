@@ -35,6 +35,8 @@ public final class ModCreativeTab {
                     output.accept(ModBlocks.SIGHTSEEING_EXPERIENCE.get().asItem());
                     output.accept(ModItems.KEY_BLANK.get());
                     output.accept(ModItems.TOURIST_CAMERA.get());
+                    output.accept(ModItems.TOURIST_CAMERA_INSTAMATIC.get());
+                    output.accept(ModItems.TOURIST_PHONE.get());
                 })
                 .build();
 

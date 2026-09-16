@@ -1,0 +1,26 @@
+{
+  "model": {
+    "type": "minecraft:select",
+    "property": "minecraft:custom_model_data",
+    "cases": [
+      {
+        "when": "base",
+        "model": {
+          "type": "minecraft:model",
+          "model": "touristry:item/tourist_camera_cellphone"
+        }
+      },
+      {
+        "when": "selfie_stick",
+        "model": {
+          "type": "minecraft:model",
+          "model": "touristry:item/tourist_camera_cellphone_selfiestick"
+        }
+      }
+    ],
+    "fallback": {
+      "type": "minecraft:model",
+      "model": "touristry:item/tourist_camera_cellphone"
+    }
+  }
+}

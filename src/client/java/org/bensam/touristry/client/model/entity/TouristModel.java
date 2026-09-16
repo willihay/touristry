@@ -157,8 +157,13 @@ public class TouristModel extends EntityModel<TouristRenderState> implements Hea
                 this.rightArm.zRot = -0.2F + wave * 0.4F;
             }
         } else if (entityRenderState.isUsingCamera) {
-            this.rightArm.xRot = -1.62F + this.head.xRot - (entityRenderState.isCrouching ? (float) (Math.PI / 12) : 0);
-            this.head.yRot = Math.clamp(this.head.yRot, -1.0F, 1.2F);
+            this.rightArm.xRot = this.head.xRot - (entityRenderState.isCrouching ? (float) (Math.PI / 12) : 0);
+            if (entityRenderState.isCameraOnStick) {
+                this.rightArm.xRot -= 0.8F;
+            } else {
+                this.rightArm.xRot -= 1.62F;
+            }
+            this.head.yRot = Math.clamp(this.head.yRot, -0.9F, 1.2F);
             this.rightArm.yRot = this.head.yRot;
         }
     }

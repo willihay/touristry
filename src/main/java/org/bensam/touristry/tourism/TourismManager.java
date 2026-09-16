@@ -467,7 +467,7 @@ public class TourismManager {
         if (dayCount > lastDayThreshold || tickHour > lastHourThreshold) {
             lastDayThreshold = dayCount;
             lastHourThreshold = tickHour;
-            logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "Minecraft Day: {}; Time: {}; Ticks: {}", dayCount, getFriendlyTimeOfDay(dayTime, false), dayTime);
+            logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "Minecraft Day: {}; Time: {}; Ticks: {}", dayCount, getFriendlyTimeOfDay(dayTime, false, false), dayTime);
         }
 
         if (despawnAllTourists) {
@@ -511,7 +511,7 @@ public class TourismManager {
         persistSavedData();
     }
 
-    public static String getFriendlyTimeOfDay(long dayTimeTicks, boolean withDay) {
+    public static String getFriendlyTimeOfDay(long dayTimeTicks, boolean withDay, boolean withTicks) {
         long day = dayTimeTicks / 24000L;
         int tickTimeOfDay = (int)(dayTimeTicks % 24000L);
         int tickHour = tickTimeOfDay / 1000;
@@ -524,11 +524,17 @@ public class TourismManager {
             hour = 12;
         }
 
+        String friendlyTime = String.format("%d:%02d %s", hour, minutes, ampm);
+
         if (withDay) {
-            return String.format("%d:%02d %s", hour, minutes, ampm) + " on day " + day;
-        } else {
-            return String.format("%d:%02d %s", hour, minutes, ampm);
+            friendlyTime += " on day " + day;
         }
+
+        if (withTicks) {
+            friendlyTime += " (" + dayTimeTicks + " ticks)";
+        }
+
+        return friendlyTime;
     }
 
     public static List<ScheduledTouristSpawn> getPendingSpawns() {
@@ -573,7 +579,7 @@ public class TourismManager {
                         beaconBlockEntity.getPlainTextName(),
                         beaconPos,
                         spawnTime,
-                        getFriendlyTimeOfDay(spawnTime, false)
+                        getFriendlyTimeOfDay(spawnTime, false, false)
                 );
             }
         }
@@ -590,7 +596,7 @@ public class TourismManager {
                     "Beacon UUID {} not found for scheduled spawn at time {} ticks ({})",
                     scheduledTouristSpawn.beaconUUID(),
                     scheduledTouristSpawn.timeOfDay(),
-                    getFriendlyTimeOfDay(scheduledTouristSpawn.timeOfDay(), false)
+                    getFriendlyTimeOfDay(scheduledTouristSpawn.timeOfDay(), false, false)
             );
             return;
         }
@@ -615,7 +621,7 @@ public class TourismManager {
                     beaconBlockEntity.getPlainTextName(),
                     beaconPos,
                     scheduledTouristSpawn.timeOfDay(),
-                    getFriendlyTimeOfDay(scheduledTouristSpawn.timeOfDay(), false)
+                    getFriendlyTimeOfDay(scheduledTouristSpawn.timeOfDay(), false, false)
             );
             return;
         }
@@ -626,7 +632,7 @@ public class TourismManager {
                 beaconBlockEntity.getPlainTextName(),
                 beaconPos,
                 scheduledTouristSpawn.timeOfDay(),
-                getFriendlyTimeOfDay(scheduledTouristSpawn.timeOfDay(), false)
+                getFriendlyTimeOfDay(scheduledTouristSpawn.timeOfDay(), false, false)
         );
 
         tourist.snapTo(spawnPoint, serverLevel.random.nextFloat() * 360.0F, 0.0F);

@@ -63,6 +63,7 @@ public class LookAtTargetPosGoal extends Goal {
         // 1. Initial focused gaze at target (first 2 seconds, approximately)
         // 2. Look up/around briefly (every 1-2 seconds)
         // 3. Add slight random variations when looking at target
+        // Also, if allowed, occasionally hold camera and "take pictures", and crouch as needed to look at targets below.
         
         if (this.tickCount <= this.initialGazeTicks) {
             // Initial focused gaze - look directly at target center.
@@ -78,7 +79,7 @@ public class LookAtTargetPosGoal extends Goal {
             }
 
             // Decide what to look at based on remaining time and other factors.
-            boolean readyToTakePicture = !hasTakenPicture && this.tourist.isUsingCamera() && (this.ticksUntilNextLookChange / 15) == 0;
+            boolean readyToTakePicture = !hasTakenPicture && this.tourist.isUsingCamera() && (this.ticksUntilNextLookChange / 20) == 0;
             if (readyToTakePicture) {
                 this.tourist.takePicture();
                 this.hasTakenPicture = true;
@@ -111,14 +112,14 @@ public class LookAtTargetPosGoal extends Goal {
             this.yVariation += 0.5 + (random.nextDouble() * 2.0); // occasionally add 0.5 to 2 blocks up
         }
 
-        // Determine if tourist will be crouching to get a closer look.
+        // Determine if tourist will be crouching to get a closer look at a target below them.
         this.tourist.setCrouching(this.targetPos.getY() + 0.75 + this.yVariation < this.tourist.blockPosition().getY());
 
         // Determine ticks before next change.
         if (usingCamera) {
-            this.ticksUntilNextLookChange = this.adjustedTickDelay(40 + random.nextInt(60)); // 2-5 seconds
+            this.ticksUntilNextLookChange = this.adjustedTickDelay(60 + random.nextInt(60)); // 3 to 6 seconds
         } else {
-            this.ticksUntilNextLookChange = this.adjustedTickDelay(20 + random.nextInt(20)); // 1-2 seconds
+            this.ticksUntilNextLookChange = this.adjustedTickDelay(20 + random.nextInt(20)); // 1 to 2 seconds
         }
     }
 

@@ -5,12 +5,15 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.LightLayer;
+import net.minecraft.world.phys.Vec3;
 import org.bensam.touristry.Touristry;
 import org.bensam.touristry.block.entity.AbstractExperienceBlockEntity;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
@@ -98,7 +101,7 @@ public final class PlayerCommands {
                                 + "; tourists killed: " + stats.getTouristsKilled()),
                 false);
         long lastVisitTicks = stats.getLastVisitTime();
-        String lastVisit = lastVisitTicks == 0 ? "never" : TourismManager.getFriendlyTimeOfDay(lastVisitTicks, true);
+        String lastVisit = lastVisitTicks == 0 ? "never" : TourismManager.getFriendlyTimeOfDay(lastVisitTicks, true, false);
         source.sendSuccess(() -> Component.literal(
                         " - last visit: " + lastVisit),
                 false);
@@ -348,7 +351,7 @@ public final class PlayerCommands {
         source.sendSuccess(() -> Component.literal("Remaining tourist arrivals scheduled for today:"), false);
 
         for (TourismManager.ScheduledTouristSpawn spawn : pendingSpawns) {
-            MutableComponent message = Component.literal(" - " + TourismManager.getFriendlyTimeOfDay(spawn.timeOfDay(), false) + " for ");
+            MutableComponent message = Component.literal(" - " + TourismManager.getFriendlyTimeOfDay(spawn.timeOfDay(), false, false) + " for ");
             TouristBeaconBlockEntity beaconBlockEntity = TourismManager.getBeaconBlockEntityByUUID(spawn.beaconUUID());
             if (beaconBlockEntity != null) {
                 message.append(beaconBlockEntity.getName().copy());
@@ -399,7 +402,7 @@ public final class PlayerCommands {
         }
 
         TourismManager.ScheduledTouristSpawn nextSpawn = pendingSpawns.getFirst();
-        MutableComponent message = Component.literal("Next spawn at " + TourismManager.getFriendlyTimeOfDay(nextSpawn.timeOfDay(), false) + " for ");
+        MutableComponent message = Component.literal("Next spawn at " + TourismManager.getFriendlyTimeOfDay(nextSpawn.timeOfDay(), false, false) + " for ");
         TouristBeaconBlockEntity beaconBlockEntity = TourismManager.getBeaconBlockEntityByUUID(nextSpawn.beaconUUID());
         if (beaconBlockEntity != null) {
             message.append(beaconBlockEntity.getName().copy());
@@ -413,7 +416,19 @@ public final class PlayerCommands {
 
     private static int showTimeAndDay(CommandSourceStack source) {
         ServerLevel overworld = source.getServer().overworld();
-        source.sendSuccess(() -> Component.literal("Current time: " + TourismManager.getFriendlyTimeOfDay(overworld.getDayTime(), true)), false);
+        //source.sendSuccess(() -> Component.literal("Current time: " + TourismManager.getFriendlyTimeOfDay(overworld.getDayTime(), true, true)), false);
+        source.sendSuccess(() -> Component.literal("Current time: " + TourismManager.getFriendlyTimeOfDay(overworld.getDayTime(), true, true) + "; Camera light: " + (isLowLight(source) ? "low" : "normal")), false);
         return 1;
+    }
+
+    private static boolean isLowLight(CommandSourceStack source) {
+        var player = source.getPlayer();
+        Vec3 eyePos = player.position().add(0, player.getEyeHeight(), 0);
+        BlockPos eyeBlockPos = BlockPos.containing(eyePos);
+        int brightness = source.getLevel().getMaxLocalRawBrightness(eyeBlockPos);
+        int blockLight = source.getLevel().getBrightness(LightLayer.BLOCK, eyeBlockPos);
+        int skyLight = source.getLevel().getBrightness(LightLayer.SKY, eyeBlockPos);
+        source.sendSuccess(() -> Component.literal("brightness: " + brightness + "; skyLight: " + skyLight + "; blockLight: " + blockLight), false);
+        return brightness <= 8;
     }
 }

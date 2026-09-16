@@ -9,6 +9,7 @@ public class TouristRenderState extends HoldingEntityRenderState implements Tour
     public int baseModelVariant;
     public String clothingVariantKey;
     public boolean isArmsCrossed;
+    public boolean isCameraOnStick;
     public boolean isCrouching;
     public boolean isUsingCamera;
     public boolean isUnhappy;

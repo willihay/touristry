@@ -2,5 +2,25 @@
   "tourist_camera": {
     "subtitle": "sound.touristry.tourist_camera",
     "sounds": ["touristry:tourist_camera"]
-  }
+  },
+  "tourist_camera_flash": {
+    "subtitle": "sound.touristry.tourist_camera",
+    "sounds": ["touristry:tourist_camera_flash"]
+  },
+  "tourist_camera_cellphone": {
+    "subtitle": "sound.touristry.tourist_camera",
+    "sounds": ["touristry:tourist_camera_cellphone"]
+  },
+  "tourist_camera_cellphone_flash": {
+    "subtitle": "sound.touristry.tourist_camera",
+    "sounds": ["touristry:tourist_camera_cellphone_flash"]
+  },
+  "tourist_camera_instamatic": {
+    "subtitle": "sound.touristry.tourist_camera",
+    "sounds": ["touristry:tourist_camera_instamatic"]
+  },
+  "tourist_camera_instamatic_flash": {
+    "subtitle": "sound.touristry.tourist_camera",
+    "sounds": ["touristry:tourist_camera_instamatic_flash"]
+  }  
 }

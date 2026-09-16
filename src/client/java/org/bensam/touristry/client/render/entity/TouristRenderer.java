@@ -58,6 +58,7 @@ public class TouristRenderer extends AgeableMobRenderer<TouristEntity, TouristRe
         //touristRenderState.isArmsCrossed = true;
         touristRenderState.isCrouching = touristEntity.isCrouching();
         touristRenderState.isUsingCamera = touristEntity.isUsingCamera();
+        touristRenderState.isCameraOnStick = touristEntity.isCameraOnStick();
         touristRenderState.isWaving = touristEntity.isWaving() && !touristRenderState.isUnhappy && touristRenderState.heldItem.isEmpty();
     }
 }
