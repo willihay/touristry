@@ -3,9 +3,11 @@ package org.bensam.touristry.entity.goal;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import org.bensam.touristry.ModSounds;
 import org.bensam.touristry.block.entity.AbstractExperienceBlockEntity;
 import org.bensam.touristry.block.entity.ShoppingExperienceBlockEntity;
 import org.bensam.touristry.config.Verbosity;
@@ -130,6 +132,7 @@ public class ShoppingExperienceGoal extends LookAtTargetPosGoal {
         }
 
         if (paymentCompleted) {
+            serverLevel.playSound(null, this.targetPos, ModSounds.CASH_REGISTER, SoundSource.NEUTRAL);
             this.tourist.clearShoppingBag();
             this.tourist.getMind().updateExperienceVisitResult(VisitResult.GOOD);
         } else {

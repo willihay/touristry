@@ -1,4 +1,12 @@
 {
+  "cash_register": {
+    "subtitle": "sound.touristry.cash_register",
+    "sounds": ["touristry:cash_register"]
+  },
+  "desk_bell": {
+    "subtitle": "sound.touristry.desk_bell",
+    "sounds": ["touristry:desk_bell"]
+  },
   "tourist_camera": {
     "subtitle": "sound.touristry.tourist_camera",
     "sounds": ["touristry:tourist_camera"]
