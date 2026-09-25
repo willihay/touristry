@@ -1,4 +1,4 @@
-package org.bensam.touristry.client.screen;
+package org.bensam.touristry.client.screen.buttons;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.ImageButton;

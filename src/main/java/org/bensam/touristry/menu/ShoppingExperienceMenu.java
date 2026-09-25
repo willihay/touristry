@@ -25,7 +25,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 
-public class ShoppingExperienceMenu extends AbstractExperienceMenu<ShoppingExperienceMenu.Tab> {
+public class ShoppingExperienceMenu extends AbstractExperienceMenu<ShoppingExperienceMenu.Tab> implements PricingMenu {
     // Slot layout
     private static final int CONFIGURATION_SLOT_COUNT = 3; // target key + entry fee + default cost
     private static final int EXPERIENCE_PAYMENT_SLOT_COUNT = ShoppingExperienceBlockEntity.PAYMENT_SLOT_SIZE;
@@ -175,16 +175,48 @@ public class ShoppingExperienceMenu extends AbstractExperienceMenu<ShoppingExper
     }
 
     @Override
+    public ItemStack getDefaultCost() {
+        return this.getSlot(SHOPPING_DEFAULT_COST_SLOT).getItem();
+    }
+
+    @Override
+    public Slot getDefaultCostSlot() {
+        return this.getSlot(SHOPPING_DEFAULT_COST_SLOT);
+    }
+
+    @Override
     protected Tab getDefaultTab() {
         return Tab.STATUS;
     }
 
+    @Override
+    public ItemStack getFocusedItemForSale() {
+        return this.getSlot(SHOPPING_ITEM_FOR_SALE_SLOT).getItem();
+    }
+
+    @Override
+    public Slot getFocusedItemForSaleSlot() {
+        return this.getSlot(SHOPPING_ITEM_FOR_SALE_SLOT);
+    }
+
+    @Override
+    public ItemStack getFocusedItemCost() {
+        return this.getSlot(SHOPPING_COST_SLOT).getItem();
+    }
+
+    @Override
+    public Slot getFocusedItemCostSlot() {
+        return this.getSlot(SHOPPING_COST_SLOT);
+    }
+
     // client-side getter
+    @Override
     public List<ItemPrice> getSyncedItemPrices() {
         return this.syncedItemPrices;
     }
 
     // client-side getter
+    @Override
     public int getSyncedItemPricesRevision() {
         return this.syncedItemPricesRevision;
     }
@@ -319,6 +351,7 @@ public class ShoppingExperienceMenu extends AbstractExperienceMenu<ShoppingExper
         this.setCostSlot(itemPrice.cost(), newStateId);
     }
 
+    @Override
     public boolean isDefaultCostFree() {
         return !this.getSlot(SHOPPING_DEFAULT_COST_SLOT).hasItem();
     }

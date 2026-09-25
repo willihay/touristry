@@ -1,4 +1,4 @@
-package org.bensam.touristry.client.screen;
+package org.bensam.touristry.client.screen.buttons;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;

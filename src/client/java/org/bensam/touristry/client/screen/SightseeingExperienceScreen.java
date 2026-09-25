@@ -8,6 +8,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import org.bensam.touristry.Touristry;
+import org.bensam.touristry.client.screen.buttons.OnOffSliderButton;
 import org.bensam.touristry.menu.SightseeingExperienceMenu;
 import org.bensam.touristry.network.ExperienceScreenActionC2SPayload;
 import org.bensam.touristry.tourism.experience.ExperienceScreenAction;

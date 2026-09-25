@@ -1,4 +1,4 @@
-package org.bensam.touristry.client.screen;
+package org.bensam.touristry.client.screen.buttons;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -26,7 +26,7 @@ public class OnOffSliderButton extends Button {
     private final Component onMessage;
     private final Component offMessage;
 
-    protected OnOffSliderButton(boolean isOn, int x, int y, Component onMessage, Component offMessage, OnPress onPress) {
+    public OnOffSliderButton(boolean isOn, int x, int y, Component onMessage, Component offMessage, OnPress onPress) {
         super(x, y, DRAW_WIDTH, DRAW_HEIGHT, CommonComponents.EMPTY, onPress, DEFAULT_NARRATION);
         this.onMessage = onMessage;
         this.offMessage = offMessage;

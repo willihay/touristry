@@ -7,7 +7,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.ImageButton;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.components.WidgetSprites;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.core.component.DataComponents;
@@ -21,6 +20,10 @@ import net.minecraft.world.item.Items;
 import org.bensam.touristry.ModBlocks;
 import org.bensam.touristry.ModItems;
 import org.bensam.touristry.Touristry;
+import org.bensam.touristry.client.screen.buttons.ExperienceScrollBoxButton;
+import org.bensam.touristry.client.screen.buttons.NoFocusImageButton;
+import org.bensam.touristry.client.screen.buttons.OnOffSliderButton;
+import org.bensam.touristry.client.screen.buttons.TargetOrderedButton;
 import org.bensam.touristry.menu.ShoppingExperienceMenu;
 import org.bensam.touristry.network.ExperienceScreenActionC2SPayload;
 import org.bensam.touristry.tourism.experience.ExperienceScreenAction;
@@ -31,24 +34,12 @@ import org.jspecify.annotations.NonNull;
 import java.util.Arrays;
 import java.util.List;
 
-public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingExperienceMenu> {
+public class ShoppingExperienceScreen extends AbstractTabbedExperienceScreen<ShoppingExperienceMenu, ShoppingExperienceMenu.Tab> {
     //region Constants: Sprites & Textures
     // Screen textures
     private static final Identifier BG_TEXTURE_STATUS = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "textures/gui/tourist_experience_status.png");
     private static final Identifier BG_TEXTURE_TARGETS = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "textures/gui/tourist_experience_targets.png");
     private static final Identifier BG_TEXTURE_PRICING = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "textures/gui/tourist_experience_pricing.png");
-
-    // Tab textures
-    private static final Identifier[] UNSELECTED_TOP_TABS = new Identifier[]{
-            Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tab_top_unselected_1"),
-            Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tab_top_unselected_2"),
-            Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tab_top_unselected_3")
-    };
-    private static final Identifier[] SELECTED_TOP_TABS = new Identifier[]{
-            Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tab_top_selected_1"),
-            Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tab_top_selected_2"),
-            Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tab_top_selected_3")
-    };
 
     // Sprites and textures
     private static final Identifier WIDE_CHEST_TEXTURE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "textures/gui/wide_chest.png");
@@ -79,13 +70,12 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     //endregion
 
     //region Constants: Common
-    private static final int ARGB_SCREEN_TEXT_COLOR = 0xFF404040; // gray
     private static final int ARGB_SCROLLBOX_BUTTON_TEXT_COLOR = 0xFFFFFFFF; // white
     private static final int ARGB_DIRTY_MARKER_COLOR = 0xFFFF0000; // red
     private static final int BG_TEXTURE_WIDTH = 512;
     private static final int BG_TEXTURE_HEIGHT = 256;
-    private static final int BG_SCREEN_WIDTH = 276;
-    private static final int BG_SCREEN_HEIGHT = 166;
+    public static final int BG_SCREEN_WIDTH = 276;
+    public static final int BG_SCREEN_HEIGHT = 166;
     private static final int TAB_WIDTH = 26;
     private static final int TAB_HEIGHT = 32;
     private static final int SCROLLBOX_WIDTH = 96;
@@ -241,7 +231,6 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     }
 
     // Common fields
-    private boolean isScrolling;
     private TabDisplay selectedTab = TabDisplay.STATUS;
 
     // Status screen fields
@@ -277,8 +266,9 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     private ImageButton itemPriceAcceptButton;
     private ImageButton itemPriceCancelButton;
 
-    public ShoppingExperienceScreen(ShoppingExperienceMenu container, Inventory inventory, Component title) {
-        super(container, inventory, title);
+    public ShoppingExperienceScreen(ShoppingExperienceMenu containerMenu, Inventory inventory, Component title) {
+        //super(containerMenu, inventory, title, List.of(new StatusTab<>(ShoppingExperienceMenu.Tab.STATUS)));
+        super(containerMenu, inventory, title, List.of());
         this.imageWidth = BG_SCREEN_WIDTH;
         this.inventoryLabelX = 107;
         this.selectedItemPriceIndex = -1;
@@ -817,14 +807,27 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float a) {
-        super.render(guiGraphics, mouseX, mouseY, a);
+    protected int getBackgroundTextureWidth() {
+        return BG_TEXTURE_WIDTH;
+    }
 
+    @Override
+    public int getScreenWidth() {
+        return BG_SCREEN_WIDTH;
+    }
+
+    @Override
+    public int getScreenHeight() {
+        return BG_SCREEN_HEIGHT;
+    }
+
+    @Override
+    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float a) {
         for (TabDisplay tab : TabDisplay.values()) {
             this.checkTabHovering(guiGraphics, tab, mouseX, mouseY);
         }
 
-        this.renderTooltip(guiGraphics, mouseX, mouseY);
+        super.render(guiGraphics, mouseX, mouseY, a);
     }
 
     @Override
@@ -1460,8 +1463,16 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
 
         // Convert the mouse's Y position on the scrollbar into a number from 0 to maxScrolledOff.
         float scrollFraction = scrollerCenterY / scrollableTrackLength;
-        int rowOffset = (int)(scrollFraction * maxScrolledOff + 0.5F); // rounded to nearest integer
-        int scrolledOff = Mth.clamp(rowOffset, 0, maxScrolledOff);
+        //int rowOffset = (int)(scrollFraction * maxScrolledOff + 0.5F); // rounded to nearest integer
+
+        int rowOffset = this.selectedTab == TabDisplay.TARGETS ? this.targetsScrolledOff : this.pricesScrolledOff;
+        rowOffset += Math.clamp(Math.round(dy), -1, 1);
+
+        int j = this.topPos + SCROLLBOX_TOP_Y;
+        int k = j + SCROLLER_TRACK_BOTTOM_Y - SCROLLBOX_TOP_Y;
+        float f = ((float)mouseButtonEvent.y() - j - 13.5F) / (k - j - 27.0F);
+        f = f * maxScrolledOff + 0.5F;
+        int scrolledOff = Mth.clamp((int)f, 0, maxScrolledOff);
 
         if (this.selectedTab == TabDisplay.TARGETS) {
             this.targetsScrolledOff = scrolledOff;
@@ -1475,10 +1486,6 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
 
     @Override
     public boolean mouseScrolled(double x, double y, double scrollX, double scrollY) {
-        if (super.mouseScrolled(x, y, scrollX, scrollY)) {
-            return true;
-        }
-
         if (this.canScroll()) {
             if (this.selectedTab == TabDisplay.TARGETS) {
                 int totalRows = this.menu.getSyncedTargets().size();
@@ -1494,7 +1501,7 @@ public class ShoppingExperienceScreen extends AbstractContainerScreen<ShoppingEx
             return true;
         }
 
-        return false;
+        return super.mouseScrolled(x, y, scrollX, scrollY);
     }
 
     private void focusOnItemForSale(ItemStack itemForSale) {
