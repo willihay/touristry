@@ -3,6 +3,8 @@ package org.bensam.touristry.entity.goal;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
@@ -102,8 +104,10 @@ public class ShoppingExperienceGoal extends LookAtTargetPosGoal {
 
         if (this.tickCount >= this.adjustedTimeAtTarget) {
             if (this.isPurchaseCounter) {
-                // Pay for items in shopping bag.
-                this.payForItems(serverLevel);
+                if (!this.tourist.getShoppingBag().isEmpty()) {
+                    // Pay for items in shopping bag.
+                    this.payForItems(serverLevel);
+                }
             } else {
                 // Make purchase decision.
                 this.makePurchaseDecision(serverLevel);
@@ -148,6 +152,7 @@ public class ShoppingExperienceGoal extends LookAtTargetPosGoal {
         }
 
         float allowance = visit.budgetRemaining();
+        boolean hasReacted = false;
 
         // Gather all items in target container.
         List<ItemStack> itemsInContainer = new ArrayList<>();
@@ -192,7 +197,12 @@ public class ShoppingExperienceGoal extends LookAtTargetPosGoal {
                 if (itemValue <= allowance) {
                     newItems.add(itemPrice); // only buying 1 quantity for now
                     allowance -= itemValue;
+                    this.tourist.playSound(SoundEvents.VILLAGER_CELEBRATE);
+                    hasReacted = true;
                     break;
+                } else if (!hasReacted) {
+                    this.tourist.playSound(ModSounds.TOURIST_WHAT);
+                    hasReacted = true;
                 }
             }
         }

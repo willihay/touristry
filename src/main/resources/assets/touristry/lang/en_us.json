@@ -54,6 +54,7 @@
   "screen.touristry.tourist_block.target_key.label": "Target Key:",
 
   "sound.touristry.cash_register": "Cash register cha-ching",
-  "sound.touristry.desk_bell": "Desk bell ding",
-  "sound.touristry.tourist_camera": "Tourist is taking a photo"
+  "sound.touristry.desk_bell": "Desk bell dings",
+  "sound.touristry.tourist_camera": "Tourist takes a photo",
+  "sound.touristry.tourist_what": "Tourist goes whaaa?"
 }

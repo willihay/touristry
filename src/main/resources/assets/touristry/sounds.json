@@ -30,5 +30,9 @@
   "tourist_camera_instamatic_flash": {
     "subtitle": "sound.touristry.tourist_camera",
     "sounds": ["touristry:tourist_camera_instamatic_flash"]
-  }  
+  },
+  "tourist_what": {
+    "subtitle": "sound.touristry.tourist_what",
+    "sounds": ["touristry:tourist_what"]
+  }
 }

@@ -14,6 +14,7 @@ public class ModSounds {
     public static final SoundEvent CAMERA_INSTAMATIC_FLASH = register("tourist_camera_instamatic_flash");
     public static final SoundEvent CASH_REGISTER = register("cash_register");
     public static final SoundEvent DESK_BELL = register("desk_bell");
+    public static final SoundEvent TOURIST_WHAT = register("tourist_what");
 
     private ModSounds() {}
 
