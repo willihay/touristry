@@ -517,7 +517,7 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
     private boolean isCameraFlashNeeded() {
         Vec3 eyePos = this.position().add(0, this.getEyeHeight(), 0);
         BlockPos eyeBlockPos = BlockPos.containing(eyePos);
-        return this.level().getMaxLocalRawBrightness(eyeBlockPos) <= 10;
+        return TourismManager.isLowCameraLightLevel(this.level(), eyeBlockPos);
     }
 
     public boolean isTraveling() {

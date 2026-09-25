@@ -148,6 +148,32 @@ public class TourismManager {
                         .toList());
     }
 
+    public static String getFriendlyTimeOfDay(long dayTimeTicks, boolean withDay, boolean withTicks) {
+        long day = dayTimeTicks / 24000L;
+        int tickTimeOfDay = (int)(dayTimeTicks % 24000L);
+        int tickHour = tickTimeOfDay / 1000;
+        int ticksIntoHour = tickTimeOfDay % 1000;
+        int minutes = ticksIntoHour * 60 / 1000;
+        int hour24 = (tickHour + 6) % 24;
+        int hour = hour24 % 12;
+        String ampm = hour24 < 12 ? "AM" : "PM";
+        if (hour == 0) {
+            hour = 12;
+        }
+
+        String friendlyTime = String.format("%d:%02d %s", hour, minutes, ampm);
+
+        if (withDay) {
+            friendlyTime += " on day " + day;
+        }
+
+        if (withTicks) {
+            friendlyTime += " (" + dayTimeTicks + " ticks)";
+        }
+
+        return friendlyTime;
+    }
+
     public static Component getTouristBlockNameOrPos(Level level, TouristLocation locationType, BlockPos blockPos) {
         switch (locationType) {
             case BEACON -> {
@@ -168,6 +194,10 @@ public class TourismManager {
         }
 
         return Component.literal(blockPos.toShortString());
+    }
+
+    public static boolean isLowCameraLightLevel(Level level, BlockPos blockPos) {
+        return level.getMaxLocalRawBrightness(blockPos) <= 10;
     }
 
     //region Experience Helpers
@@ -509,32 +539,6 @@ public class TourismManager {
         pendingSpawns.clear();
         lastPreparedDay = -1;
         persistSavedData();
-    }
-
-    public static String getFriendlyTimeOfDay(long dayTimeTicks, boolean withDay, boolean withTicks) {
-        long day = dayTimeTicks / 24000L;
-        int tickTimeOfDay = (int)(dayTimeTicks % 24000L);
-        int tickHour = tickTimeOfDay / 1000;
-        int ticksIntoHour = tickTimeOfDay % 1000;
-        int minutes = ticksIntoHour * 60 / 1000;
-        int hour24 = (tickHour + 6) % 24;
-        int hour = hour24 % 12;
-        String ampm = hour24 < 12 ? "AM" : "PM";
-        if (hour == 0) {
-            hour = 12;
-        }
-
-        String friendlyTime = String.format("%d:%02d %s", hour, minutes, ampm);
-
-        if (withDay) {
-            friendlyTime += " on day " + day;
-        }
-
-        if (withTicks) {
-            friendlyTime += " (" + dayTimeTicks + " ticks)";
-        }
-
-        return friendlyTime;
     }
 
     public static List<ScheduledTouristSpawn> getPendingSpawns() {

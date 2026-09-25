@@ -416,19 +416,15 @@ public final class PlayerCommands {
 
     private static int showTimeAndDay(CommandSourceStack source) {
         ServerLevel overworld = source.getServer().overworld();
-        //source.sendSuccess(() -> Component.literal("Current time: " + TourismManager.getFriendlyTimeOfDay(overworld.getDayTime(), true, true)), false);
-        source.sendSuccess(() -> Component.literal("Current time: " + TourismManager.getFriendlyTimeOfDay(overworld.getDayTime(), true, true) + "; Camera light: " + (isLowLight(source) ? "low" : "normal")), false);
-        return 1;
-    }
-
-    private static boolean isLowLight(CommandSourceStack source) {
         var player = source.getPlayer();
-        Vec3 eyePos = player.position().add(0, player.getEyeHeight(), 0);
-        BlockPos eyeBlockPos = BlockPos.containing(eyePos);
-        int brightness = source.getLevel().getMaxLocalRawBrightness(eyeBlockPos);
-        int blockLight = source.getLevel().getBrightness(LightLayer.BLOCK, eyeBlockPos);
-        int skyLight = source.getLevel().getBrightness(LightLayer.SKY, eyeBlockPos);
-        source.sendSuccess(() -> Component.literal("brightness: " + brightness + "; skyLight: " + skyLight + "; blockLight: " + blockLight), false);
-        return brightness <= 8;
+        if (player != null) {
+            Vec3 eyePos = player.position().add(0, player.getEyeHeight(), 0);
+            BlockPos eyeBlockPos = BlockPos.containing(eyePos);
+            boolean isLowLight = TourismManager.isLowCameraLightLevel(source.getLevel(), eyeBlockPos);
+            source.sendSuccess(() -> Component.literal("Current time: " + TourismManager.getFriendlyTimeOfDay(overworld.getDayTime(), true, true) + "; Camera light: " + (isLowLight ? "low" : "normal")), false);
+        } else {
+            source.sendSuccess(() -> Component.literal("Current time: " + TourismManager.getFriendlyTimeOfDay(overworld.getDayTime(), true, true)), false);
+        }
+        return 1;
     }
 }
