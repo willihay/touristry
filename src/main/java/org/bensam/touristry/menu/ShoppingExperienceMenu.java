@@ -39,16 +39,16 @@ public class ShoppingExperienceMenu extends AbstractExperienceMenu<ShoppingExper
     private static final int CONFIGURATION_ENTRY_FEE_SLOT = 1;
     private static final int EXPERIENCE_ENTRY_FEE_SLOT_X = 180;
     private static final int EXPERIENCE_ENTRY_FEE_SLOT_Y = 53;
-    public static final int SHOPPING_DEFAULT_COST_SLOT = EXPERIENCE_ENTRY_FEE_SLOT + 1;
+    private static final int SHOPPING_DEFAULT_COST_SLOT = EXPERIENCE_ENTRY_FEE_SLOT + 1;
     private static final int CONFIGURATION_DEFAULT_COST_SLOT = 2;
-    public static final int SHOPPING_DEFAULT_COST_SLOT_X = 216;
-    public static final int SHOPPING_DEFAULT_COST_SLOT_Y = 19;
-    public static final int SHOPPING_ITEM_FOR_SALE_SLOT = SHOPPING_DEFAULT_COST_SLOT + 1;
+    private static final int SHOPPING_DEFAULT_COST_SLOT_X = 216;
+    private static final int SHOPPING_DEFAULT_COST_SLOT_Y = 19;
+    private static final int SHOPPING_ITEM_FOR_SALE_SLOT = SHOPPING_DEFAULT_COST_SLOT + 1;
     private static final int SHOPPING_ITEM_FOR_SALE_SLOT_X = 162;
     private static final int SHOPPING_ITEM_FOR_SALE_SLOT_Y = 51;
-    public static final int SHOPPING_COST_SLOT = SHOPPING_ITEM_FOR_SALE_SLOT + 1;
-    public static final int SHOPPING_COST_SLOT_X = 216;
-    public static final int SHOPPING_COST_SLOT_Y = 51;
+    private static final int SHOPPING_COST_SLOT = SHOPPING_ITEM_FOR_SALE_SLOT + 1;
+    private static final int SHOPPING_COST_SLOT_X = 216;
+    private static final int SHOPPING_COST_SLOT_Y = 51;
     private static final int EXPERIENCE_SLOT_COUNT = EXPERIENCE_PAYMENT_SLOT_COUNT + CONFIGURATION_SLOT_COUNT + ItemPricingContainer.ITEM_PRICING_SLOTS;
 
     // Player inventory layout

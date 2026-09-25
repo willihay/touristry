@@ -16,7 +16,7 @@ public interface ScreenTab<T extends Enum<T>> {
     default void tick(AbstractExperienceMenu<?> menu) {}
 
     // Tab properties
-    T getTabName();
+    T getTabEnum();
     int getTabOrder();
     Component getTabTitle();
     void setTabOrder(int tabOrder);

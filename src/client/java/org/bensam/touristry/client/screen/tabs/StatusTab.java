@@ -47,15 +47,16 @@ public class StatusTab<T extends Enum<T>> implements ScreenTab<T> {
     private static final int INVENTORY_LABEL_Y = 72;
     //endregion
 
-    private final T tabName;
+    private final T tabEnum;
     private final ItemStack tabIcon;
     private int tabOrder;
 
+    private boolean hasReceivedSync;
     private boolean openForBusiness;
     private OnOffSliderButton statusToggleButton;
 
-    public StatusTab(T tabName, Item tabIcon) {
-        this.tabName = tabName;
+    public StatusTab(T tabEnum, Item tabIcon) {
+        this.tabEnum = tabEnum;
         this.tabIcon = new ItemStack(tabIcon);
     }
 
@@ -83,6 +84,7 @@ public class StatusTab<T extends Enum<T>> implements ScreenTab<T> {
                         }
                     })
             );
+            this.statusToggleButton.visible = this.hasReceivedSync;
         }
     }
 
@@ -96,19 +98,30 @@ public class StatusTab<T extends Enum<T>> implements ScreenTab<T> {
 
     @Override
     public void tick(AbstractExperienceMenu<?> menu) {
-        if (menu.isOpenForBusiness() != this.openForBusiness) {
-            this.openForBusiness = menu.isOpenForBusiness();
+        int generation = menu.getSyncGeneration();
+        boolean openStatus = menu.isOpenForBusiness();
 
+        if (!hasReceivedSync && generation > 0) {
+            // Set the initial value of openForBusiness, update the button state, and make the toggle button visible.
+            this.hasReceivedSync = true;
             if (this.statusToggleButton != null) {
-                this.statusToggleButton.setState(this.openForBusiness);
+                this.statusToggleButton.visible = true;
+                this.statusToggleButton.setState(openStatus);
+                this.openForBusiness = openStatus;
+            }
+        } else if (openStatus != this.openForBusiness) {
+            // Update the value of openForBusiness and the button state.
+            this.openForBusiness = openStatus;
+            if (this.statusToggleButton != null) {
+                this.statusToggleButton.setState(openStatus);
             }
         }
     }
 
     // Tab properties
     @Override
-    public T getTabName() {
-        return this.tabName;
+    public T getTabEnum() {
+        return this.tabEnum;
     }
 
     @Override

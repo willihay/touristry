@@ -152,6 +152,12 @@ public abstract class AbstractExperienceMenu<T extends Enum<T>> extends Abstract
     }
 
     @Override
+    public void broadcastChanges() {
+        super.broadcastChanges();
+        this.incrementSyncGeneration();
+    }
+
+    @Override
     public void clicked(int slotId, int button, ClickType clickType, Player player) {
         if (slotId >= 0 && slotId < this.slots.size()) {
             Slot slot = this.getSlot(slotId);
@@ -187,6 +193,11 @@ public abstract class AbstractExperienceMenu<T extends Enum<T>> extends Abstract
 
     public double getReputation() {
         return (double) this.experienceContainerData.get(AbstractExperienceBlockEntity.DATA_REPUTATION) / 100;
+    }
+
+    // client-side getter
+    public int getSyncGeneration() {
+        return this.experienceContainerData.get(AbstractExperienceBlockEntity.DATA_SYNC_GENERATION);
     }
 
     // client-side getter
@@ -312,6 +323,15 @@ public abstract class AbstractExperienceMenu<T extends Enum<T>> extends Abstract
 
     private boolean hasTargetKey() {
         return this.targetKeySlotId != -1;
+    }
+
+    private void incrementSyncGeneration() {
+        this.containerLevelAccess.execute((level, blockPos) -> {
+            if (!(this.getExperienceContainer() instanceof AbstractExperienceBlockEntity experienceBlockEntity)) {
+                return;
+            }
+            experienceBlockEntity.incrementSyncGeneration();
+        });
     }
 
     @Override

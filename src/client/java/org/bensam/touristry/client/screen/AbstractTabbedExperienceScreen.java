@@ -37,7 +37,6 @@ public abstract class AbstractTabbedExperienceScreen<M extends AbstractExperienc
             Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tab_top_selected_right")
     };
 
-    protected boolean isScrolling;
     private ScreenTab<T> selectedTab;
     protected final List<ScreenTab<T>> tabs;
 
@@ -288,14 +287,14 @@ public abstract class AbstractTabbedExperienceScreen<M extends AbstractExperienc
         }
 
         this.selectedTab = tab;
-        this.menu.setSelectedTab(tab.getTabName());
+        this.menu.setSelectedTab(tab.getTabEnum());
         this.selectedTab.onSelected(this, this.menu);
 
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.player != null && minecraft.gameMode != null) {
             minecraft.gameMode.handleInventoryButtonClick(
                     this.menu.getContainerId(),
-                    tab.getTabName().ordinal()
+                    tab.getTabEnum().ordinal()
             );
         }
     }

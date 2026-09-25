@@ -41,11 +41,13 @@ import java.util.stream.IntStream;
 public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEntity implements TouristExperience {
     public static final int DATA_REPUTATION = 0;
     public static final int DATA_OPEN_FOR_BUSINESS = 1;
-    public static final int DATA_COUNT = 2;
+    public static final int DATA_SYNC_GENERATION = 2;
+    public static final int DATA_COUNT = 3;
     private static final int MIN_WAIT_AFTER_ARRIVAL_TICKS = 40;
     private static final int MAX_WAIT_AFTER_ARRIVAL_TICKS = 80;
 
     protected Set<UUID> currentGuests = new HashSet<>(); // for capacity tracking at experiences that need it
+    private int syncGeneration = 0;
 
     // persisted fields
     protected UUID uuid;
@@ -60,8 +62,9 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         @Override
         public int get(int i) {
             return switch (i) {
-                case DATA_REPUTATION -> (int) Math.round(AbstractExperienceBlockEntity.this.statistics.getReputation() * 100.0);
-                case DATA_OPEN_FOR_BUSINESS -> AbstractExperienceBlockEntity.this.openForBusiness ? 1 : 0;
+                case DATA_REPUTATION -> (int) Math.round(statistics.getReputation() * 100.0);
+                case DATA_OPEN_FOR_BUSINESS -> openForBusiness ? 1 : 0;
+                case DATA_SYNC_GENERATION -> syncGeneration;
                 default -> throw new IndexOutOfBoundsException("Invalid container data index: " + i);
             };
         }
@@ -70,6 +73,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         public void set(int i, int value) {
             switch (i) {
                 case DATA_REPUTATION, DATA_OPEN_FOR_BUSINESS -> { /* ignore: synced display-only value */ }
+                case DATA_SYNC_GENERATION -> syncGeneration = value;
                 default -> throw new IndexOutOfBoundsException("Invalid container data index: " + i);
             }
         }
@@ -327,6 +331,10 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
     @Override
     public boolean hasTarget(BlockPos blockPos) {
         return targets.stream().anyMatch(target -> target.pos().equals(blockPos));
+    }
+
+    public void incrementSyncGeneration() {
+        this.syncGeneration++;
     }
 
     @Override

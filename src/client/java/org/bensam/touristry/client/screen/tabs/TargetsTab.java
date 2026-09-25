@@ -1,7 +1,6 @@
 package org.bensam.touristry.client.screen.tabs;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.ImageButton;
 import net.minecraft.client.gui.components.WidgetSprites;
@@ -69,15 +68,14 @@ public class TargetsTab<T extends Enum<T>> implements ScreenTab<T> {
     private static final int TARGET_DETAILS_LABEL_X = 127;
     private static final int TARGET_DETAILS_LABEL_Y = 50;
     private static final int TARGET_REMOVE_BUTTON_X = -22;
-    private static final int TARGET_REMOVE_BUTTON_Y = TARGET_DETAILS_LABEL_Y + 8;
+    private static final int TARGET_REMOVE_BUTTON_Y = TARGET_DETAILS_LABEL_Y + 9;
     private static final int TARGET_REMOVE_ALL_BUTTON_X = -22;
     private static final int TARGET_REMOVE_ALL_BUTTON_Y = -22;
     //endregion
 
-    private final T tabName;
+    private final T tabEnum;
     private final ItemStack tabIcon;
     private int tabOrder;
-    private final Font font;
     private final ScrollBox scrollBox = new ScrollBox();
 
     private TargetOrderedButton targetOrderedToggleButton;
@@ -86,10 +84,9 @@ public class TargetsTab<T extends Enum<T>> implements ScreenTab<T> {
     private ImageButton targetRemoveButton;
     private ImageButton targetRemoveAllButton;
 
-    public TargetsTab(T tabName, Item tabIcon, Font font) {
-        this.tabName = tabName;
+    public TargetsTab(T tabEnum, Item tabIcon) {
+        this.tabEnum = tabEnum;
         this.tabIcon = new ItemStack(tabIcon);
-        this.font = font;
     }
 
     // Screen setup handlers
@@ -153,12 +150,13 @@ public class TargetsTab<T extends Enum<T>> implements ScreenTab<T> {
         // Add target move up button.
         buttonX = screen.getScreenLeft() + TARGET_CHANGE_ORDER_BUTTON_X;
         buttonY = screen.getScreenTop() + TARGET_CHANGE_ORDER_BUTTON_Y;
-        int u = 17;
-        int v = 6;
+        int u = 16;
+        int v = 0;
         this.targetOrderUpButton = screen.addButton(new NoFocusImageButton(
                 buttonX, buttonY,
-                14, 8,
+                10, 10,
                 u, v,
+                16, 16,
                 new WidgetSprites(MOVE_UP_SPRITE, MOVE_UP_HIGHLIGHTED_SPRITE),
                 button -> {
                     int selectedTarget = this.scrollBox.getSelectedTargetIndex();
@@ -176,14 +174,16 @@ public class TargetsTab<T extends Enum<T>> implements ScreenTab<T> {
                 },
                 TARGET_MOVE_UP_TOOLTIP
         ));
+        this.targetOrderUpButton.visible = false;
 
         // Add target move down button.
-        buttonY += 12;
-        v = 18;
+        buttonY += 10;
+        v = 16;
         this.targetOrderDownButton = screen.addButton(new NoFocusImageButton(
                 buttonX, buttonY,
-                14, 8,
+                10, 10,
                 u, v,
+                16, 16,
                 new WidgetSprites(MOVE_DOWN_SPRITE, MOVE_DOWN_HIGHLIGHTED_SPRITE),
                 button -> {
                     int selectedTarget = this.scrollBox.getSelectedTargetIndex();
@@ -201,12 +201,13 @@ public class TargetsTab<T extends Enum<T>> implements ScreenTab<T> {
                 },
                 TARGET_MOVE_DOWN_TOOLTIP
         ));
+        this.targetOrderDownButton.visible = false;
 
         buttonX = screen.getScreenLeft() + screen.getScreenWidth() + TARGET_REMOVE_BUTTON_X;
         buttonY = screen.getScreenTop() + TARGET_REMOVE_BUTTON_Y;
         this.targetRemoveButton = screen.addButton(new NoFocusImageButton(
                 buttonX, buttonY,
-                16, 16,
+                10, 10,
                 new WidgetSprites(TRASH_SPRITE, TRASH_HIGHLIGHTED_SPRITE),
                 button -> {
                     if (!this.scrollBox.isAnyContentRowSelected()) {
@@ -225,6 +226,7 @@ public class TargetsTab<T extends Enum<T>> implements ScreenTab<T> {
                 },
                 TARGET_REMOVE_TOOLTIP
         ));
+        this.targetRemoveButton.visible = false;
 
         buttonX = screen.getScreenLeft() + screen.getScreenWidth() + TARGET_REMOVE_ALL_BUTTON_X;
         buttonY = screen.getScreenTop() + screen.getScreenHeight() + TARGET_REMOVE_ALL_BUTTON_Y;
@@ -273,8 +275,8 @@ public class TargetsTab<T extends Enum<T>> implements ScreenTab<T> {
 
     // Tab properties
     @Override
-    public T getTabName() {
-        return this.tabName;
+    public T getTabEnum() {
+        return this.tabEnum;
     }
 
     @Override
@@ -359,9 +361,9 @@ public class TargetsTab<T extends Enum<T>> implements ScreenTab<T> {
         // Render targets tab title, including number of targets.
         int numTargets = menu.getSyncedTargets().size();
         Component targetsTitle = TAB_TITLE.copy().append(" (" + numTargets + ")");
-        int targetsLabelWidth = this.font.width(targetsTitle);
+        int targetsLabelWidth = screen.getFont().width(targetsTitle);
         guiGraphics.drawString(
-                this.font,
+                screen.getFont(),
                 targetsTitle,
                 SCROLLBOX_ROW_X + ((SCROLLBOX_WIDTH - targetsLabelWidth) / 2),
                 SCROLLBOX_LABEL_Y,
@@ -374,8 +376,8 @@ public class TargetsTab<T extends Enum<T>> implements ScreenTab<T> {
             String targetDetails = (this.scrollBox.getSelectedTargetIndex() + 1) + ") " + targetView.displayName();
             int maxDetailWidth = screen.getScreenWidth() - TARGET_DETAILS_LABEL_X - 5;
             guiGraphics.drawString(
-                    this.font,
-                    this.font.plainSubstrByWidth(targetDetails, maxDetailWidth),
+                    screen.getFont(),
+                    screen.getFont().plainSubstrByWidth(targetDetails, maxDetailWidth),
                     TARGET_DETAILS_LABEL_X,
                     TARGET_DETAILS_LABEL_Y,
                     AbstractTabbedExperienceScreen.ARGB_SCREEN_TEXT_COLOR,
@@ -383,7 +385,7 @@ public class TargetsTab<T extends Enum<T>> implements ScreenTab<T> {
             );
 
             guiGraphics.drawString(
-                    this.font,
+                    screen.getFont(),
                     "@ " + targetView.pos().toShortString(),
                     TARGET_DETAILS_LABEL_X + 20,
                     TARGET_DETAILS_LABEL_Y + 11,
@@ -393,7 +395,7 @@ public class TargetsTab<T extends Enum<T>> implements ScreenTab<T> {
         }
 
         guiGraphics.drawString(
-                this.font,
+                screen.getFont(),
                 TARGET_ORDERED_LABEL,
                 TARGET_ORDERED_LABEL_X,
                 TARGET_ORDERED_LABEL_Y,
@@ -450,8 +452,8 @@ public class TargetsTab<T extends Enum<T>> implements ScreenTab<T> {
             }
 
             guiGraphics.drawString(
-                    TargetsTab.this.font,
-                    TargetsTab.this.font.plainSubstrByWidth(target.displayName(), maxTextWidth),
+                    screen.getFont(),
+                    screen.getFont().plainSubstrByWidth(target.displayName(), maxTextWidth),
                     xTextStart,
                     yItem + 5,
                     ARGB_SCROLLBOX_BUTTON_TEXT_COLOR,

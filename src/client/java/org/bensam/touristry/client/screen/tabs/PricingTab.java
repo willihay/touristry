@@ -1,7 +1,6 @@
 package org.bensam.touristry.client.screen.tabs;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.ImageButton;
 import net.minecraft.client.gui.components.WidgetSprites;
@@ -10,6 +9,7 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import org.bensam.touristry.Touristry;
@@ -101,13 +101,11 @@ public class PricingTab<T extends Enum<T>> implements ScreenTab<T> {
     private static final int INVENTORY_LABEL_Y = 72;
     //endregion
 
-    private final T tabName;
+    private final T tabEnum;
     private final ItemStack tabIcon;
     private int tabOrder;
-    private final Font font;
     private final ScrollBox scrollBox = new ScrollBox();
 
-    private int defaultItemPriceLabelWidth;
     private ItemStack focusItemForSale = ItemStack.EMPTY;
     private int lastItemPricesRevision;
     private ImageButton itemImportButton;
@@ -122,11 +120,9 @@ public class PricingTab<T extends Enum<T>> implements ScreenTab<T> {
     private ImageButton itemPriceAcceptButton;
     private ImageButton itemPriceCancelButton;
 
-    public PricingTab(T tabName, ItemStack tabIcon, Font font) {
-        this.tabName = tabName;
-        this.tabIcon = tabIcon;
-        this.font = font;
-        this.defaultItemPriceLabelWidth = this.font.width(PRICING_DEFAULT_LABEL);
+    public PricingTab(T tabEnum, Item tabIcon) {
+        this.tabEnum = tabEnum;
+        this.tabIcon = new ItemStack(tabIcon);
     }
 
     // Screen setup handlers
@@ -460,8 +456,8 @@ public class PricingTab<T extends Enum<T>> implements ScreenTab<T> {
 
     // Tab properties
     @Override
-    public T getTabName() {
-        return this.tabName;
+    public T getTabEnum() {
+        return this.tabEnum;
     }
 
     @Override
@@ -601,9 +597,9 @@ public class PricingTab<T extends Enum<T>> implements ScreenTab<T> {
         // Render pricing tab title, including number of item prices in table.
         int numItemPrices = pricingMenu.getSyncedItemPrices().size();
         Component pricingTitle = TAB_TITLE.copy().append(" (" + numItemPrices + ")");
-        int pricingLabelWidth = this.font.width(pricingTitle);
+        int pricingLabelWidth = screen.getFont().width(pricingTitle);
         guiGraphics.drawString(
-                this.font,
+                screen.getFont(),
                 pricingTitle,
                 SCROLLBOX_ROW_X + ((SCROLLBOX_WIDTH - pricingLabelWidth) / 2),
                 SCROLLBOX_LABEL_Y,
@@ -612,9 +608,10 @@ public class PricingTab<T extends Enum<T>> implements ScreenTab<T> {
         );
 
         // Render default cost label and tooltip.
-        int xDefaultCostLabel = PRICING_DEFAULT_LABEL_RIGHT_X - this.defaultItemPriceLabelWidth;
+        int defaultItemPriceLabelWidth = screen.getFont().width(PRICING_DEFAULT_LABEL);
+        int xDefaultCostLabel = PRICING_DEFAULT_LABEL_RIGHT_X - defaultItemPriceLabelWidth;
         guiGraphics.drawString(
-                this.font,
+                screen.getFont(),
                 PRICING_DEFAULT_LABEL,
                 xDefaultCostLabel,
                 PRICING_DEFAULT_LABEL_Y,
@@ -622,9 +619,9 @@ public class PricingTab<T extends Enum<T>> implements ScreenTab<T> {
                 false
         );
 
-        if (screen.isHovering(xDefaultCostLabel, PRICING_DEFAULT_LABEL_Y, this.defaultItemPriceLabelWidth, this.font.lineHeight, mouseX, mouseY)) {
+        if (screen.isHovering(xDefaultCostLabel, PRICING_DEFAULT_LABEL_Y, defaultItemPriceLabelWidth, screen.getFont().lineHeight, mouseX, mouseY)) {
             guiGraphics.setTooltipForNextFrame(
-                    this.font,
+                    screen.getFont(),
                     PRICING_DEFAULT_LABEL_TOOLTIP,
                     mouseX,
                     mouseY
@@ -729,12 +726,12 @@ public class PricingTab<T extends Enum<T>> implements ScreenTab<T> {
 
             // Render item for sale.
             guiGraphics.renderFakeItem(itemForSale, xItemForSale, yItem);
-            guiGraphics.renderItemDecorations(PricingTab.this.font, itemForSale, xItemForSale, yItem);
+            guiGraphics.renderItemDecorations(screen.getFont(), itemForSale, xItemForSale, yItem);
 
             // Render item tooltip if mouse is hovering over item for sale.
             if (screen.isHovering(xItemForSale - screenLeft, yItem - screenTop, 16, 16, mouseX, mouseY)) {
                 guiGraphics.setTooltipForNextFrame(
-                        PricingTab.this.font,
+                        screen.getFont(),
                         screen.getTooltipFromContainerItem(itemForSale),
                         itemForSale.getTooltipImage(),
                         mouseX,
@@ -758,7 +755,7 @@ public class PricingTab<T extends Enum<T>> implements ScreenTab<T> {
                 ItemStack defaultCost = pricingMenu.getDefaultCost();
 
                 // Render parentheses before and after default cost to indicate this cost is from the default cost slot.
-                guiGraphics.drawString(PricingTab.this.font, "(", xItemCost - 5, yItem + 5, ARGB_SCROLLBOX_BUTTON_TEXT_COLOR);
+                guiGraphics.drawString(screen.getFont(), "(", xItemCost - 5, yItem + 5, ARGB_SCROLLBOX_BUTTON_TEXT_COLOR);
 
                 if (defaultCost.isEmpty()) {
                     guiGraphics.blitSprite(
@@ -770,12 +767,12 @@ public class PricingTab<T extends Enum<T>> implements ScreenTab<T> {
                     );
                 } else {
                     guiGraphics.renderFakeItem(defaultCost, xItemCost, yItem);
-                    guiGraphics.renderItemDecorations(PricingTab.this.font, defaultCost, xItemCost, yItem);
+                    guiGraphics.renderItemDecorations(screen.getFont(), defaultCost, xItemCost, yItem);
 
                     // Render item tooltip if mouse is hovering over item cost.
                     if (screen.isHovering(xItemCost - screenLeft, yItem - screenTop, 16, 16, mouseX, mouseY)) {
                         guiGraphics.setTooltipForNextFrame(
-                                PricingTab.this.font,
+                                screen.getFont(),
                                 screen.getTooltipFromContainerItem(defaultCost),
                                 defaultCost.getTooltipImage(),
                                 mouseX,
@@ -786,7 +783,7 @@ public class PricingTab<T extends Enum<T>> implements ScreenTab<T> {
                 }
 
                 // Render parentheses before and after default cost to indicate this cost is from the default cost slot.
-                guiGraphics.drawString(PricingTab.this.font, ")", xItemCost + 18, yItem + 5, ARGB_SCROLLBOX_BUTTON_TEXT_COLOR);
+                guiGraphics.drawString(screen.getFont(), ")", xItemCost + 18, yItem + 5, ARGB_SCROLLBOX_BUTTON_TEXT_COLOR);
             } else if (itemCost == ItemStack.EMPTY) {
                 guiGraphics.blitSprite(
                         RenderPipelines.GUI_TEXTURED,
@@ -797,12 +794,12 @@ public class PricingTab<T extends Enum<T>> implements ScreenTab<T> {
                 );
             } else {
                 guiGraphics.renderFakeItem(itemCost, xItemCost, yItem);
-                guiGraphics.renderItemDecorations(PricingTab.this.font, itemCost, xItemCost, yItem);
+                guiGraphics.renderItemDecorations(screen.getFont(), itemCost, xItemCost, yItem);
 
                 // Render item tooltip if mouse is hovering over item cost.
                 if (screen.isHovering(xItemCost - screenLeft, yItem - screenTop, 16, 16, mouseX, mouseY)) {
                     guiGraphics.setTooltipForNextFrame(
-                            PricingTab.this.font,
+                            screen.getFont(),
                             screen.getTooltipFromContainerItem(itemCost),
                             itemCost.getTooltipImage(),
                             mouseX,
@@ -815,7 +812,7 @@ public class PricingTab<T extends Enum<T>> implements ScreenTab<T> {
             // Render dirty marker if applicable.
             int itemPriceIndex = this.contentRowsScrolledOff + row;
             if (itemPriceIndex == this.selectedContentRow && this.isSelectedItemPriceDirty(itemPrice, pricingMenu)) {
-                guiGraphics.drawString(PricingTab.this.font, "*", xDirtyMarker, yItem + 2, ARGB_DIRTY_MARKER_COLOR);
+                guiGraphics.drawString(screen.getFont(), "*", xDirtyMarker, yItem + 2, ARGB_DIRTY_MARKER_COLOR);
             }
         }
     }
