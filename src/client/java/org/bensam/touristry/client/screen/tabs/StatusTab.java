@@ -159,7 +159,7 @@ public class StatusTab<T extends Enum<T>> implements ScreenTab<T> {
         guiGraphics.drawString(screen.getFont(), screen.getPlayerInventoryTitle(), INVENTORY_LABEL_X, INVENTORY_LABEL_Y, AbstractTabbedExperienceScreen.ARGB_SCREEN_TEXT_COLOR, false);
 
         Component reputationLabel = Component.translatable(
-                "screen." + Touristry.MOD_ID + ".tourist_block.reputation",
+                "screen.touristry.tourist_block.reputation",
                 String.format("%.2f", menu.getReputation())
         );
         guiGraphics.drawString(

@@ -165,8 +165,9 @@ public final class PlayerCommands {
 
         Component message = beaconBlockEntity.getName().copy()
                 .append(Component.literal(" @ " + beaconBlockEntity.getBlockPos().toShortString() + " is now "))
-                .append(Component.translatable("message." + Touristry.MOD_ID
-                        + (beaconBlockEntity.isOpenForBusiness() ? ".tourist_block.status.open_for_business" : ".tourist_block.status.closed_for_business")));
+                .append(Component.translatable(beaconBlockEntity.isOpenForBusiness()
+                        ? "message.touristry.tourist_block.status.open_for_business"
+                        : "message.touristry.tourist_block.status.closed_for_business"));
         source.sendSuccess(() -> message,  false);
         return 1;
     }
@@ -251,8 +252,9 @@ public final class PlayerCommands {
 
         Component message = experienceBlockEntity.getName().copy()
                 .append(Component.literal(" @ " + experienceBlockEntity.getBlockPos().toShortString() + " is now "))
-                .append(Component.translatable("message." + Touristry.MOD_ID
-                        + (experienceBlockEntity.isOpenForBusiness() ? ".tourist_block.status.open_for_business" : ".tourist_block.status.closed_for_business")));
+                .append(Component.translatable(experienceBlockEntity.isOpenForBusiness()
+                        ? "message.touristry.tourist_block.status.open_for_business"
+                        : "message.touristry.tourist_block.status.closed_for_business"));
         source.sendSuccess(() -> message,  false);
         return 1;
     }
@@ -260,8 +262,9 @@ public final class PlayerCommands {
     private static int toggleOrderedTargets(CommandSourceStack source, AbstractExperienceBlockEntity experienceBlockEntity) {
         experienceBlockEntity.setOrderedTargets(!experienceBlockEntity.isTargetListOrdered());
 
-        Component message = Component.translatable("message." + Touristry.MOD_ID
-                        + (experienceBlockEntity.isTargetListOrdered() ? ".tourist_block.targets.ordered" : ".tourist_block.targets.randomized"),
+        Component message = Component.translatable(experienceBlockEntity.isTargetListOrdered()
+                        ? "message.touristry.tourist_block.targets.ordered"
+                        : "message.touristry.tourist_block.targets.randomized",
                 experienceBlockEntity.getPlainTextName());
         source.sendSuccess(() -> message,  false);
         return 1;
@@ -280,8 +283,9 @@ public final class PlayerCommands {
             Component message = Component.literal(" - ")
                     .append(beaconBlockEntity.getName())
                     .append(Component.literal(" @ " + beaconBlockEntity.getBlockPos().toShortString() + " ("))
-                    .append(Component.translatable("message." + Touristry.MOD_ID
-                            + (beaconBlockEntity.isOpenForBusiness() ? ".tourist_block.status.open_for_business" : ".tourist_block.status.closed_for_business")))
+                    .append(Component.translatable(beaconBlockEntity.isOpenForBusiness()
+                            ? "message.touristry.tourist_block.status.open_for_business"
+                            : "message.touristry.tourist_block.status.closed_for_business"))
                     .append(Component.literal(")"));
             source.sendSuccess(() -> message, false);
         }

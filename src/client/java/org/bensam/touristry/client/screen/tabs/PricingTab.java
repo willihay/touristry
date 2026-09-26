@@ -55,15 +55,15 @@ public class PricingTab<T extends Enum<T>> implements ScreenTab<T> {
 
     //region Constants: Labels and positions
     private static final boolean PRICING_SHOW_REMOVE_ALL_BUTTON = false;
-    private static final Component PRICING_IMPORT_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.pricing.import.tooltip");
-    private static final Component PRICING_DEFAULT_LABEL = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.pricing.default.label");
-    private static final Component PRICING_DEFAULT_LABEL_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.pricing.default.label.tooltip");
-    private static final Component PRICING_RESET_DEFAULT_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.pricing.reset_default_cost.tooltip");
-    private static final Component PRICING_REMOVE_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.pricing.remove.tooltip");
-    private static final Component PRICING_ACCEPT_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.pricing.accept.tooltip");
-    private static final Component PRICING_CANCEL_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.pricing.cancel.tooltip");
-    private static final Component PRICING_REMOVE_ALL_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.pricings.remove_all.tooltip");
-    private static final Component PRICING_REMOVE_DEFAULTS_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.pricings.remove_defaults.tooltip");
+    private static final Component PRICING_IMPORT_TOOLTIP = Component.translatable("screen.touristry.tourist_block.pricing.import.tooltip");
+    private static final Component PRICING_DEFAULT_LABEL = Component.translatable("screen.touristry.tourist_block.pricing.default.label");
+    private static final Component PRICING_DEFAULT_LABEL_TOOLTIP = Component.translatable("screen.touristry.tourist_block.pricing.default.label.tooltip");
+    private static final Component PRICING_RESET_DEFAULT_TOOLTIP = Component.translatable("screen.touristry.tourist_block.pricing.reset_default_cost.tooltip");
+    private static final Component PRICING_REMOVE_TOOLTIP = Component.translatable("screen.touristry.tourist_block.pricing.remove.tooltip");
+    private static final Component PRICING_ACCEPT_TOOLTIP = Component.translatable("screen.touristry.tourist_block.pricing.accept.tooltip");
+    private static final Component PRICING_CANCEL_TOOLTIP = Component.translatable("screen.touristry.tourist_block.pricing.cancel.tooltip");
+    private static final Component PRICING_REMOVE_ALL_TOOLTIP = Component.translatable("screen.touristry.tourist_block.pricings.remove_all.tooltip");
+    private static final Component PRICING_REMOVE_DEFAULTS_TOOLTIP = Component.translatable("screen.touristry.tourist_block.pricings.remove_defaults.tooltip");
     private static final int ARGB_SCROLLBOX_BUTTON_TEXT_COLOR = 0xFFFFFFFF; // white
     private static final int ARGB_DIRTY_MARKER_COLOR = 0xFFFF0000; // red
     private static final int SCROLLBOX_ROWS = 7;

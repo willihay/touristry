@@ -24,10 +24,10 @@ public class TargetOrderedButton extends Button {
     );
     private static final int BUTTON_WIDTH = 76;
     private static final int BUTTON_HEIGHT = 18;
-    private static final Component BUTTON_LABEL_ORDERED = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.targets.ordered_button.label.ordered");
-    private static final Component BUTTON_LABEL_RANDOMIZED = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.targets.ordered_button.label.randomized");
-    private static final Component BUTTON_TOOLTIP_ORDERED = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.targets.ordered_button.tooltip.ordered");
-    private static final Component BUTTON_TOOLTIP_RANDOMIZED = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.targets.ordered_button.tooltip.randomized");
+    private static final Component BUTTON_LABEL_ORDERED = Component.translatable("screen.touristry.tourist_block.targets.ordered_button.label.ordered");
+    private static final Component BUTTON_LABEL_RANDOMIZED = Component.translatable("screen.touristry.tourist_block.targets.ordered_button.label.randomized");
+    private static final Component BUTTON_TOOLTIP_ORDERED = Component.translatable("screen.touristry.tourist_block.targets.ordered_button.tooltip.ordered");
+    private static final Component BUTTON_TOOLTIP_RANDOMIZED = Component.translatable("screen.touristry.tourist_block.targets.ordered_button.tooltip.randomized");
 
     private final Font font;
     private boolean isOrdered;

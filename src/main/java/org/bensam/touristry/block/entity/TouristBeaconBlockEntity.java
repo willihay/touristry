@@ -91,7 +91,7 @@ public class TouristBeaconBlockEntity extends BlockEntity implements MenuProvide
     }
 
     protected @NonNull Component getDefaultName() {
-        return Component.translatable("block." + Touristry.MOD_ID + ".tourist_beacon");
+        return Component.translatable("block.touristry.tourist_beacon");
     }
 
     @Override

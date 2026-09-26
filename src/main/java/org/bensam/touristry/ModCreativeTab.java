@@ -27,7 +27,7 @@ public final class ModCreativeTab {
         // Build the custom creative tab.
         tabInternal = FabricItemGroup.builder()
                 .icon(() -> new ItemStack(ModBlocks.TOURIST_BEACON.get().asItem()))
-                .title(Component.translatable("itemGroup." + Touristry.MOD_ID))
+                .title(Component.translatable("itemGroup.touristry"))
                 .displayItems((params, output) -> {
                     output.accept(ModBlocks.TOURIST_BEACON.get().asItem());
                     output.accept(ModBlocks.DINING_EXPERIENCE.get().asItem());

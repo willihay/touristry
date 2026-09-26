@@ -42,11 +42,11 @@ public class TargetsTab<T extends Enum<T>> implements ScreenTab<T> {
     //endregion
 
     //region Constants: Labels and positions
-    private static final Component TARGET_ORDERED_LABEL = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.targets.ordered_button.label");
-    private static final Component TARGET_MOVE_UP_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.target.move_up.tooltip");
-    private static final Component TARGET_MOVE_DOWN_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.target.move_down.tooltip");
-    private static final Component TARGET_REMOVE_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.target.remove.tooltip");
-    private static final Component TARGET_REMOVE_ALL_TOOLTIP = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.targets.remove_all.tooltip");
+    private static final Component TARGET_ORDERED_LABEL = Component.translatable("screen.touristry.tourist_block.targets.ordered_button.label");
+    private static final Component TARGET_MOVE_UP_TOOLTIP = Component.translatable("screen.touristry.tourist_block.target.move_up.tooltip");
+    private static final Component TARGET_MOVE_DOWN_TOOLTIP = Component.translatable("screen.touristry.tourist_block.target.move_down.tooltip");
+    private static final Component TARGET_REMOVE_TOOLTIP = Component.translatable("screen.touristry.tourist_block.target.remove.tooltip");
+    private static final Component TARGET_REMOVE_ALL_TOOLTIP = Component.translatable("screen.touristry.tourist_block.targets.remove_all.tooltip");
     private static final int ARGB_SCROLLBOX_BUTTON_TEXT_COLOR = 0xFFFFFFFF; // white
     private static final int SCROLLBOX_ROWS = 7;
     private static final int SCROLLBOX_WIDTH = 96;

@@ -105,7 +105,7 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
 
     @Override
     public Component getDefaultName() {
-        return Component.translatable("block." + Touristry.MOD_ID + ".shopping_experience");
+        return Component.translatable("block.touristry.shopping_experience");
     }
 
     @Override

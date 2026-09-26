@@ -26,8 +26,8 @@ public class SightseeingExperienceScreen extends AbstractContainerScreen<Sightse
 
     //region Constants: Status Tab
     // Status screen constants
-    private static final Component OPEN_FOR_BUSINESS_MESSAGE = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.status.open_for_business");
-    private static final Component CLOSED_FOR_BUSINESS_MESSAGE = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.status.closed_for_business");
+    private static final Component OPEN_FOR_BUSINESS_MESSAGE = Component.translatable("screen.touristry.tourist_block.status.open_for_business");
+    private static final Component CLOSED_FOR_BUSINESS_MESSAGE = Component.translatable("screen.touristry.tourist_block.status.closed_for_business");
     private static final int REPUTATION_LABEL_X = 8;
     private static final int REPUTATION_LABEL_Y = 17;
     private static final int TARGET_KEY_LABEL_X = 8;
@@ -121,7 +121,7 @@ public class SightseeingExperienceScreen extends AbstractContainerScreen<Sightse
         super.renderLabels(guiGraphics, i, j);
 
         Component reputationLabel = Component.translatable(
-                "screen." + Touristry.MOD_ID + ".tourist_block.reputation",
+                "screen.touristry.tourist_block.reputation",
                 String.format("%.2f", this.menu.getReputation())
         );
         guiGraphics.drawString(
@@ -133,7 +133,7 @@ public class SightseeingExperienceScreen extends AbstractContainerScreen<Sightse
                 false
         );
 
-        Component targetKeyLabel = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.target_key.label");
+        Component targetKeyLabel = Component.translatable("screen.touristry.tourist_block.target_key.label");
         guiGraphics.drawString(
                 this.font,
                 targetKeyLabel,
@@ -143,7 +143,7 @@ public class SightseeingExperienceScreen extends AbstractContainerScreen<Sightse
                 false
         );
 
-        Component entryFeeLabel = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.entry_fee.label");
+        Component entryFeeLabel = Component.translatable("screen.touristry.tourist_block.entry_fee.label");
         guiGraphics.drawString(
                 this.font,
                 entryFeeLabel,
@@ -153,7 +153,7 @@ public class SightseeingExperienceScreen extends AbstractContainerScreen<Sightse
                 false
         );
 
-        Component statusLabel = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.status.label");
+        Component statusLabel = Component.translatable("screen.touristry.tourist_block.status.label");
         guiGraphics.drawString(
                 this.font,
                 statusLabel,

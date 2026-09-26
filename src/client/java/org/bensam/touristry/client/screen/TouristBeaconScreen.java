@@ -15,8 +15,8 @@ import org.jspecify.annotations.NonNull;
 public class TouristBeaconScreen extends AbstractContainerScreen<TouristBeaconMenu> {
     private static final Identifier BG_TEXTURE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "textures/gui/tourist_beacon.png");
 
-    private static final Component OPEN_FOR_BUSINESS_MESSAGE = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.status.open_for_business");
-    private static final Component CLOSED_FOR_BUSINESS_MESSAGE = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.status.closed_for_business");
+    private static final Component OPEN_FOR_BUSINESS_MESSAGE = Component.translatable("screen.touristry.tourist_block.status.open_for_business");
+    private static final Component CLOSED_FOR_BUSINESS_MESSAGE = Component.translatable("screen.touristry.tourist_block.status.closed_for_business");
     private static final int REPUTATION_LABEL_X = 8;
     private static final int REPUTATION_LABEL_Y = 17;
     private static final int STATUS_LABEL_X = 116;
@@ -104,7 +104,7 @@ public class TouristBeaconScreen extends AbstractContainerScreen<TouristBeaconMe
         super.renderLabels(guiGraphics, i, j);
 
         Component reputationLabel = Component.translatable(
-                "screen." + Touristry.MOD_ID + ".tourist_block.reputation",
+                "screen.touristry.tourist_block.reputation",
                 String.format("%.2f", this.menu.getReputation())
         );
 
@@ -117,7 +117,7 @@ public class TouristBeaconScreen extends AbstractContainerScreen<TouristBeaconMe
                 false
         );
 
-        Component statusLabel = Component.translatable("screen." + Touristry.MOD_ID + ".tourist_block.status.label");
+        Component statusLabel = Component.translatable("screen.touristry.tourist_block.status.label");
 
         guiGraphics.drawString(
                 this.font,
