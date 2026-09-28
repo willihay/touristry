@@ -5,7 +5,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
 import org.bensam.touristry.Touristry;
 import org.bensam.touristry.client.screen.AbstractTabbedExperienceScreen;
 import org.bensam.touristry.client.screen.ReputationColor;
@@ -14,7 +13,7 @@ import org.bensam.touristry.menu.AbstractExperienceMenu;
 import org.bensam.touristry.network.ExperienceScreenActionC2SPayload;
 import org.bensam.touristry.tourism.experience.ExperienceScreenAction;
 
-public class StatusTab<T extends Enum<T>> implements ScreenTab<T> {
+public class StatusTab<T extends Enum<T>> extends AbstractScreenTab<T> {
     private static final Component TAB_TITLE = Component.translatable("screen.touristry.tourist_block.tab.status");
 
     //region Constants: Textures and sprites
@@ -47,17 +46,16 @@ public class StatusTab<T extends Enum<T>> implements ScreenTab<T> {
     private static final int INVENTORY_LABEL_Y = 72;
     //endregion
 
-    private final T tabEnum;
-    private final ItemStack tabIcon;
-    private int tabOrder;
-
     private boolean hasReceivedSync;
     private boolean openForBusiness;
     private OnOffSliderButton statusToggleButton;
 
     public StatusTab(T tabEnum, Item tabIcon) {
-        this.tabEnum = tabEnum;
-        this.tabIcon = new ItemStack(tabIcon);
+        this(TAB_TITLE, tabEnum, tabIcon);
+    }
+
+    public StatusTab(Component tabTitle, T tabEnum, Item tabIcon) {
+        super(tabTitle, tabEnum, tabIcon, BACKGROUND_TEXTURE);
     }
 
     // Screen setup handlers
@@ -118,38 +116,7 @@ public class StatusTab<T extends Enum<T>> implements ScreenTab<T> {
         }
     }
 
-    // Tab properties
-    @Override
-    public T getTabEnum() {
-        return this.tabEnum;
-    }
-
-    @Override
-    public int getTabOrder() {
-        return this.tabOrder;
-    }
-
-    @Override
-    public Component getTabTitle() {
-        return TAB_TITLE;
-    }
-
-    @Override
-    public void setTabOrder(int tabOrder) {
-        this.tabOrder = tabOrder;
-    }
-
     // Render methods
-    @Override
-    public Identifier getBackground() {
-        return BACKGROUND_TEXTURE;
-    }
-
-    @Override
-    public ItemStack getTabIcon() {
-        return this.tabIcon;
-    }
-
     @Override
     public void renderContents(GuiGraphics guiGraphics, int mouseX, int mouseY, AbstractTabbedExperienceScreen<?, ?> screen, AbstractExperienceMenu<?> menu) {}
 

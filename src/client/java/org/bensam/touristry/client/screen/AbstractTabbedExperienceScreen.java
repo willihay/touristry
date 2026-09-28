@@ -14,7 +14,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import org.bensam.touristry.Touristry;
-import org.bensam.touristry.client.screen.tabs.ScreenTab;
+import org.bensam.touristry.client.screen.tabs.AbstractScreenTab;
 import org.bensam.touristry.menu.AbstractExperienceMenu;
 import org.jspecify.annotations.NonNull;
 
@@ -37,10 +37,10 @@ public abstract class AbstractTabbedExperienceScreen<M extends AbstractExperienc
             Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tab_top_selected_right")
     };
 
-    private ScreenTab<T> selectedTab;
-    protected final List<ScreenTab<T>> tabs;
+    private AbstractScreenTab<T> selectedTab;
+    protected final List<AbstractScreenTab<T>> tabs;
 
-    public AbstractTabbedExperienceScreen(M containerMenu, Inventory inventory, Component title, List<ScreenTab<T>> tabs) {
+    public AbstractTabbedExperienceScreen(M containerMenu, Inventory inventory, Component title, List<AbstractScreenTab<T>> tabs) {
         super(containerMenu, inventory, title);
         this.tabs = tabs;
 
@@ -48,7 +48,7 @@ public abstract class AbstractTabbedExperienceScreen<M extends AbstractExperienc
             this.selectedTab = this.tabs.getFirst();
         }
 
-        for (int i = 0; i < tabs.size(); ++i) {
+        for (int i = 0; i < this.tabs.size(); ++i) {
             this.tabs.get(i).setTabOrder(i);
         }
     }
@@ -61,7 +61,7 @@ public abstract class AbstractTabbedExperienceScreen<M extends AbstractExperienc
             this.selectTab(this.selectedTab);
         }
 
-        for (ScreenTab<T> tab : this.tabs) {
+        for (AbstractScreenTab<T> tab : this.tabs) {
             tab.init(this.menu);
         }
     }
@@ -78,13 +78,13 @@ public abstract class AbstractTabbedExperienceScreen<M extends AbstractExperienc
         return this.addRenderableWidget(button);
     }
 
-    private boolean checkTabClicked(double mouseLocalX, double mouseLocalY, ScreenTab<T> tab) {
+    private boolean checkTabClicked(double mouseLocalX, double mouseLocalY, AbstractScreenTab<T> tab) {
         int tabX = this.getTabLeft(tab);
         int tabY = this.getTabTop();
         return mouseLocalX >= tabX && mouseLocalX <= tabX + TAB_WIDTH && mouseLocalY >= tabY && mouseLocalY <= tabY + TAB_HEIGHT;
     }
 
-    private void checkTabHovering(GuiGraphics guiGraphics, int mouseX, int mouseY, ScreenTab<T> tab) {
+    private void checkTabHovering(GuiGraphics guiGraphics, int mouseX, int mouseY, AbstractScreenTab<T> tab) {
         int tabX = this.getTabLeft(tab);
         int tabY = this.getTabTop();
         if (this.isHovering(tabX + 3, tabY + 3, TAB_WIDTH - 5, TAB_HEIGHT - 5, mouseX, mouseY)) {
@@ -116,7 +116,7 @@ public abstract class AbstractTabbedExperienceScreen<M extends AbstractExperienc
 
     public abstract int getScreenHeight();
 
-    private int getTabLeft(ScreenTab<T> tab) {
+    private int getTabLeft(AbstractScreenTab<T> tab) {
         return (TAB_WIDTH + 1) * tab.getTabOrder();
     }
 
@@ -150,7 +150,7 @@ public abstract class AbstractTabbedExperienceScreen<M extends AbstractExperienc
         double mouseLocalY = mouseButtonEvent.y() - this.topPos;
 
         if (mouseButtonEvent.button() == 0) {
-            for (ScreenTab<T> tab : this.tabs) {
+            for (AbstractScreenTab<T> tab : this.tabs) {
                 if (this.checkTabClicked(mouseLocalX, mouseLocalY, tab)) {
                     return true;
                 }
@@ -171,7 +171,7 @@ public abstract class AbstractTabbedExperienceScreen<M extends AbstractExperienc
         double mouseLocalY = mouseButtonEvent.y() - this.topPos;
 
         if (mouseButtonEvent.button() == 0) {
-            for (ScreenTab<T> tab : this.tabs) {
+            for (AbstractScreenTab<T> tab : this.tabs) {
                 if (this.checkTabClicked(mouseLocalX, mouseLocalY, tab)) {
                     this.selectTab(tab);
                     handled = true;
@@ -215,7 +215,7 @@ public abstract class AbstractTabbedExperienceScreen<M extends AbstractExperienc
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float a) {
         super.render(guiGraphics, mouseX, mouseY, a);
 
-        for (ScreenTab<T> tab : this.tabs) {
+        for (AbstractScreenTab<T> tab : this.tabs) {
             this.checkTabHovering(guiGraphics, mouseX, mouseY, tab);
         }
 
@@ -225,7 +225,7 @@ public abstract class AbstractTabbedExperienceScreen<M extends AbstractExperienc
     @Override
     protected void renderBg(GuiGraphics guiGraphics, float a, int mouseX, int mouseY) {
         // Render unselected tabs.
-        for (ScreenTab<T> tab : this.tabs) {
+        for (AbstractScreenTab<T> tab : this.tabs) {
             if (tab != this.selectedTab) {
                 this.renderTabButton(guiGraphics, mouseX, mouseY, tab, false);
             }
@@ -252,18 +252,18 @@ public abstract class AbstractTabbedExperienceScreen<M extends AbstractExperienc
         }
     }
 
-    private void renderTabButton(GuiGraphics guiGraphics, int mouseX, int mouseY, ScreenTab<T> tab, boolean isSelectedTab) {
-        int xTab = this.leftPos + this.getTabLeft(tab);
-        int yTab = this.topPos + this.getTabTop();
-        guiGraphics.blitSprite(RenderPipelines.GUI_TEXTURED, this.getTabTexture(isSelectedTab, tab.getTabOrder()), xTab, yTab, 26, 32);
+    private void renderTabButton(GuiGraphics guiGraphics, int mouseX, int mouseY, AbstractScreenTab<T> tab, boolean isSelectedTab) {
+        int tabX = this.leftPos + this.getTabLeft(tab);
+        int tabY = this.topPos + this.getTabTop();
+        guiGraphics.blitSprite(RenderPipelines.GUI_TEXTURED, this.getTabTexture(isSelectedTab, tab.getTabOrder()), tabX, tabY, 26, 32);
 
-        if (!isSelectedTab && mouseX > xTab && mouseY > yTab && mouseX < xTab + TAB_WIDTH && mouseY < yTab + TAB_HEIGHT) {
+        if (!isSelectedTab && mouseX > tabX && mouseY > tabY && mouseX < tabX + TAB_WIDTH && mouseY < tabY + TAB_HEIGHT) {
             guiGraphics.requestCursor(CursorTypes.POINTING_HAND);
         }
 
-        int xIcon = xTab + 5;
-        int yIcon = yTab + 9;
-        guiGraphics.renderItem(tab.getTabIcon(), xIcon, yIcon);
+        int iconX = tabX + 5;
+        int iconY = tabY + 9;
+        guiGraphics.renderItem(tab.getTabIcon(), iconX, iconY);
     }
 
     @Override
@@ -281,7 +281,7 @@ public abstract class AbstractTabbedExperienceScreen<M extends AbstractExperienc
         }
     }
 
-    protected void selectTab(@NonNull ScreenTab<T> tab) {
+    protected void selectTab(@NonNull AbstractScreenTab<T> tab) {
         if (this.selectedTab != null) {
             this.selectedTab.onDeselected(this);
         }

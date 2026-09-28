@@ -9,7 +9,6 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
 import org.bensam.touristry.Touristry;
 import org.bensam.touristry.client.screen.AbstractTabbedExperienceScreen;
 import org.bensam.touristry.client.screen.buttons.ExperienceScrollBoxButton;
@@ -25,7 +24,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.Arrays;
 
-public class TargetsTab<T extends Enum<T>> implements ScreenTab<T> {
+public class TargetsTab<T extends Enum<T>> extends AbstractScreenTab<T> {
     private static final Component TAB_TITLE = Component.translatable("screen.touristry.tourist_block.tab.targets");
 
     //region Constants: Textures and sprites
@@ -73,9 +72,6 @@ public class TargetsTab<T extends Enum<T>> implements ScreenTab<T> {
     private static final int TARGET_REMOVE_ALL_BUTTON_Y = -22;
     //endregion
 
-    private final T tabEnum;
-    private final ItemStack tabIcon;
-    private int tabOrder;
     private final ScrollBox scrollBox = new ScrollBox();
 
     private TargetOrderedButton targetOrderedToggleButton;
@@ -85,8 +81,11 @@ public class TargetsTab<T extends Enum<T>> implements ScreenTab<T> {
     private ImageButton targetRemoveAllButton;
 
     public TargetsTab(T tabEnum, Item tabIcon) {
-        this.tabEnum = tabEnum;
-        this.tabIcon = new ItemStack(tabIcon);
+        this(TAB_TITLE, tabEnum, tabIcon);
+    }
+
+    public TargetsTab(Component tabTitle, T tabEnum, Item tabIcon) {
+        super(tabTitle, tabEnum, tabIcon, BACKGROUND_TEXTURE);
     }
 
     // Screen setup handlers
@@ -273,27 +272,6 @@ public class TargetsTab<T extends Enum<T>> implements ScreenTab<T> {
         screen.removeButton(this.targetRemoveAllButton);
     }
 
-    // Tab properties
-    @Override
-    public T getTabEnum() {
-        return this.tabEnum;
-    }
-
-    @Override
-    public int getTabOrder() {
-        return this.tabOrder;
-    }
-
-    @Override
-    public Component getTabTitle() {
-        return TAB_TITLE;
-    }
-
-    @Override
-    public void setTabOrder(int tabOrder) {
-        this.tabOrder = tabOrder;
-    }
-
     // Input methods
     @Override
     public boolean onMouseClicked(MouseButtonEvent mouseButtonEvent, boolean doubleClick, double mouseLocalX, double mouseLocalY, AbstractExperienceMenu<?> menu) {
@@ -330,16 +308,6 @@ public class TargetsTab<T extends Enum<T>> implements ScreenTab<T> {
     }
 
     // Render methods
-    @Override
-    public Identifier getBackground() {
-        return BACKGROUND_TEXTURE;
-    }
-
-    @Override
-    public ItemStack getTabIcon() {
-        return this.tabIcon;
-    }
-
     @Override
     public void renderContents(GuiGraphics guiGraphics, int mouseX, int mouseY, AbstractTabbedExperienceScreen<?, ?> screen, AbstractExperienceMenu<?> menu) {
         boolean isAnyTargetSelected = this.scrollBox.isAnyContentRowSelected();
