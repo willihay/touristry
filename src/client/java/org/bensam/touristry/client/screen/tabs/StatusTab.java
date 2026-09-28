@@ -70,13 +70,11 @@ public class StatusTab<T extends Enum<T>> extends AbstractScreenTab<T> {
                     CLOSED_FOR_BUSINESS_MESSAGE,
                     button -> {
                         if (button instanceof OnOffSliderButton onOffSliderButton) {
-                            this.openForBusiness = !menu.isOpenForBusiness();
-                            onOffSliderButton.setState(this.openForBusiness);
-
+                            boolean newState = !menu.isOpenForBusiness();
                             ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
                                     menu.getContainerId(),
                                     ExperienceScreenAction.SET_OPEN_STATUS,
-                                    this.openForBusiness ? 1 : 0,
+                                    newState ? 1 : 0,
                                     -1
                             ));
                         }
