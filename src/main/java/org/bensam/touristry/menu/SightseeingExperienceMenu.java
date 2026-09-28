@@ -19,19 +19,19 @@ public class SightseeingExperienceMenu extends AbstractExperienceMenu<Sightseein
     // Slot layout
     private static final int CONFIGURATION_SLOT_COUNT = 2; // target key + entry fee
     private static final int EXPERIENCE_PAYMENT_SLOT_COUNT = SightseeingExperienceBlockEntity.PAYMENT_SLOT_SIZE;
-    private static final int EXPERIENCE_PAYMENT_SLOT_START_X = 116;
+    private static final int EXPERIENCE_PAYMENT_SLOT_START_X = 216;
     private static final int EXPERIENCE_PAYMENT_SLOT_START_Y = 17;
     private static final int CONFIGURATION_TARGET_KEY_SLOT = 0;
-    private static final int EXPERIENCE_TARGET_KEY_SLOT_X = 80;
+    private static final int EXPERIENCE_TARGET_KEY_SLOT_X = 180;
     private static final int EXPERIENCE_TARGET_KEY_SLOT_Y = 35;
     private static final int CONFIGURATION_ENTRY_FEE_SLOT = 1;
-    private static final int EXPERIENCE_ENTRY_FEE_SLOT_X = 80;
+    private static final int EXPERIENCE_ENTRY_FEE_SLOT_X = 180;
     private static final int EXPERIENCE_ENTRY_FEE_SLOT_Y = 53;
     private static final int EXPERIENCE_SLOT_COUNT = EXPERIENCE_PAYMENT_SLOT_COUNT + CONFIGURATION_SLOT_COUNT;
 
     // Player inventory layout
     private static final int PLAYER_SLOT_START = EXPERIENCE_SLOT_COUNT;
-    private static final int PLAYER_INVENTORY_ROW_X = 8;
+    private static final int PLAYER_INVENTORY_ROW_X = 108;
     private static final int PLAYER_INVENTORY_ROW_Y = 84;
 
     // Tab layout
@@ -90,13 +90,13 @@ public class SightseeingExperienceMenu extends AbstractExperienceMenu<Sightseein
 
     @Override
     public boolean clickMenuButton(@NonNull Player player, int buttonId) {
-        if (buttonId == SightseeingExperienceMenu.Tab.STATUS.ordinal()) {
-            this.setSelectedTab(SightseeingExperienceMenu.Tab.STATUS);
+        if (buttonId == Tab.STATUS.ordinal()) {
+            this.setSelectedTab(Tab.STATUS);
             return true;
         }
 
-        if (buttonId == SightseeingExperienceMenu.Tab.TARGETS.ordinal()) {
-            this.setSelectedTab(SightseeingExperienceMenu.Tab.TARGETS);
+        if (buttonId == Tab.TARGETS.ordinal()) {
+            this.setSelectedTab(Tab.TARGETS);
             return true;
         }
 
@@ -105,7 +105,7 @@ public class SightseeingExperienceMenu extends AbstractExperienceMenu<Sightseein
 
     @Override
     protected SightseeingExperienceMenu.Tab getDefaultTab() {
-        return SightseeingExperienceMenu.Tab.STATUS;
+        return Tab.STATUS;
     }
 
     @Override
@@ -120,7 +120,7 @@ public class SightseeingExperienceMenu extends AbstractExperienceMenu<Sightseein
 
         // Player inventory -> experience slot
         if (slotId >= PLAYER_SLOT_START) {
-            if (this.isSelectedTab(SightseeingExperienceMenu.Tab.STATUS)) {
+            if (this.isSelectedTab(Tab.STATUS)) {
                 if (!this.moveItemStackTo(sourceStack, 0, EXPERIENCE_PAYMENT_SLOT_COUNT, false)) {
                     return ItemStack.EMPTY;
                 }

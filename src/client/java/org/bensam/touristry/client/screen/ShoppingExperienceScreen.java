@@ -14,8 +14,8 @@ import java.util.List;
 
 public class ShoppingExperienceScreen extends AbstractTabbedExperienceScreen<ShoppingExperienceMenu, ShoppingExperienceMenu.Tab> {
     private static final int BG_TEXTURE_WIDTH = 512;
-    public static final int BG_SCREEN_WIDTH = 276;
-    public static final int BG_SCREEN_HEIGHT = 166;
+    private static final int BG_SCREEN_WIDTH = 276;
+    private static final int BG_SCREEN_HEIGHT = 166;
 
     public ShoppingExperienceScreen(ShoppingExperienceMenu containerMenu, Inventory inventory, Component title) {
         super(containerMenu, inventory, title, List.of(
