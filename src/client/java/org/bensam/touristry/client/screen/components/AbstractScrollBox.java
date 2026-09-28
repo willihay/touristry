@@ -45,11 +45,6 @@ public abstract class AbstractScrollBox<R> {
         return numContentRows > this.rows;
     }
 
-    public boolean checkIfScrolling(double mouseLocalX, double mouseLocalY, int numContentRows) {
-        this.isScrolling = this.canScroll(numContentRows) && this.isInsideScrollbar(mouseLocalX, mouseLocalY);
-        return this.isScrolling;
-    }
-
     public void clampContentRowsScrolledOff(int numContentRows) {
         this.contentRowsScrolledOff = Math.max(0, Math.min(this.contentRowsScrolledOff, numContentRows - this.rows)); // cannot use Math.clamp here because (numContentRows - rows) might be negative
     }
@@ -59,23 +54,84 @@ public abstract class AbstractScrollBox<R> {
         this.updateRowFocusForSelectedContent(numContentRows);
     }
 
+    protected int getScrollerOffset(int numContentRows) {
+        int scrollSteps = numContentRows - this.rows;
+        if (scrollSteps <= 0) {
+            return 0;
+        }
+        
+        // Compute how far the scroller can travel.
+        int maxScrollerOffset = this.scrollerTrackLength - SCROLLER_HEIGHT;
+
+        // Compute the actual scroller travel.
+        int scrollerOffset = 0;
+
+        // Check for the simple case.
+        if (this.contentRowsScrolledOff == scrollSteps) {
+            scrollerOffset = maxScrollerOffset;
+        } else {
+            // Distribute the track height across all scroll steps.
+            float pixelsPerStep = (float) maxScrollerOffset / scrollSteps;
+
+            // Compute the scroller's offset based on how many rows have been scrolled off.
+            scrollerOffset = Math.round(pixelsPerStep * this.contentRowsScrolledOff);
+        }
+
+        return scrollerOffset;
+    }
+
     public boolean isAnyContentRowSelected() {
         return this.selectedContentRow >= 0;
     }
 
-    public boolean isScrolling() {
-        return this.isScrolling;
-    }
-
-    protected boolean isInsideScrollbar(double mouseLocalX, double mouseLocalY) {
+    protected boolean isInsideScrollTrack(double mouseLocalX, double mouseLocalY) {
         return mouseLocalX >= this.scrollerTrackX &&
                 mouseLocalX < this.scrollerTrackX + SCROLLER_WIDTH &&
                 mouseLocalY >= this.scrollerTrackTopY &&
                 mouseLocalY <= this.scrollerTrackBottomY;
     }
 
+    protected boolean isInsideScroller(double mouseLocalX, double mouseLocalY, int numContentRows) {
+        int scrollerOffset = this.getScrollerOffset(numContentRows);
+        int scrollerY = this.scrollerTrackTopY + scrollerOffset;
+        return mouseLocalX >= this.scrollerTrackX &&
+                mouseLocalX < this.scrollerTrackX + SCROLLER_WIDTH &&
+                mouseLocalY >= scrollerY &&
+                mouseLocalY < scrollerY + SCROLLER_HEIGHT;
+    }
+
+    public boolean isScrolling() {
+        return this.isScrolling;
+    }
+
     public boolean isValidContentRowSelected(int numContentRows) {
         return this.selectedContentRow >= 0 && this.selectedContentRow < numContentRows;
+    }
+
+    public boolean onClick(double mouseLocalX, double mouseLocalY, int numContentRows) {
+        boolean handled = this.canScroll(numContentRows) && this.isInsideScrollTrack(mouseLocalX, mouseLocalY);
+        if (handled) {
+            if (this.isInsideScroller(mouseLocalX, mouseLocalY, numContentRows)) {
+                this.isScrolling = true;
+                return true;
+            }
+
+            // Mouse clicked inside scroller track but outside scroller.
+            // Move the scroller to that step position.
+            int scrollSteps = numContentRows - this.rows;
+            float clickedOffset = (float) mouseLocalY - this.scrollerTrackTopY;
+            int maxScrollerOffset = this.scrollerTrackLength - SCROLLER_HEIGHT;
+            float pixelsPerStep = (float) maxScrollerOffset / scrollSteps;
+            int newContentRow = (int) (clickedOffset / pixelsPerStep);
+            if (this.contentRowsScrolledOff == newContentRow) {
+                newContentRow++; // if we're not scrolling up, always scroll down by at least one (since we know the player clicked outside the scroller)
+            }
+            this.contentRowsScrolledOff = Math.clamp(newContentRow, 0, scrollSteps);
+            this.updateRowFocusForSelectedContent(numContentRows);
+        }
+
+        this.isScrolling = false;
+        return handled;
     }
 
     public void onDragScroll(double mouseLocalY, int numContentRows) {
@@ -92,7 +148,6 @@ public abstract class AbstractScrollBox<R> {
         float scrollFraction = scrollerCenterY / scrollableTrackLength;
         int rowOffset = (int)(scrollFraction * maxScrolledOff + 0.5F); // rounded to nearest integer
         this.contentRowsScrolledOff = Mth.clamp(rowOffset, 0, maxScrolledOff);
-
         this.updateRowFocusForSelectedContent(numContentRows);
     }
 
@@ -127,8 +182,8 @@ public abstract class AbstractScrollBox<R> {
 
     protected abstract void renderRow(GuiGraphics guiGraphics, int mouseX, int mouseY, int row, AbstractTabbedExperienceScreen<?, ?> screen, AbstractExperienceMenu<?> menu, @NonNull R content);
 
-    protected void renderScroller(GuiGraphics guiGraphics, int mouseX, int mouseY, int screenLeft, int screenTop, int contentRows) {
-        int scrollSteps = contentRows - this.rows;
+    protected void renderScroller(GuiGraphics guiGraphics, int mouseX, int mouseY, int screenLeft, int screenTop, int numContentRows) {
+        int scrollSteps = numContentRows - this.rows;
         int scrollerX = screenLeft + this.scrollerTrackX;
         int trackTopY = screenTop + this.scrollerTrackTopY;
 
@@ -145,25 +200,8 @@ public abstract class AbstractScrollBox<R> {
             return;
         }
 
-        // Compute how far the scroller can travel.
-        int maxScrollerOffset = this.scrollerTrackLength - SCROLLER_HEIGHT;
-
-        // Compute the actual scroller travel.
-        int scrollerOffset = 0;
-
-        // Check for the simple case.
-        if (this.contentRowsScrolledOff == scrollSteps) {
-            scrollerOffset = maxScrollerOffset;
-        } else {
-            // Distribute the track height across all scroll steps.
-            float pixelsPerStep = (float) maxScrollerOffset / scrollSteps;
-
-            // Compute the scroller's offset based on how many rows have been scrolled off.
-            scrollerOffset = Math.round(pixelsPerStep * this.contentRowsScrolledOff);
-        }
-
         // Draw the scroller in the correct position.
-        int scrollerY = trackTopY + scrollerOffset;
+        int scrollerY = trackTopY + this.getScrollerOffset(numContentRows);
         guiGraphics.blitSprite(
                 RenderPipelines.GUI_TEXTURED,
                 SCROLLER_SPRITE,
@@ -176,9 +214,9 @@ public abstract class AbstractScrollBox<R> {
         // Update cursor when hovering over the scroller.
         boolean mouseOverScroller =
                 mouseX >= scrollerX &&
-                        mouseX < (scrollerX + SCROLLER_WIDTH) &&
+                        mouseX < scrollerX + SCROLLER_WIDTH &&
                         mouseY >= scrollerY &&
-                        mouseY <= (scrollerY + SCROLLER_HEIGHT);
+                        mouseY < scrollerY + SCROLLER_HEIGHT;
         if (mouseOverScroller) {
             guiGraphics.requestCursor(this.isScrolling ? CursorTypes.RESIZE_NS : CursorTypes.POINTING_HAND);
         }

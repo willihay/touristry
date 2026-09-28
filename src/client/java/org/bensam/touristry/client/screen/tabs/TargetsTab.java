@@ -276,7 +276,7 @@ public class TargetsTab<T extends Enum<T>> extends AbstractScreenTab<T> {
     @Override
     public boolean onMouseClicked(MouseButtonEvent mouseButtonEvent, boolean doubleClick, double mouseLocalX, double mouseLocalY, AbstractExperienceMenu<?> menu) {
         if (mouseButtonEvent.button() == 0) {
-            return this.scrollBox.checkIfScrolling(mouseLocalX, mouseLocalY, menu.getSyncedTargets().size());
+            return this.scrollBox.onClick(mouseLocalX, mouseLocalY, menu.getSyncedTargets().size());
         }
         return false;
     }

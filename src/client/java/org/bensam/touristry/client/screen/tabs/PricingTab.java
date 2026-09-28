@@ -459,7 +459,7 @@ public class PricingTab<T extends Enum<T>> extends AbstractScreenTab<T> {
     public boolean onMouseClicked(MouseButtonEvent mouseButtonEvent, boolean doubleClick, double mouseLocalX, double mouseLocalY, AbstractExperienceMenu<?> menu) {
         if (menu instanceof PricingMenu pricingMenu) {
             if (mouseButtonEvent.button() == 0) {
-                return this.scrollBox.checkIfScrolling(mouseLocalX, mouseLocalY, pricingMenu.getSyncedItemPrices().size());
+                return this.scrollBox.onClick(mouseLocalX, mouseLocalY, pricingMenu.getSyncedItemPrices().size());
             }
         }
         return false;
