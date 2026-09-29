@@ -190,10 +190,18 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         return 10; // override in subclasses
     }
 
+    public int getMinWaitAfterArrivalTicks() {
+        return MIN_WAIT_AFTER_ARRIVAL_TICKS;
+    }
+
+    public int getMaxWaitAfterArrivalTicks() {
+        return MAX_WAIT_AFTER_ARRIVAL_TICKS;
+    }
+
     public abstract int getPaymentSlotSize();
 
     public int getPostArrivalWaitTicks(RandomSource randomSource) {
-        return randomSource.nextIntBetweenInclusive(MIN_WAIT_AFTER_ARRIVAL_TICKS, MAX_WAIT_AFTER_ARRIVAL_TICKS);
+        return randomSource.nextIntBetweenInclusive(this.getMinWaitAfterArrivalTicks(), this.getMaxWaitAfterArrivalTicks());
     }
 
     @Override

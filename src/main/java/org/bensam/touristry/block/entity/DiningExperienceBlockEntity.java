@@ -5,9 +5,11 @@ import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.Container;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -16,8 +18,8 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import org.bensam.touristry.ModBlockEntities;
 import org.bensam.touristry.ModComponents;
-import org.bensam.touristry.Touristry;
 import org.bensam.touristry.entity.TouristEntity;
+import org.bensam.touristry.menu.DiningExperienceMenu;
 import org.bensam.touristry.tourism.experience.ExperienceTarget;
 import org.bensam.touristry.tourism.experience.ExperienceVisit;
 import org.bensam.touristry.tourism.experience.ItemPrice;
@@ -25,9 +27,7 @@ import org.bensam.touristry.tourism.experience.TouristExperience;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
+import java.util.*;
 
 public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
     public static final int IDEAL_TARGET_APPROACH_DISTANCE = 1; // Tourist should try to stand this far away for dining spot targets
@@ -35,25 +35,22 @@ public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
     public static final int MAX_RANGE_TO_TARGET = 100;
     public static final int MIN_TICKS_AT_TARGET = 60;
     public static final int MAX_TICKS_AT_TARGET = 100;
-    public static final int TICKS_AT_BLOCK_WHEN_PAYING = 40;
+    public static final int MIN_WAIT_AFTER_ARRIVAL_TICKS = 60;
+    public static final int MAX_WAIT_AFTER_ARRIVAL_TICKS = 120;
+    public static final int TICKS_AT_BLOCK_WHEN_PAYING = 60;
     public static final int PAYMENT_SLOT_SIZE = 9;
-    public static final int TARGET_KEY_INDEX = PAYMENT_SLOT_SIZE;
-    public static final int ENTRY_FEE_INDEX = TARGET_KEY_INDEX + 1;
-    public static final int DEFAULT_COST_INDEX = ENTRY_FEE_INDEX + 1;
-    public static final int TOTAL_INVENTORY_SIZE = PAYMENT_SLOT_SIZE + 3;
 
     private ItemStack defaultCost = ItemStack.EMPTY;
-    private LinkedHashMap<ItemStackKey, ItemPrice> itemPrices;
+    private LinkedHashMap<ItemStackKey, ItemPrice> menuPrices;
 
     public DiningExperienceBlockEntity(BlockPos blockPos, BlockState blockState) {
-        super(ModBlockEntities.DINING_EXPERIENCE.get(), blockPos, blockState, TOTAL_INVENTORY_SIZE);
+        super(ModBlockEntities.DINING_EXPERIENCE.get(), blockPos, blockState, PAYMENT_SLOT_SIZE);
 
-        this.itemPrices = new LinkedHashMap<>();
+        this.menuPrices = new LinkedHashMap<>();
 
         if (this.defaultCost.isEmpty()) {
             this.defaultCost = new ItemStack(Items.EMERALD);
         }
-        this.inventory.set(DEFAULT_COST_INDEX, this.defaultCost.copy());
     }
 
     @Override
@@ -68,7 +65,7 @@ public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
 
     @Override
     protected AbstractContainerMenu createMenu(int i, Inventory inventory) {
-        return null;
+        return new DiningExperienceMenu(i, inventory, this, this.data, ContainerLevelAccess.create(this.level, this.getBlockPos()));
     }
 
     public ItemStack getDefaultCost() {
@@ -81,35 +78,30 @@ public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
     }
 
     @Override
-    public ItemStack getEntryFee() {
-        return this.inventory.get(ENTRY_FEE_INDEX).copy();
-    }
-
-    @Override
     public int getIdealApproachDistance() {
         return IDEAL_TARGET_APPROACH_DISTANCE;
     }
 
-    public @Nullable ItemPrice getItemPrice(int index) {
-        List<ItemPrice> itemPriceList = this.getItemPrices();
+    public @Nullable ItemPrice getMenuPrice(int index) {
+        List<ItemPrice> menuPriceList = this.getMenuPrices();
 
-        if (index >= 0 && index < itemPriceList.size()) {
-            return itemPriceList.get(index);
+        if (index >= 0 && index < menuPriceList.size()) {
+            return menuPriceList.get(index);
         }
         return null;
     }
 
-    public @NonNull ItemPrice getItemPrice(ItemStack itemStack) {
-        ItemPrice itemPrice = this.lookupItemPriceFor(itemStack);
-        if (itemPrice != null && itemPrice.cost() != null) {
-            return itemPrice;
+    public @NonNull ItemPrice getMenuPrice(ItemStack itemStack) {
+        ItemPrice menuPrice = this.lookupItemPriceFor(itemStack);
+        if (menuPrice != null && menuPrice.cost() != null) {
+            return menuPrice;
         }
 
         return new ItemPrice(itemStack.copyWithCount(1), this.getDefaultCost());
     }
 
-    public List<ItemPrice> getItemPrices() {
-        return this.itemPrices.values().stream()
+    public List<ItemPrice> getMenuPrices() {
+        return this.menuPrices.values().stream()
                 .sorted(ItemPrice.DISPLAY_ORDER)
                 .toList();
     }
@@ -122,6 +114,16 @@ public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
     @Override
     public int getMaxRangeToTarget() {
         return MAX_RANGE_TO_TARGET;
+    }
+
+    @Override
+    public int getMinWaitAfterArrivalTicks() {
+        return MIN_WAIT_AFTER_ARRIVAL_TICKS;
+    }
+
+    @Override
+    public int getMaxWaitAfterArrivalTicks() {
+        return MAX_WAIT_AFTER_ARRIVAL_TICKS;
     }
 
     @Override
@@ -146,9 +148,39 @@ public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
         return targets;
     }
 
-    @Override
-    public boolean hasEntryFee() {
-        return !this.inventory.get(ENTRY_FEE_INDEX).isEmpty();
+    public int importItemsFromTargets(ServerLevel serverLevel) {
+        int numAdded = 0;
+
+        this.pruneInvalidTargets(serverLevel);
+
+        for (ExperienceTarget target : this.targets) {
+            if (target.isBlock()) {
+                BlockEntity blockEntity = serverLevel.getBlockEntity(target.pos());
+                if (blockEntity instanceof Container container) {
+                    if (container.iterator() instanceof ContainerIterator it) {
+                        while (it.hasNext()) {
+                            ItemStack itemInContainer = it.next();
+                            if (!itemInContainer.isEmpty()) {
+                                ItemStack copyOfItem = itemInContainer.copyWithCount(1);
+                                if (copyOfItem.isDamageableItem()) {
+                                    copyOfItem.setDamageValue(0);
+                                }
+                                ItemPrice itemPrice = new ItemPrice(copyOfItem, this.getDefaultCost());
+                                if (this.menuPrices.putIfAbsent(new ItemStackKey(copyOfItem), itemPrice) == null) {
+                                    numAdded++;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (numAdded > 0) {
+            this.setChanged();
+        }
+
+        return numAdded;
     }
 
     @Override
@@ -158,7 +190,7 @@ public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
     }
 
     public @Nullable ItemPrice lookupItemPriceFor(ItemStack itemStack) {
-        return this.itemPrices.get(new ItemStackKey(itemStack));
+        return this.menuPrices.get(new ItemStackKey(itemStack));
     }
 
     @Override
@@ -187,17 +219,43 @@ public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
         );
     }
 
-    public boolean removeItemPrice(@NonNull ItemPrice itemPrice) {
-        boolean removed = this.itemPrices.remove(new ItemStackKey(itemPrice.itemForSale())) != null;
+    public boolean removeMenuPrice(@NonNull ItemPrice menuPrice) {
+        boolean removed = this.menuPrices.remove(new ItemStackKey(menuPrice.itemForSale())) != null;
         if (removed) {
             this.setChanged();
         }
         return removed;
     }
 
-    public void removeAllItemPrices() {
-        this.itemPrices.clear();
-        this.setChanged();
+    public void removeAllMenuPrices() {
+        if (!this.menuPrices.isEmpty()) {
+            this.menuPrices.clear();
+            this.setChanged();
+        }
+    }
+
+    public void removeDefaultMenuPrices() {
+        ItemStack defaultCost = this.getDefaultCost();
+        Iterator<Map.Entry<ItemStackKey, ItemPrice>> iterator = this.menuPrices.entrySet().iterator();
+        boolean removed = false;
+
+        while (iterator.hasNext()) {
+            Map.Entry<ItemStackKey, ItemPrice> entry = iterator.next();
+            ItemPrice price = entry.getValue();
+
+            if (price.itemForSale().getCount() > 1) {
+                continue;
+            }
+
+            if (price.cost() == null || ItemStack.matches(price.cost(), defaultCost)) {
+                iterator.remove();
+                removed = true;
+            }
+        }
+
+        if (removed) {
+            this.setChanged();
+        }
     }
 
     public void resetDefaultCost() {
@@ -206,12 +264,12 @@ public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
     }
 
     public void setDefaultCost(ItemStack itemStack) {
-        this.defaultCost = itemStack;
+        this.defaultCost = itemStack.copy();
         this.setChanged();
     }
 
-    public void updateItemPrice(@NonNull ItemPrice itemPrice) {
-        this.itemPrices.put(new ItemStackKey(itemPrice.itemForSale()), itemPrice);
+    public void updateMenuPrice(@NonNull ItemPrice menuPrice) {
+        this.menuPrices.put(new ItemStackKey(menuPrice.itemForSale()), menuPrice);
         this.setChanged();
     }
 
@@ -221,9 +279,7 @@ public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
         super.loadAdditional(valueInput);
 
         this.defaultCost = valueInput.read("DefaultCost", ItemStack.OPTIONAL_CODEC).orElse(this.defaultCost);
-        this.inventory.set(DEFAULT_COST_INDEX, this.defaultCost.copy());
-
-        this.itemPrices = valueInput.read("ItemPrices", ItemPrice.MAP_CODEC).orElse(new LinkedHashMap<>());
+        this.menuPrices = valueInput.read("MenuPrices", ItemPrice.MAP_CODEC).orElse(new LinkedHashMap<>());
     }
 
     @Override
@@ -231,7 +287,7 @@ public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
         super.saveAdditional(valueOutput);
 
         valueOutput.store("DefaultCost", ItemStack.OPTIONAL_CODEC, this.defaultCost);
-        valueOutput.store("ItemPrices", ItemPrice.MAP_CODEC, this.itemPrices);
+        valueOutput.store("MenuPrices", ItemPrice.MAP_CODEC, this.menuPrices);
     }
 
     @Override
@@ -240,9 +296,7 @@ public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
 
         // Restore additional components when BlockItem is placed as a Block/Block Entity.
         this.defaultCost = dataComponentGetter.getOrDefault(ModComponents.TOURIST_EXPERIENCE_ITEM_DEFAULT_COST, this.defaultCost);
-        this.inventory.set(DEFAULT_COST_INDEX, this.defaultCost.copy());
-
-        this.itemPrices = dataComponentGetter.getOrDefault(ModComponents.TOURIST_EXPERIENCE_ITEM_PRICES, new LinkedHashMap<>());
+        this.menuPrices = dataComponentGetter.getOrDefault(ModComponents.TOURIST_EXPERIENCE_ITEM_PRICES, new LinkedHashMap<>());
     }
 
     @Override
@@ -252,8 +306,8 @@ public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
         // Collect additional components to save in components container in BlockItem when block breaks.
         builder.set(ModComponents.TOURIST_EXPERIENCE_ITEM_DEFAULT_COST, this.defaultCost.copy());
 
-        if (!this.itemPrices.isEmpty()) {
-            builder.set(ModComponents.TOURIST_EXPERIENCE_ITEM_PRICES, this.itemPrices);
+        if (!this.menuPrices.isEmpty()) {
+            builder.set(ModComponents.TOURIST_EXPERIENCE_ITEM_PRICES, this.menuPrices);
         }
     }
 
@@ -263,7 +317,7 @@ public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
 
         // Remove raw tag entries for data that is carried by custom components in the block item form.
         valueOutput.discard("DefaultCost");
-        valueOutput.discard("ItemPrices");
+        valueOutput.discard("MenuPrices");
     }
     //endregion
 }

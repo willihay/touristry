@@ -19,7 +19,6 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import org.bensam.touristry.ModBlockEntities;
 import org.bensam.touristry.ModComponents;
-import org.bensam.touristry.Touristry;
 import org.bensam.touristry.entity.TouristEntity;
 import org.bensam.touristry.entity.goal.ShoppingExperienceGoal;
 import org.bensam.touristry.menu.ShoppingExperienceMenu;
@@ -38,6 +37,8 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
     public static final int MAX_RANGE_TO_TARGET = 100;
     public static final int MIN_TICKS_AT_TARGET = 60;
     public static final int MAX_TICKS_AT_TARGET = 100;
+    public static final int MIN_WAIT_AFTER_ARRIVAL_TICKS = 5;
+    public static final int MAX_WAIT_AFTER_ARRIVAL_TICKS = 20;
     public static final int TICKS_AT_BLOCK_WHEN_PURCHASING = 40;
     public static final int PAYMENT_SLOT_SIZE = 9;
 
@@ -148,13 +149,18 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
     }
 
     @Override
-    public int getPaymentSlotSize() {
-        return PAYMENT_SLOT_SIZE;
+    public int getMinWaitAfterArrivalTicks() {
+        return MIN_WAIT_AFTER_ARRIVAL_TICKS;
     }
 
     @Override
-    public int getPostArrivalWaitTicks(RandomSource randomSource) {
-        return 10;
+    public int getMaxWaitAfterArrivalTicks() {
+        return MAX_WAIT_AFTER_ARRIVAL_TICKS;
+    }
+
+    @Override
+    public int getPaymentSlotSize() {
+        return PAYMENT_SLOT_SIZE;
     }
 
     @Override

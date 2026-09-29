@@ -18,7 +18,8 @@ public class SightseeingExperienceScreen extends AbstractTabbedExperienceScreen<
     public SightseeingExperienceScreen(SightseeingExperienceMenu containerMenu, Inventory inventory, Component title) {
         super(containerMenu, inventory, title, List.of(
                 new StatusTab<>(SightseeingExperienceMenu.Tab.STATUS, ModBlocks.SIGHTSEEING_EXPERIENCE.get().asItem()),
-                new TargetsTab<>(SightseeingExperienceMenu.Tab.TARGETS, ModItems.EXPERIENCE_TARGET_KEY.get())));
+                new TargetsTab<>(SightseeingExperienceMenu.Tab.TARGETS, ModItems.EXPERIENCE_TARGET_KEY.get())
+        ));
         this.imageWidth = BG_SCREEN_WIDTH;
     }
 

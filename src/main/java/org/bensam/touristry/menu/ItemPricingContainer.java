@@ -13,9 +13,9 @@ public class ItemPricingContainer implements Container {
 
     private ItemStack activeItemForSale = ItemStack.EMPTY;
     private final NonNullList<ItemStack> itemStacks = NonNullList.withSize(ITEM_PRICING_SLOTS, ItemStack.EMPTY);
-    private final ShoppingExperienceMenu menu;
+    private final PricingMenu menu;
 
-    public ItemPricingContainer(ShoppingExperienceMenu menu) {
+    public ItemPricingContainer(PricingMenu menu) {
         this.menu = menu;
     }
 

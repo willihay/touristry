@@ -136,7 +136,7 @@ public class ShoppingExperienceMenu extends AbstractExperienceMenu<ShoppingExper
 
         // Add the player inventory slots.
         this.addPlayerInventorySlots(
-                menu -> menu.isSelectedTab(ShoppingExperienceMenu.Tab.STATUS) || menu.isSelectedTab(ShoppingExperienceMenu.Tab.PRICING),
+                menu -> menu.isSelectedTab(Tab.STATUS) || menu.isSelectedTab(Tab.PRICING),
                 PLAYER_INVENTORY_ROW_X,
                 PLAYER_INVENTORY_ROW_Y);
 
@@ -356,6 +356,7 @@ public class ShoppingExperienceMenu extends AbstractExperienceMenu<ShoppingExper
         return !this.getSlot(SHOPPING_DEFAULT_COST_SLOT).hasItem();
     }
 
+    @Override
     public void onItemForSaleChanged(ItemStack itemForSale) {
         this.syncedItemPricesRevision++;
 
@@ -430,7 +431,7 @@ public class ShoppingExperienceMenu extends AbstractExperienceMenu<ShoppingExper
     }
 
     @Override
-    public boolean stillValid(@NonNull Player player) {
+    public boolean stillValid(Player player) {
         return stillValid(this.containerLevelAccess, player, ModBlocks.SHOPPING_EXPERIENCE.get());
     }
 }

@@ -8,21 +8,20 @@ import org.bensam.touristry.ModItems;
 import org.bensam.touristry.client.screen.tabs.PricingTab;
 import org.bensam.touristry.client.screen.tabs.StatusTab;
 import org.bensam.touristry.client.screen.tabs.TargetsTab;
-import org.bensam.touristry.menu.ShoppingExperienceMenu;
+import org.bensam.touristry.menu.DiningExperienceMenu;
 
 import java.util.List;
 
-public class ShoppingExperienceScreen extends AbstractTabbedExperienceScreen<ShoppingExperienceMenu, ShoppingExperienceMenu.Tab> {
+public class DiningExperienceScreen extends AbstractTabbedExperienceScreen<DiningExperienceMenu, DiningExperienceMenu.Tab> {
     private static final int BG_TEXTURE_WIDTH = 512;
     private static final int BG_SCREEN_WIDTH = 276;
     private static final int BG_SCREEN_HEIGHT = 166;
 
-    public ShoppingExperienceScreen(ShoppingExperienceMenu containerMenu, Inventory inventory, Component title) {
+    public DiningExperienceScreen(DiningExperienceMenu containerMenu, Inventory inventory, Component title) {
         super(containerMenu, inventory, title, List.of(
-                new StatusTab<>(ShoppingExperienceMenu.Tab.STATUS, ModBlocks.SHOPPING_EXPERIENCE.get().asItem()),
-                new TargetsTab<>(ShoppingExperienceMenu.Tab.TARGETS, ModItems.EXPERIENCE_TARGET_KEY.get()),
-                new PricingTab<>(ShoppingExperienceMenu.Tab.PRICING, Items.EMERALD)
-        ));
+                new StatusTab<>(DiningExperienceMenu.Tab.STATUS, ModBlocks.DINING_EXPERIENCE.get().asItem()),
+                new TargetsTab<>(DiningExperienceMenu.Tab.TARGETS, ModItems.EXPERIENCE_TARGET_KEY.get()),
+                new PricingTab<>(DiningExperienceMenu.Tab.MENU, Items.EMERALD)));
         this.imageWidth = BG_SCREEN_WIDTH;
     }
 
