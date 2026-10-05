@@ -118,7 +118,7 @@ public class StatusTab<T extends Enum<T>> extends AbstractScreenTab<T> {
 
     @Override
     public void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY, AbstractTabbedExperienceScreen<?, ?> screen, AbstractExperienceMenu<?> menu) {
-        guiGraphics.drawString(screen.getFont(), this.getTabTitle(), TITLE_LABEL_X, TITLE_LABEL_Y, AbstractTabbedExperienceScreen.ARGB_SCREEN_TEXT_COLOR, false);
+        guiGraphics.drawString(screen.getFont(), screen.getExperienceDisplayName(), TITLE_LABEL_X, TITLE_LABEL_Y, AbstractTabbedExperienceScreen.ARGB_SCREEN_TEXT_COLOR, false);
         guiGraphics.drawString(screen.getFont(), screen.getPlayerInventoryTitle(), INVENTORY_LABEL_X, INVENTORY_LABEL_Y, AbstractTabbedExperienceScreen.ARGB_SCREEN_TEXT_COLOR, false);
 
         Component reputationLabel = Component.translatable(

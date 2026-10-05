@@ -2,8 +2,9 @@ package org.bensam.touristry.client.network;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import org.bensam.touristry.menu.AbstractExperienceMenu;
-import org.bensam.touristry.menu.ShoppingExperienceMenu;
+import org.bensam.touristry.menu.PricingMenu;
 import org.bensam.touristry.client.render.ExperienceTargetOverlayRenderer;
+import org.bensam.touristry.menu.TourismBlockMenu;
 import org.bensam.touristry.network.SyncItemPricesS2CPayload;
 import org.bensam.touristry.network.SyncTargetOverlayViewS2CPayload;
 import org.bensam.touristry.network.SyncTargetViewS2CPayload;
@@ -41,15 +42,17 @@ public final class ExperienceClientPackets {
                         return;
                     }
 
-                    if (!(context.client().player.containerMenu instanceof ShoppingExperienceMenu menu)) {
+                    if (!(context.client().player.containerMenu instanceof PricingMenu pricingMenu) ||
+                            !(context.client().player.containerMenu instanceof TourismBlockMenu tourismBlockMenu)
+                    ) {
                         return;
                     }
 
-                    if (menu.getContainerId() != payload.containerId()) {
+                    if (tourismBlockMenu.getContainerId() != payload.containerId()) {
                         return;
                     }
 
-                    menu.setSyncedItemPrices(payload.itemPrices());
+                    pricingMenu.setSyncedItemPrices(payload.itemPrices());
                 }));
     }
 }

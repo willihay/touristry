@@ -32,7 +32,7 @@ public interface TouristExperience extends Nameable {
     List<TargetOverlayView> getTargetOverlayViews(ServerLevel serverLevel);
     boolean hasBeds(); // return true if this experience has beds where the tourists can spend the night (does not guarantee availability of beds)
     boolean hasEntryFee();
-    boolean hasTarget(BlockPos blockPos);
+    boolean hasTarget(ServerLevel serverLevel, BlockPos blockPos);
     boolean isOpenForBusiness();
     void onTouristArrival(TouristEntity tourist, ServerLevel serverLevel);
     void onTouristDeparture(TouristEntity tourist, ServerLevel serverLevel, boolean completed);

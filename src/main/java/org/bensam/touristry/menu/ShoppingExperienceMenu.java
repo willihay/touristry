@@ -388,13 +388,14 @@ public class ShoppingExperienceMenu extends AbstractExperienceMenu<ShoppingExper
     }
 
     // client-side setter
+    @Override
     public void setSyncedItemPrices(List<ItemPrice> itemPrices) {
         this.syncedItemPrices = List.copyOf(itemPrices);
         this.syncedItemPricesRevision++;
     }
 
     // server-side sync initiator
-    public void syncItemPrices(ServerPlayer serverPlayer, ShoppingExperienceBlockEntity shoppingExperienceBlockEntity) {
+    protected void syncItemPrices(ServerPlayer serverPlayer, ShoppingExperienceBlockEntity shoppingExperienceBlockEntity) {
         ServerPlayNetworking.send(
                 serverPlayer,
                 new SyncItemPricesS2CPayload(

@@ -275,15 +275,22 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
 
     // Other helpers
     public void addToShoppingBag(ItemPrice newItem) {
+        if (newItem.cost() == null) {
+            logActivity(Verbosity.ERRORS, "Cannot add null cost item to shopping bag in addToShoppingBag(). Caller should lookup default cost first.");
+            return;
+        }
+
         for (ItemPrice bagItem : this.shoppingBag) {
-            if (bagItem.equals(newItem)) {
-                ItemStack itemForSale = bagItem.itemForSale();
-                itemForSale.setCount(itemForSale.getCount() + newItem.itemForSale().getCount());
+            if (ItemStack.isSameItemSameComponents(bagItem.itemForSale(), newItem.itemForSale()) &&
+                    ItemStack.isSameItemSameComponents(bagItem.cost(), newItem.cost())
+            ) {
+                bagItem.itemForSale().grow(newItem.itemForSale().getCount());
+                bagItem.cost().grow(newItem.cost().getCount());
                 return;
             }
         }
 
-        this.shoppingBag.add(newItem);
+        this.shoppingBag.add(new ItemPrice(newItem.itemForSale(), newItem.cost()));
     }
 
     public void removeFromShoppingBag(ItemPrice itemPrice) {

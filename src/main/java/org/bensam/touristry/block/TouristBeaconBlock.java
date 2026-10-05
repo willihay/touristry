@@ -78,6 +78,7 @@ public class TouristBeaconBlock extends BaseEntityBlock {
                 player.displayClientMessage(net.minecraft.network.chat.Component.literal("Tourism blocks can only be used in the overworld"), true);
                 return InteractionResult.FAIL;
             }
+
             if (level.getBlockEntity(blockPos) instanceof TouristBeaconBlockEntity beaconBlockEntity) {
                 player.openMenu(beaconBlockEntity);
             }

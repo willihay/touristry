@@ -29,11 +29,13 @@ import org.bensam.touristry.ModComponents;
 import org.bensam.touristry.ModItems;
 import org.bensam.touristry.block.TouristExperienceBlock;
 import org.bensam.touristry.entity.TouristEntity;
+import org.bensam.touristry.entity.TouristItemInterest;
 import org.bensam.touristry.tourism.TourismManager;
 import org.bensam.touristry.tourism.TouristReview;
 import org.bensam.touristry.tourism.VisitResult;
 import org.bensam.touristry.tourism.experience.*;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 import java.util.stream.IntStream;
@@ -167,9 +169,27 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         return Direction.NORTH;
     }
 
+    public static BlockPos getCanonicalChestTargetPos(ServerLevel serverLevel, BlockPos blockPos) {
+        BlockState blockState = serverLevel.getBlockState(blockPos);
+        if (blockState.getBlock() instanceof ChestBlock && blockState.getValue(ChestBlock.TYPE) == ChestType.RIGHT) {
+            return ChestBlock.getConnectedBlockPos(blockPos, blockState);
+        }
+        return blockPos;
+    }
+
     @Override
     public int getContainerSize() {
         return this.inventory.size();
+    }
+
+    public List<ItemStack> getContentsOfAllTargetContainers(ServerLevel serverLevel, @Nullable TouristItemInterest matchingInterest) {
+        List<ItemStack> contents = new ArrayList<>();
+
+        for (ExperienceTarget target : this.targets) {
+            getTargetContainerContents(serverLevel, contents, target.pos(), matchingInterest);
+        }
+
+        return contents;
     }
 
     public int getCurrentCapacity() {
@@ -209,13 +229,49 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         return this.statistics;
     }
 
-    public static List<ItemStack> getTargetContainerContents(Container container) {
-        List<ItemStack> contents = new ArrayList<>();
+    // Returns Container found at BlockPos, including the combined inventory of a double-wide chest, if applicable.
+    public static @Nullable Container getTargetContainer(ServerLevel serverLevel, BlockPos blockPos) {
+        BlockState blockState = serverLevel.getBlockState(blockPos);
+        if (blockState.getBlock() instanceof ChestBlock chestBlock) {
+            return ChestBlock.getContainer(chestBlock, blockState, serverLevel, blockPos, false);
+        }
 
+        BlockEntity blockEntity = serverLevel.getBlockEntity(blockPos);
+        return blockEntity instanceof Container container ? container : null;
+    }
+
+    // Returns the inventory of a container. Use when caller provides the Container, having already called getTargetContainer() if necessary.
+    public static List<ItemStack> getTargetContainerContents(ServerLevel serverLevel, Container container, @Nullable TouristItemInterest matchingInterest) {
+        List<ItemStack> contents = new ArrayList<>();
+        getTargetContainerContents(serverLevel, contents, container, matchingInterest);
+        return contents;
+    }
+
+    // Returns the inventory of a container at BlockPos, including the combined inventory of a double-wide chest, if applicable.
+    public static List<ItemStack> getTargetContainerContents(ServerLevel serverLevel, BlockPos targetPos, @Nullable TouristItemInterest matchingInterest) {
+        List<ItemStack> contents = new ArrayList<>();
+        getTargetContainerContents(serverLevel, contents, targetPos, matchingInterest);
+        return contents;
+    }
+
+    // Adds the inventory of a container at BlockPos, including the combined inventory of a double-wide chest if applicable, to the provided List of contents.
+    public static void getTargetContainerContents(ServerLevel serverLevel, List<ItemStack> contents, BlockPos targetPos, @Nullable TouristItemInterest matchingInterest) {
+        Container container = AbstractExperienceBlockEntity.getTargetContainer(serverLevel, targetPos);
+        if (container != null) {
+            getTargetContainerContents(serverLevel, contents, container, matchingInterest);
+        }
+    }
+
+    // Adds the inventory of a provided Container to the provided List of contents. Assumes provided Container already represents a double-wide chest, if applicable.
+    public static void getTargetContainerContents(ServerLevel serverLevel, List<ItemStack> contents, Container container, @Nullable TouristItemInterest matchingInterest) {
         if (container.iterator() instanceof Container.ContainerIterator it) {
             while (it.hasNext()) {
                 ItemStack itemInContainer = it.next();
                 if (!itemInContainer.isEmpty()) {
+                    if (matchingInterest != null && !matchingInterest.isAMatch(itemInContainer, serverLevel)) {
+                        continue;
+                    }
+
                     boolean merged = false;
 
                     for (ItemStack existingItem : contents) {
@@ -236,8 +292,6 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
                 }
             }
         }
-
-        return contents;
     }
 
     public List<ExperienceTarget> getTargets(ServerLevel serverLevel) {
@@ -337,8 +391,10 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
     }
 
     @Override
-    public boolean hasTarget(BlockPos blockPos) {
-        return targets.stream().anyMatch(target -> target.pos().equals(blockPos));
+    public boolean hasTarget(ServerLevel serverLevel, BlockPos blockPos) {
+        this.normalizeChestTargetPositions(serverLevel);
+        BlockPos canonicalBlockPos = getCanonicalChestTargetPos(serverLevel, blockPos);
+        return this.targets.stream().anyMatch(target -> target.pos().equals(canonicalBlockPos));
     }
 
     public void incrementSyncGeneration() {
@@ -370,6 +426,49 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         this.targets.add(toIndex, targetToMove);
         this.setChanged();
         return true;
+    }
+
+    private void normalizeChestTargetPositions(ServerLevel serverLevel) {
+        List<ExperienceTarget> normalizedTargets = new ArrayList<>(this.targets.size());
+        Set<BlockPos> blockTargetPositions = new HashSet<>();
+        boolean changed = false;
+
+        for (ExperienceTarget target : this.targets) {
+            if (!target.isBlock()) {
+                // Leave entity targets unchanged.
+                normalizedTargets.add(target);
+                continue;
+            }
+
+            // Get current canonical position of blocks, in preparation for converting previously single-chest locations
+            // into their new, left-hand canonical position, as needed.
+            BlockPos canonicalBlockPos = getCanonicalChestTargetPos(serverLevel, target.pos());
+
+            // Discard duplicate block targets after normalization.
+            if (!blockTargetPositions.add(canonicalBlockPos)) {
+                changed = true;
+                continue;
+            }
+
+            // Replace records of moved targets.
+            if (!canonicalBlockPos.equals(target.pos())) {
+                target = new ExperienceTarget(
+                        canonicalBlockPos,
+                        target.playerFacing(),
+                        target.entityUUID(),
+                        target.registeredAtTicks()
+                );
+                changed = true;
+            }
+
+            // Keep the normalized target.
+            normalizedTargets.add(target);
+        }
+
+        if (changed) {
+            this.targets = normalizedTargets;
+            this.setChanged();
+        }
     }
 
     @Override
@@ -409,6 +508,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
     }
 
     protected void pruneInvalidTargets(ServerLevel serverLevel) {
+        this.normalizeChestTargetPositions(serverLevel);
         boolean changed = this.targets.removeIf(target ->
                 serverLevel.isLoaded(target.pos()) && !isTargetValid(serverLevel, target));
         if (changed) {
@@ -439,6 +539,37 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         this.setChanged();
     }
 
+    public void removeItemStackFromTargetContainers(ServerLevel serverLevel, ItemStack itemStack) {
+        int count = itemStack.getCount();
+
+        for (ExperienceTarget target : this.targets) {
+            Container container = getTargetContainer(serverLevel, target.pos());
+            if (container != null) {
+                if (container.iterator() instanceof Container.ContainerIterator it) {
+                    // Find item in container and reduce its quantity by remaining count.
+                    boolean changed = false;
+                    while (it.hasNext()) {
+                        ItemStack itemInContainer = it.next();
+                        if (!itemInContainer.isEmpty() && ItemStack.isSameItemSameComponents(itemInContainer, itemStack)) {
+                            int shrinkBy = Math.min(count, itemInContainer.getCount());
+                            itemInContainer.shrink(shrinkBy);
+                            count -= shrinkBy;
+                            changed = true;
+
+                            if (count <= 0) {
+                                container.setChanged();
+                                return;
+                            }
+                        }
+                    }
+                    if (changed) {
+                        container.setChanged();
+                    }
+                }
+            }
+        }
+    }
+
     public void removeTarget(int index) {
         if (index < 0 || index >= this.targets.size()) {
             return;
@@ -450,7 +581,9 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
 
     @Override
     public boolean removeTarget(ServerLevel serverLevel, BlockPos pos) {
-        boolean removed = this.targets.removeIf(target -> target.pos().equals(pos));
+        this.normalizeChestTargetPositions(serverLevel);
+        BlockPos canonicalBlockPos = getCanonicalChestTargetPos(serverLevel, pos);
+        boolean removed = this.targets.removeIf(target -> target.pos().equals(canonicalBlockPos));
         if (removed) {
             this.setChanged();
         }
@@ -550,9 +683,11 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
                 int overMax = totalCount > slotStack.getMaxStackSize() ? totalCount - slotStack.getMaxStackSize() : 0;
                 if (overMax == 0) {
                     slotStack.setCount(totalCount);
+                    this.setChanged();
                     return true;
                 }
-                slotStack.setCount(getMaxStackSize());
+                slotStack.setCount(slotStack.getMaxStackSize());
+                this.setChanged();
                 depositStack.setCount(overMax);
             }
         }

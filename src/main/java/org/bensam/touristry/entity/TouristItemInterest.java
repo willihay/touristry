@@ -46,7 +46,7 @@ public enum TouristItemInterest implements StringRepresentable {
         return name().toLowerCase(Locale.ROOT);
     }
     
-    boolean isAMatch(ItemStack itemStack, Level level) {
+    public boolean isAMatch(ItemStack itemStack, Level level) {
         // Use assignment to make compiler catch forgotten updates when new TouristItemInterest enums are added.
         boolean match = switch (this) {
             case GENERAL -> level.getRandom().nextFloat() < PROBABILITY_INTEREST_IN_ANY_ITEM;
@@ -97,7 +97,7 @@ public enum TouristItemInterest implements StringRepresentable {
         return match;
     }
 
-    float probabilityOfInterest() {
+    public float probabilityOfInterest() {
         return this.probability;
     }
 }

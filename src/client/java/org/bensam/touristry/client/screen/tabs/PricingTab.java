@@ -101,6 +101,7 @@ public class PricingTab<T extends Enum<T>> extends AbstractScreenTab<T> {
     private static final int INVENTORY_LABEL_Y = 72;
     //endregion
 
+    private final Component importTooltip;
     private final ScrollBox scrollBox = new ScrollBox();
 
     private ItemStack focusItemForSale = ItemStack.EMPTY;
@@ -118,11 +119,16 @@ public class PricingTab<T extends Enum<T>> extends AbstractScreenTab<T> {
     private ImageButton itemPriceCancelButton;
 
     public PricingTab(T tabEnum, Item tabIcon) {
-        this(TAB_TITLE, tabEnum, tabIcon);
+        this(TAB_TITLE, tabEnum, tabIcon, PRICING_IMPORT_TOOLTIP);
     }
 
     public PricingTab(Component tabTitle, T tabEnum, Item tabIcon) {
+        this(tabTitle, tabEnum, tabIcon, PRICING_IMPORT_TOOLTIP);
+    }
+
+    public PricingTab(Component tabTitle, T tabEnum, Item tabIcon, Component importTooltip) {
         super(tabTitle, tabEnum, tabIcon, BACKGROUND_TEXTURE);
+        this.importTooltip = importTooltip;
     }
 
     // Screen setup handlers
@@ -181,7 +187,7 @@ public class PricingTab<T extends Enum<T>> extends AbstractScreenTab<T> {
                     this.scrollBox.deselectContentRows(pricingMenu.getSyncedItemPrices().size());
                     this.scrollBox.scrollTo(0, pricingMenu.getSyncedItemPrices().size());
                 },
-                PRICING_IMPORT_TOOLTIP
+                this.importTooltip
         ));
 
         // Add reset button for default price.
@@ -413,9 +419,7 @@ public class PricingTab<T extends Enum<T>> extends AbstractScreenTab<T> {
         }
 
         for (var button : this.scrollBox.getPricingButtons()) {
-            if (button != null) {
-                screen.removeButton(button);
-            }
+            screen.removeButton(button);
         }
         Arrays.fill(this.scrollBox.getPricingButtons(), null);
 

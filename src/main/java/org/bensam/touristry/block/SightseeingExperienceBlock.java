@@ -86,6 +86,7 @@ public class SightseeingExperienceBlock extends TouristExperienceBlock {
                 player.displayClientMessage(net.minecraft.network.chat.Component.literal("Tourism blocks can only be used in the overworld"), true);
                 return InteractionResult.FAIL;
             }
+
             if (level.getBlockEntity(blockPos) instanceof SightseeingExperienceBlockEntity sightseeingExperienceBlockEntity) {
                 player.openMenu(sightseeingExperienceBlockEntity);
             }

@@ -5,7 +5,6 @@ import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.player.Inventory;
@@ -70,12 +69,7 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
             ticksAtBlock = TICKS_AT_BLOCK_WHEN_PURCHASING;
         } else {
             // Gather all items in target container.
-            List<ItemStack> itemsInContainer = new ArrayList<>();
-            BlockEntity blockEntity = serverLevel.getBlockEntity(target.pos());
-            if (blockEntity instanceof Container container) {
-                itemsInContainer = AbstractExperienceBlockEntity.getTargetContainerContents(container);
-            }
-
+            List<ItemStack> itemsInContainer = AbstractExperienceBlockEntity.getTargetContainerContents(serverLevel, target.pos(), null);
             int numItemsInTargetContainer = itemsInContainer.size();
             int minTicksAtTarget = Math.min((numItemsInTargetContainer + 1) * 15, MIN_TICKS_AT_TARGET);
             if (minTicksAtTarget < MIN_TICKS_AT_TARGET) {
@@ -187,8 +181,8 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
 
         for (ExperienceTarget target : this.targets) {
             if (target.isBlock()) {
-                BlockEntity blockEntity = serverLevel.getBlockEntity(target.pos());
-                if (blockEntity instanceof Container container) {
+                Container container = AbstractExperienceBlockEntity.getTargetContainer(serverLevel, target.pos());
+                if (container != null) {
                     if (container.iterator() instanceof ContainerIterator it) {
                         while (it.hasNext()) {
                             ItemStack itemInContainer = it.next();

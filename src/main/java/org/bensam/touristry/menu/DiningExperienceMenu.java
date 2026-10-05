@@ -384,13 +384,14 @@ public class DiningExperienceMenu extends AbstractExperienceMenu<DiningExperienc
     }
 
     // client-side setter
+    @Override
     public void setSyncedItemPrices(List<ItemPrice> itemPrices) {
         this.syncedMenuPrices = List.copyOf(itemPrices);
         this.syncedMenuPricesRevision++;
     }
 
     // server-side sync initiator
-    public void syncItemPrices(ServerPlayer serverPlayer, DiningExperienceBlockEntity diningExperienceBlockEntity) {
+    protected void syncItemPrices(ServerPlayer serverPlayer, DiningExperienceBlockEntity diningExperienceBlockEntity) {
         ServerPlayNetworking.send(
                 serverPlayer,
                 new SyncItemPricesS2CPayload(

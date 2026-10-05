@@ -100,6 +100,10 @@ public abstract class AbstractTabbedExperienceScreen<M extends AbstractExperienc
         return BACKGROUND_TEXTURE_HEIGHT;
     }
 
+    public Component getExperienceDisplayName() {
+        return this.title;
+    }
+
     public Component getPlayerInventoryTitle() {
         return this.playerInventoryTitle;
     }
@@ -208,7 +212,9 @@ public abstract class AbstractTabbedExperienceScreen<M extends AbstractExperienc
     }
 
     public void removeButton(GuiEventListener button) {
-        this.removeWidget(button);
+        if (button != null) {
+            this.removeWidget(button);
+        }
     }
 
     @Override

@@ -220,10 +220,10 @@ public class TourismManager {
         return closestBlockEntity;
     }
 
-    public static @Nullable TouristExperience findOwnerOfExperienceTarget(BlockPos pos) {
+    public static @Nullable TouristExperience findOwnerOfExperienceTarget(ServerLevel serverLevel, BlockPos pos) {
         TouristExperience owner = null;
         for (TouristExperience experience : loadedExperiences.values()) {
-            if (experience.hasTarget(pos)) {
+            if (experience.hasTarget(serverLevel, pos)) {
                 return experience;
             }
         }

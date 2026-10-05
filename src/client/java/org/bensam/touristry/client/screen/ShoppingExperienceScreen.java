@@ -16,11 +16,12 @@ public class ShoppingExperienceScreen extends AbstractTabbedExperienceScreen<Sho
     private static final int BG_TEXTURE_WIDTH = 512;
     private static final int BG_SCREEN_WIDTH = 276;
     private static final int BG_SCREEN_HEIGHT = 166;
+    private static final Component SHOPPING_STORAGE_TAB_TITLE = Component.translatable("screen.touristry.tourist_block.tab.shopping_storage");
 
     public ShoppingExperienceScreen(ShoppingExperienceMenu containerMenu, Inventory inventory, Component title) {
         super(containerMenu, inventory, title, List.of(
                 new StatusTab<>(ShoppingExperienceMenu.Tab.STATUS, ModBlocks.SHOPPING_EXPERIENCE.get().asItem()),
-                new TargetsTab<>(ShoppingExperienceMenu.Tab.TARGETS, ModItems.EXPERIENCE_TARGET_KEY.get()),
+                new TargetsTab<>(SHOPPING_STORAGE_TAB_TITLE, ShoppingExperienceMenu.Tab.TARGETS, ModItems.EXPERIENCE_TARGET_KEY.get(), true),
                 new PricingTab<>(ShoppingExperienceMenu.Tab.PRICING, Items.EMERALD)
         ));
         this.imageWidth = BG_SCREEN_WIDTH;

@@ -19,6 +19,8 @@ import net.minecraft.world.level.storage.ValueOutput;
 import org.bensam.touristry.ModBlockEntities;
 import org.bensam.touristry.ModComponents;
 import org.bensam.touristry.entity.TouristEntity;
+import org.bensam.touristry.entity.TouristItemInterest;
+import org.bensam.touristry.entity.goal.DiningExperienceGoal;
 import org.bensam.touristry.menu.DiningExperienceMenu;
 import org.bensam.touristry.tourism.experience.ExperienceTarget;
 import org.bensam.touristry.tourism.experience.ExperienceVisit;
@@ -33,10 +35,10 @@ public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
     public static final int IDEAL_TARGET_APPROACH_DISTANCE = 1; // Tourist should try to stand this far away for dining spot targets
     public static final int MAX_APPROACH_DISTANCE = 4; // Skip target if tourist can't get closer than this distance
     public static final int MAX_RANGE_TO_TARGET = 100;
-    public static final int MIN_TICKS_AT_TARGET = 60;
-    public static final int MAX_TICKS_AT_TARGET = 100;
-    public static final int MIN_WAIT_AFTER_ARRIVAL_TICKS = 60;
-    public static final int MAX_WAIT_AFTER_ARRIVAL_TICKS = 120;
+    public static final int MIN_TICKS_CHOOSING_FOOD_AT_COUNTER = 80;
+    public static final int MAX_TICKS_CHOOSING_FOOD_AT_COUNTER = 200;
+    public static final int MIN_WAIT_AFTER_ARRIVAL_TICKS = 0;
+    public static final int MAX_WAIT_AFTER_ARRIVAL_TICKS = 0;
     public static final int TICKS_AT_BLOCK_WHEN_PAYING = 60;
     public static final int PAYMENT_SLOT_SIZE = 9;
 
@@ -60,7 +62,26 @@ public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
 
     @Override
     public @Nullable Goal createGoalForTarget(TouristEntity tourist, ServerLevel serverLevel, ExperienceTarget target) {
-        return null;
+        int ticksAtBlock = 0;
+        boolean isOrderingHere = tourist.getShoppingBag().isEmpty();
+        boolean isPayingHere = target.pos().equals(this.getBlockPos());
+
+        // Determine how long the tourist will visibly pause at the target.
+        if (isOrderingHere) {
+            ticksAtBlock = tourist.getRandom().nextIntBetweenInclusive(MIN_TICKS_CHOOSING_FOOD_AT_COUNTER, MAX_TICKS_CHOOSING_FOOD_AT_COUNTER);
+        } else if (isPayingHere) {
+            ticksAtBlock = TICKS_AT_BLOCK_WHEN_PAYING;
+        }
+
+        return new DiningExperienceGoal(
+                tourist,
+                this.getBlockPos(),
+                target.pos(),
+                tourist.getTicksAtCurrentTarget(),
+                ticksAtBlock,
+                isOrderingHere,
+                isPayingHere
+        );
     }
 
     @Override
@@ -133,19 +154,15 @@ public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
 
     @Override
     public List<ExperienceTarget> getTargetsForVisit(ServerLevel serverLevel) {
-        List<ExperienceTarget> targets = super.getTargetsForVisit(serverLevel);
+        // If the dining experience has seating available, most tourists will elect to sit.
 
-        if (!targets.isEmpty()) {
-            // Add dining experience block entity as last target so that tourists can return here to pay for food.
-            targets.add(new ExperienceTarget(
+        // Tourists finish their dining experience at the block entity to pay for their food.
+        return List.of(new ExperienceTarget(
                     this.getBlockPos(),
                     this.getApproachDirection(),
                     null,
                     serverLevel.getDayTime()
-            ));
-        }
-
-        return targets;
+        ));
     }
 
     public int importItemsFromTargets(ServerLevel serverLevel) {
@@ -155,12 +172,12 @@ public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
 
         for (ExperienceTarget target : this.targets) {
             if (target.isBlock()) {
-                BlockEntity blockEntity = serverLevel.getBlockEntity(target.pos());
-                if (blockEntity instanceof Container container) {
+                Container container = AbstractExperienceBlockEntity.getTargetContainer(serverLevel, target.pos());
+                if (container != null) {
                     if (container.iterator() instanceof ContainerIterator it) {
                         while (it.hasNext()) {
                             ItemStack itemInContainer = it.next();
-                            if (!itemInContainer.isEmpty()) {
+                            if (!itemInContainer.isEmpty() && TouristItemInterest.FOOD.isAMatch(itemInContainer, serverLevel)) {
                                 ItemStack copyOfItem = itemInContainer.copyWithCount(1);
                                 if (copyOfItem.isDamageableItem()) {
                                     copyOfItem.setDamageValue(0);
@@ -185,8 +202,15 @@ public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
 
     @Override
     protected boolean isTargetValid(ServerLevel serverLevel, ExperienceTarget target) {
+        // Check entity targets.
+        if (target.isEntity()) {
+            // There are currently no valid pantry entities.
+            return false;
+        }
+
+        // Check if block still exists and is valid as a food pantry.
         BlockEntity blockEntity = serverLevel.getBlockEntity(target.pos());
-        return !(blockEntity instanceof TouristExperience);
+        return blockEntity instanceof Container && !(blockEntity instanceof TouristExperience);
     }
 
     public @Nullable ItemPrice lookupItemPriceFor(ItemStack itemStack) {

@@ -18,5 +18,6 @@ public interface PricingMenu {
     int getSyncedItemPricesRevision();
     boolean isDefaultCostFree();
     void onItemForSaleChanged(ItemStack itemForSale);
+    void setSyncedItemPrices(List<ItemPrice> itemPrices);
     boolean stillValid(Player player);
 }

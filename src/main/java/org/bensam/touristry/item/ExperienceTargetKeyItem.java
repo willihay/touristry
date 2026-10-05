@@ -13,15 +13,12 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.ChestBlock;
-import net.minecraft.world.level.block.entity.BedBlockEntity;
-import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BedPart;
-import net.minecraft.world.level.block.state.properties.ChestType;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import org.bensam.touristry.ModComponents;
+import org.bensam.touristry.block.entity.AbstractExperienceBlockEntity;
 import org.bensam.touristry.tourism.ExperienceTargetOverlaySyncManager;
 import org.bensam.touristry.tourism.TourismManager;
 import org.bensam.touristry.tourism.experience.TouristExperience;
@@ -54,18 +51,13 @@ public class ExperienceTargetKeyItem extends Item {
         }
 
         BlockPos blockPos = hitResult.getBlockPos();
-        BlockEntity blockEntity = serverLevel.getBlockEntity(blockPos);
         BlockState blockState = serverLevel.getBlockState(blockPos);
 
-        // If the block entity is part of a double-wide connection (e.g. chest, bed), always store the BlockPos of the LEFT/HEAD half.
-        // This way, players can click on either half and the object will be stored as a single target using a consistent BlockPos.
-        // Note that the LEFT half of a chest is the opposite of what you'd think as a player looking at the front of the chest...
-        if (blockEntity instanceof ChestBlockEntity) {
-            ChestType chestType = blockState.getValue(ChestBlock.TYPE);
-            if (chestType == ChestType.RIGHT) {
-                blockPos = ChestBlock.getConnectedBlockPos(blockPos, blockState);
-            }
-        } else if (blockEntity instanceof BedBlockEntity) {
+        if (blockState.getBlock() instanceof ChestBlock) {
+            // Store a double chest at its left half so either half refers to one target.
+            blockPos = AbstractExperienceBlockEntity.getCanonicalChestTargetPos(serverLevel, blockPos);
+        } else if (blockState.getBlock() instanceof BedBlock) {
+            // Store a bed at its head position.
             BedPart bedPart = blockState.getValue(BedBlock.PART);
             if (bedPart == BedPart.FOOT) {
                 blockPos = blockPos.relative(BedBlock.getConnectedDirection(blockState));
@@ -83,7 +75,7 @@ public class ExperienceTargetKeyItem extends Item {
         } else {
             // Add target to experience.
             // Check if target is already linked to the experience.
-            if (experience.hasTarget(blockPos)) {
+            if (experience.hasTarget(serverLevel, blockPos)) {
                 player.displayClientMessage(
                         Component.literal("Already linked to ")
                                 .append(experience.getDisplayName()),
@@ -92,7 +84,7 @@ public class ExperienceTargetKeyItem extends Item {
                 return InteractionResult.SUCCESS;
             } else {
                 // Check if target is already linked to a different experience.
-                TouristExperience owner = TourismManager.findOwnerOfExperienceTarget(blockPos);
+                TouristExperience owner = TourismManager.findOwnerOfExperienceTarget(serverLevel, blockPos);
                 if (owner != null) {
                     this.displayLinkedToDifferentExperienceMessage(player, owner);
                     return InteractionResult.FAIL;
@@ -144,7 +136,7 @@ public class ExperienceTargetKeyItem extends Item {
         } else {
             // Add target to experience.
             // Check if target is already linked to the experience.
-            if (experience.hasTarget(entityPos)) {
+            if (experience.hasTarget(serverLevel, entityPos)) {
                 player.displayClientMessage(
                         Component.literal("Already linked to ")
                                 .append(experience.getDisplayName()),
@@ -153,7 +145,7 @@ public class ExperienceTargetKeyItem extends Item {
                 return InteractionResult.SUCCESS;
             } else {
                 // Check if target is already linked to a different experience.
-                TouristExperience owner = TourismManager.findOwnerOfExperienceTarget(entityPos);
+                TouristExperience owner = TourismManager.findOwnerOfExperienceTarget(serverLevel, entityPos);
                 if (owner != null) {
                     this.displayLinkedToDifferentExperienceMessage(player, owner);
                     return InteractionResult.FAIL;

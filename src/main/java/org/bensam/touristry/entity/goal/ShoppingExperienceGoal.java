@@ -7,7 +7,6 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import org.bensam.touristry.ModSounds;
 import org.bensam.touristry.block.entity.AbstractExperienceBlockEntity;
 import org.bensam.touristry.block.entity.ShoppingExperienceBlockEntity;
@@ -29,9 +28,9 @@ public class ShoppingExperienceGoal extends LookAtTargetPosGoal {
     private final BlockPos shoppingExperiencePos;
     private final BlockPos targetPos;
     private final int durationAtTarget;
-    private int tickCount;
     private final int adjustedTimeAtTarget;
     private final boolean isPurchaseCounter;
+    private int tickCount;
 
     public ShoppingExperienceGoal(TouristEntity tourist, BlockPos shoppingExperiencePos, BlockPos targetPos, int startingTickCount, int timeAtTarget, boolean isPurchaseCounter) {
         super(tourist, targetPos, true, false);
@@ -58,13 +57,15 @@ public class ShoppingExperienceGoal extends LookAtTargetPosGoal {
                     experienceName = experience.getDisplayName();
                 }
             }
-            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[ShoppingExperienceGoal] Paying for {} items at {} for {} ticks",
+            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] Paying for {} items at {} for {} ticks",
+                    this.getClass().getSimpleName(),
                     this.tourist.getShoppingBag().size(),
                     experienceName.getString(),
                     this.durationAtTarget);
         } else {
             if (this.tourist.level() instanceof ServerLevel serverLevel) {
-                if (serverLevel.getBlockEntity(this.targetPos) instanceof Container container) {
+                Container container = AbstractExperienceBlockEntity.getTargetContainer(serverLevel, this.targetPos);
+                if (container != null) {
                     container.startOpen(this.tourist);
                     this.tourist.setOpenContainer(this.targetPos);
                 }
@@ -74,7 +75,8 @@ public class ShoppingExperienceGoal extends LookAtTargetPosGoal {
             if (visit != null) {
                 allowance = visit.budgetRemaining();
             }
-            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[ShoppingExperienceGoal] Shopping at target with a budget of {} for {} ticks",
+            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] Shopping at target with a budget of {} for {} ticks",
+                    this.getClass().getSimpleName(),
                     allowance,
                     this.durationAtTarget);
         }
@@ -85,7 +87,8 @@ public class ShoppingExperienceGoal extends LookAtTargetPosGoal {
         super.stop();
 
         if (this.tourist.level() instanceof ServerLevel serverLevel) {
-            if (serverLevel.getBlockEntity(this.targetPos) instanceof Container container) {
+            Container container = AbstractExperienceBlockEntity.getTargetContainer(serverLevel, this.targetPos);
+            if (container != null) {
                 container.stopOpen(this.tourist);
                 this.tourist.setOpenContainer(null);
             }
@@ -119,9 +122,9 @@ public class ShoppingExperienceGoal extends LookAtTargetPosGoal {
 
     private void payForItems(ServerLevel serverLevel) {
         boolean paymentCompleted = false;
-        if (serverLevel.getBlockEntity(this.targetPos) instanceof ShoppingExperienceBlockEntity shoppingExperienceBlockEntity) {
+        if (serverLevel.getBlockEntity(this.targetPos) instanceof AbstractExperienceBlockEntity experienceBlockEntity) {
             for (ItemPrice purchase : this.tourist.getShoppingBag()) {
-                if (shoppingExperienceBlockEntity.tryDepositPayment(purchase.cost())) {
+                if (experienceBlockEntity.tryDepositPayment(purchase.cost())) {
                     TourismManager.recordTouristPurchase(purchase);
                     float itemValue = (int) TouristEconomy.getEmeraldEquivalent(purchase.cost());
                     this.tourist.getMind().spendBudget(itemValue);
@@ -154,14 +157,14 @@ public class ShoppingExperienceGoal extends LookAtTargetPosGoal {
         boolean hasReacted = false;
 
         // Gather all items in target container.
-        List<ItemStack> itemsInContainer = new ArrayList<>();
-        BlockEntity blockEntity = serverLevel.getBlockEntity(this.targetPos);
-        if (blockEntity instanceof Container container) {
-            itemsInContainer = AbstractExperienceBlockEntity.getTargetContainerContents(container);
+        Container targetContainer = AbstractExperienceBlockEntity.getTargetContainer(serverLevel, this.targetPos);
+        if (targetContainer == null) {
+            return;
+        }
 
-            if (itemsInContainer.isEmpty()) {
-                return;
-            }
+        List<ItemStack> itemsInContainer = AbstractExperienceBlockEntity.getTargetContainerContents(serverLevel, targetContainer, null);
+        if (itemsInContainer.isEmpty()) {
+            return;
         }
 
         // Fetch item prices and their quantity available in the container.
@@ -182,7 +185,7 @@ public class ShoppingExperienceGoal extends LookAtTargetPosGoal {
         List<ItemPrice> shoppingBag = this.tourist.getShoppingBag();
 
         // Build a shopping cart of new items that the tourist wants to buy.
-        List<ItemPrice> newItems = new ArrayList<>();
+        List<ItemPrice> newItemsForBag = new ArrayList<>();
 
         // Look for items of interest to this tourist.
         for (Map.Entry<ItemPrice, Integer> entry : itemPrices.entrySet()) {
@@ -194,7 +197,7 @@ public class ShoppingExperienceGoal extends LookAtTargetPosGoal {
                 // TODO: Use qtyAvailable to consider buying more than 1 quantity.
                 float itemValue = TouristEconomy.getEmeraldEquivalent(itemPrice.cost());
                 if (itemValue <= allowance) {
-                    newItems.add(itemPrice); // only buying 1 quantity for now
+                    newItemsForBag.add(itemPrice); // only buying 1 quantity for now
                     allowance -= itemValue;
                     this.tourist.playSound(SoundEvents.VILLAGER_CELEBRATE);
                     hasReacted = true;
@@ -207,7 +210,7 @@ public class ShoppingExperienceGoal extends LookAtTargetPosGoal {
         }
 
         // If no specific item of interest was found, there's still a chance they might want something they see.
-        if (newItems.isEmpty() && this.tourist.getRandom().nextFloat() < CHANCE_TO_WANT_RANDOM_ITEM) {
+        if (newItemsForBag.isEmpty() && this.tourist.getRandom().nextFloat() < CHANCE_TO_WANT_RANDOM_ITEM) {
             int selectedIndex = this.tourist.getRandom().nextInt(itemPrices.size());
             Map.Entry<ItemPrice, Integer> selectedEntry = null;
             Iterator<Map.Entry<ItemPrice, Integer>> iterator = itemPrices.entrySet().iterator();
@@ -217,44 +220,57 @@ public class ShoppingExperienceGoal extends LookAtTargetPosGoal {
             ItemPrice itemToBuy = selectedEntry.getKey();
 
             if (!shoppingBag.contains(itemToBuy)) {
-                TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[ShoppingExperienceGoal] Tourist found random item of interest: {}", itemToBuy.itemForSale().getItem().getName().getString());
+                TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] Tourist found random item of interest: {}",
+                        this.getClass().getSimpleName(),
+                        itemToBuy.itemForSale().getItem().getName().getString()
+                );
 
                 int qtyAvailable = selectedEntry.getValue();
                 // TODO: Use qtyAvailable to consider buying more than 1 quantity.
                 float itemValue = TouristEconomy.getEmeraldEquivalent(itemToBuy.cost());
                 if (itemValue <= allowance) {
-                    newItems.add(itemToBuy); // only buying 1 quantity for now
+                    newItemsForBag.add(itemToBuy); // only buying 1 quantity for now
                     allowance -= itemValue;
                 }
             }
         }
 
         // Move items to buy from container to tourist's shopping bag.
-        for (ItemPrice purchase : newItems) {
-            if (((Container) blockEntity).iterator() instanceof Container.ContainerIterator it) {
+        for (ItemPrice purchase : newItemsForBag) {
+            if (targetContainer.iterator() instanceof Container.ContainerIterator it) {
                 ItemStack itemBuying = purchase.itemForSale();
                 int countBuying = itemBuying.getCount();
-                TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[ShoppingExperienceGoal] Adding {} {} to shopping bag", countBuying, itemBuying.getItem().getName().getString());
+                TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] Adding {} {} to shopping bag",
+                        this.getClass().getSimpleName(),
+                        countBuying,
+                        itemBuying.getItem().getName().getString()
+                );
 
                 // Find item to buy in container and reduce its quantity by purchase count.
+                boolean changed = false;
                 while (it.hasNext()) {
                     ItemStack itemInContainer = it.next();
                     if (!itemInContainer.isEmpty() && ItemStack.isSameItemSameComponents(itemInContainer, itemBuying)) {
                         int shrinkBy = Math.min(countBuying, itemInContainer.getCount());
                         itemInContainer.shrink(shrinkBy);
                         countBuying -= shrinkBy;
+                        changed = true;
+
                         if (countBuying <= 0) {
                             break;
                         }
                     }
                 }
+                if (changed) {
+                    targetContainer.setChanged();
+                }
 
                 // Add item to buy to tourist's shopping bag.
                 this.tourist.addToShoppingBag(purchase);
-
-                // Update tourist's allowance at the experience.
-                this.tourist.getMind().updateExperienceVisitAllowance(allowance);
             }
         }
+
+        // Update tourist's allowance at the experience.
+        this.tourist.getMind().updateExperienceVisitAllowance(allowance);
     }
 }

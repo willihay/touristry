@@ -72,6 +72,7 @@ public class TargetsTab<T extends Enum<T>> extends AbstractScreenTab<T> {
     private static final int TARGET_REMOVE_ALL_BUTTON_Y = -22;
     //endregion
 
+    private final boolean showVisitOrderToggle;
     private final ScrollBox scrollBox = new ScrollBox();
 
     private TargetOrderedButton targetOrderedToggleButton;
@@ -81,11 +82,12 @@ public class TargetsTab<T extends Enum<T>> extends AbstractScreenTab<T> {
     private ImageButton targetRemoveAllButton;
 
     public TargetsTab(T tabEnum, Item tabIcon) {
-        this(TAB_TITLE, tabEnum, tabIcon);
+        this(TAB_TITLE, tabEnum, tabIcon, true);
     }
 
-    public TargetsTab(Component tabTitle, T tabEnum, Item tabIcon) {
+    public TargetsTab(Component tabTitle, T tabEnum, Item tabIcon, boolean showVisitOrderToggle) {
         super(tabTitle, tabEnum, tabIcon, BACKGROUND_TEXTURE);
+        this.showVisitOrderToggle = showVisitOrderToggle;
     }
 
     // Screen setup handlers
@@ -123,28 +125,30 @@ public class TargetsTab<T extends Enum<T>> extends AbstractScreenTab<T> {
         // Set the focus if there already is one.
         this.scrollBox.updateRowFocusForSelectedContent(menu.getSyncedTargets().size());
 
-        // Add target order toggle button.
-        buttonX = screen.getScreenLeft() + TARGET_ORDERED_BUTTON_X;
-        buttonY = screen.getScreenTop() + TARGET_ORDERED_BUTTON_Y;
-        this.targetOrderedToggleButton = screen.addButton(new TargetOrderedButton(
-                menu.getSyncedOrderedTargets(),
-                buttonX,
-                buttonY,
-                button -> {
-                    if (button instanceof TargetOrderedButton orderedButton) {
-                        boolean isOrdered = !menu.getSyncedOrderedTargets();
-                        orderedButton.setOrdered(isOrdered);
-                        this.scrollBox.updateRowFocusForSelectedContent(menu.getSyncedTargets().size());
+        if (this.showVisitOrderToggle) {
+            // Add target visit order toggle button.
+            buttonX = screen.getScreenLeft() + TARGET_ORDERED_BUTTON_X;
+            buttonY = screen.getScreenTop() + TARGET_ORDERED_BUTTON_Y;
+            this.targetOrderedToggleButton = screen.addButton(new TargetOrderedButton(
+                    menu.getSyncedOrderedTargets(),
+                    buttonX,
+                    buttonY,
+                    button -> {
+                        if (button instanceof TargetOrderedButton orderedButton) {
+                            boolean isOrdered = !menu.getSyncedOrderedTargets();
+                            orderedButton.setOrdered(isOrdered);
+                            this.scrollBox.updateRowFocusForSelectedContent(menu.getSyncedTargets().size());
 
-                        ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
-                                menu.getContainerId(),
-                                ExperienceScreenAction.SET_ORDERED_TARGETS,
-                                isOrdered ? 1 : 0,
-                                -1
-                        ));
+                            ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
+                                    menu.getContainerId(),
+                                    ExperienceScreenAction.SET_ORDERED_TARGETS,
+                                    isOrdered ? 1 : 0,
+                                    -1
+                            ));
+                        }
                     }
-                }
-        ));
+            ));
+        }
 
         // Add target move up button.
         buttonX = screen.getScreenLeft() + TARGET_CHANGE_ORDER_BUTTON_X;
@@ -259,9 +263,7 @@ public class TargetsTab<T extends Enum<T>> extends AbstractScreenTab<T> {
         }
 
         for (var button : this.scrollBox.getTargetButtons()) {
-            if (button != null) {
-                screen.removeButton(button);
-            }
+            screen.removeButton(button);
         }
         Arrays.fill(this.scrollBox.getTargetButtons(), null);
 
@@ -362,14 +364,16 @@ public class TargetsTab<T extends Enum<T>> extends AbstractScreenTab<T> {
             );
         }
 
-        guiGraphics.drawString(
-                screen.getFont(),
-                TARGET_ORDERED_LABEL,
-                TARGET_ORDERED_LABEL_X,
-                TARGET_ORDERED_LABEL_Y,
-                AbstractTabbedExperienceScreen.ARGB_SCREEN_TEXT_COLOR,
-                false
-        );
+        if (this.showVisitOrderToggle) {
+            guiGraphics.drawString(
+                    screen.getFont(),
+                    TARGET_ORDERED_LABEL,
+                    TARGET_ORDERED_LABEL_X,
+                    TARGET_ORDERED_LABEL_Y,
+                    AbstractTabbedExperienceScreen.ARGB_SCREEN_TEXT_COLOR,
+                    false
+            );
+        }
     }
 
     public class ScrollBox extends AbstractScrollBox<TargetView> {
