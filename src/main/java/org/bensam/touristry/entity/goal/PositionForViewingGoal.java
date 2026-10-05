@@ -63,16 +63,18 @@ public class PositionForViewingGoal extends Goal {
         }
 
         TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, 
-            "[PositionForViewingGoal] Positioning {} at ideal viewing position {} ({}  blocks from target at {})",
-            this.tourist.getDisplayName().getString(),
-            this.idealViewingPos.toShortString(),
-            this.idealDistance,
-            this.targetPos.toShortString());
+            "[{}] Positioning {} at ideal viewing position {} ({}  blocks from target at {})",
+                this.getClass().getSimpleName(),
+                this.tourist.getDisplayName().getString(),
+                this.idealViewingPos.toShortString(),
+                this.idealDistance,
+                this.targetPos.toShortString()
+        );
 
         // Check if tourist can see target from ideal position.
         if (!this.hasLineOfSight()) {
             TouristEntity.logActivity(Verbosity.LEVEL_1_DIAGNOSTICS,
-                "[PositionForViewingGoal] No line of sight from ideal position, skipping fine positioning");
+                "[{}] No line of sight from ideal position, skipping fine positioning", this.getClass().getSimpleName());
             this.aborted = true;
             return;
         }
@@ -87,7 +89,7 @@ public class PositionForViewingGoal extends Goal {
 
         if (!moveStarted) {
             TouristEntity.logActivity(Verbosity.LEVEL_1_DIAGNOSTICS,
-                "[PositionForViewingGoal] Unable to path to ideal position, skipping fine positioning");
+                "[{}] Unable to path to ideal position, skipping fine positioning", this.getClass().getSimpleName());
             this.aborted = true;
         }
     }
@@ -111,7 +113,7 @@ public class PositionForViewingGoal extends Goal {
             this.positioned = true;
 
             TouristEntity.logActivity(Verbosity.LEVEL_1_DIAGNOSTICS,
-                "[PositionForViewingGoal] Positioned at ideal viewing position");
+                "[{}] Positioned at ideal viewing position", this.getClass().getSimpleName());
             
             this.finishPositioning();
         }
@@ -121,7 +123,7 @@ public class PositionForViewingGoal extends Goal {
     public void stop() {
         if (!this.positioned && this.ticksPositioning >= MAX_POSITIONING_TICKS) {
             TouristEntity.logActivity(Verbosity.LEVEL_1_DIAGNOSTICS,
-                "[PositionForViewingGoal] Positioning timeout, orienting tourist and proceeding anyway");
+                "[{}] Positioning timeout, orienting tourist and proceeding anyway", this.getClass().getSimpleName());
 
             this.tourist.getLookControl().setLookAt(
                     this.targetPos.getX() + 0.5,

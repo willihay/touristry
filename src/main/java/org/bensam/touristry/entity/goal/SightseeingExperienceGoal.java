@@ -22,7 +22,8 @@ public class SightseeingExperienceGoal extends LookAtTargetPosGoal {
     public void start() {
         super.start();
 
-        TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[SightseeingExperienceGoal] Starting sightseeing at target for {} ticks",
+        TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] Starting sightseeing at target for {} ticks",
+                this.getClass().getSimpleName(),
                 this.durationAtTarget);
     }
 

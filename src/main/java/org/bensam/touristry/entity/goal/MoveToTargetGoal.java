@@ -52,9 +52,15 @@ public class MoveToTargetGoal extends Goal {
 
         String targetName = this.tourist.getMind().getStateTargetName();
         if (!targetName.isEmpty()) {
-            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[MoveToTargetGoal] Starting navigation to " + targetName);
+            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] Starting navigation to {}",
+                    this.getClass().getSimpleName(),
+                    targetName
+            );
         } else {
-            TouristEntity.logActivity(Verbosity.GAMEPLAY_WARNINGS, "[MoveToTargetGoal] Starting navigation to (unknown) " + targetPos.toShortString());
+            TouristEntity.logActivity(Verbosity.GAMEPLAY_WARNINGS, "[{}] Starting navigation to (unknown) {}",
+                    this.getClass().getSimpleName(),
+                    targetPos.toShortString()
+            );
         }
 
         double distanceToTarget = Math.sqrt(this.getDistanceToTargetSqr(targetPos, false));
@@ -118,7 +124,11 @@ public class MoveToTargetGoal extends Goal {
                     return;
                 } else {
                     if (this.tourist.level() instanceof ServerLevel) {
-                        TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[MoveToTargetGoal] " + this.tourist.getDisplayName().getString() + " failed " + consecutiveFailedProgressChecks + " consecutive nav progress checks");
+                        TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] {} failed {} consecutive nav progress checks",
+                                this.getClass().getSimpleName(),
+                                this.tourist.getDisplayName().getString(),
+                                consecutiveFailedProgressChecks
+                        );
                     }
                 }
             } else {
@@ -148,7 +158,8 @@ public class MoveToTargetGoal extends Goal {
 
         if (!moveStarted && this.tourist.level() instanceof ServerLevel) {
             TouristEntity.logActivity(Verbosity.LEVEL_1_DIAGNOSTICS,
-                    "[MoveToTargetGoal] Unable to path {} toward target at {}",
+                    "[{}] Unable to path {} toward target at {}",
+                    this.getClass().getSimpleName(),
                     this.tourist.getDisplayName().getString(),
                     targetPos.toShortString());
         }

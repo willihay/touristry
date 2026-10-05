@@ -33,6 +33,6 @@ public class TouristRandomLookAroundGoal extends RandomLookAroundGoal {
 
         if (this.tourist.level().isClientSide()) return;
 
-        TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "Starting TouristRandomLookAroundGoal");
+        TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] Starting", this.getClass().getSimpleName());
     }
 }

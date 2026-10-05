@@ -24,7 +24,10 @@ public class TouristLookAtEntityGoal extends LookAtPlayerGoal {
 
         if (this.lookAt != null) {
             this.canWaveAtEntity = TouristEntity.wouldWaveAt(this.lookAt);
-            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "Starting TouristLookAtEntityGoal to look at " + this.lookAt.getDisplayName().getString());
+            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] Looking at {}",
+                    this.getClass().getSimpleName(),
+                    this.lookAt.getDisplayName().getString()
+            );
         }
     }
 

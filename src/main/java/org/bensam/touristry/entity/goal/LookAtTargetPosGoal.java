@@ -42,7 +42,10 @@ public class LookAtTargetPosGoal extends Goal {
         if (this.tourist.level().isClientSide()) {
             return;
         }
-        TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[LookAtTargetPosGoal] Starting to look at target at " + this.targetPos.toShortString());
+        TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] Starting to look at target at {}",
+                this.getClass().getSimpleName(),
+                this.targetPos.toShortString()
+        );
     }
 
     @Override

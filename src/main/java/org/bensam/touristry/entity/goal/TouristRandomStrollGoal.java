@@ -35,12 +35,19 @@ public class TouristRandomStrollGoal extends RandomStrollGoal {
         if (this.tourist.isAtTouristLocation()) {
             String locationName = this.tourist.getCurrentLocationNameOrPos();
             if (!locationName.isEmpty()) {
-                TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[TouristRandomStrollGoal] Starting to wander around " + locationName);
+                TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] Starting to wander around {}",
+                        this.getClass().getSimpleName(),
+                        locationName
+                );
             } else {
-                TouristEntity.logActivity(Verbosity.GAMEPLAY_WARNINGS, "[TouristRandomStrollGoal] Starting to wander around unknown tourist location");
+                TouristEntity.logActivity(Verbosity.GAMEPLAY_WARNINGS, "[{}] Starting to wander around unknown tourist location",
+                        this.getClass().getSimpleName()
+                );
             }
         } else {
-            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[TouristRandomStrollGoal] Starting to wander in the world");
+            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] Starting to wander in the world",
+                    this.getClass().getSimpleName()
+            );
         }
     }
 
