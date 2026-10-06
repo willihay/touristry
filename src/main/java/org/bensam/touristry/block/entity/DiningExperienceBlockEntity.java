@@ -1,6 +1,7 @@
 package org.bensam.touristry.block.entity;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.network.chat.Component;
@@ -18,6 +19,7 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import org.bensam.touristry.ModBlockEntities;
 import org.bensam.touristry.ModComponents;
+import org.bensam.touristry.block.TouristExperienceBlock;
 import org.bensam.touristry.entity.TouristEntity;
 import org.bensam.touristry.entity.TouristItemInterest;
 import org.bensam.touristry.entity.goal.DiningExperienceGoal;
@@ -87,6 +89,15 @@ public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
     @Override
     protected AbstractContainerMenu createMenu(int i, Inventory inventory) {
         return new DiningExperienceMenu(i, inventory, this, this.data, ContainerLevelAccess.create(this.level, this.getBlockPos()));
+    }
+
+    @Override
+    public Direction getApproachDirection() {
+        BlockState blockState = this.getBlockState();
+        if (blockState.hasProperty(TouristExperienceBlock.FACING)) {
+            return blockState.getValue(TouristExperienceBlock.FACING);
+        }
+        return Direction.NORTH;
     }
 
     public ItemStack getDefaultCost() {
