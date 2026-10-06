@@ -113,7 +113,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         }
 
         long timeAdded = serverLevel.getDayTime();
-        ExperienceTarget target = new ExperienceTarget(blockPos, playerFacing, null, timeAdded);
+        ExperienceTarget target = new ExperienceTarget(blockPos, playerFacing.getOpposite(), null, timeAdded);
         return this.addTarget(serverLevel, target);
     }
 
@@ -124,7 +124,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         }
 
         long timeAdded = serverLevel.getDayTime();
-        ExperienceTarget target = new ExperienceTarget(entityPos, playerFacing, entityUUID, timeAdded);
+        ExperienceTarget target = new ExperienceTarget(entityPos, playerFacing.getOpposite(), entityUUID, timeAdded);
         return this.addTarget(serverLevel, target);
     }
 
@@ -161,10 +161,10 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         return key;
     }
 
-    public Direction getApproachDirection() {
+    public Direction getApproachFromDirection() {
         BlockState blockState = this.getBlockState();
         if (blockState.hasProperty(TouristExperienceBlock.FACING)) {
-            return blockState.getValue(TouristExperienceBlock.FACING).getOpposite();
+            return blockState.getValue(TouristExperienceBlock.FACING);
         }
         return Direction.NORTH;
     }
@@ -338,7 +338,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
 
             targetView.add(new TargetView(
                     target.pos(),
-                    getBlockPosInFront(target.pos(), target.playerFacing()),
+                    getBlockPosInFront(target.pos(), target.approachFrom()),
                     target.entityUUID(),
                     targetItemStack,
                     isWideChest,
@@ -360,15 +360,15 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
                     ExperienceTarget target = this.targets.get(i);
                     targetOverlays.add(new TargetOverlayView(
                             target.pos(),
-                            getBlockPosInFront(target.pos(), target.playerFacing()),
+                            getBlockPosInFront(target.pos(), target.approachFrom()),
                             target.entityUUID(),
                             i + 1));
                 });
         return targetOverlays;
     }
 
-    private static BlockPos getBlockPosInFront(BlockPos blockPos, Direction playerFacing) {
-        return blockPos.relative(playerFacing.getOpposite());
+    private static BlockPos getBlockPosInFront(BlockPos blockPos, Direction approachFrom) {
+        return blockPos.relative(approachFrom);
     }
 
     @Override
@@ -454,7 +454,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
             if (!canonicalBlockPos.equals(target.pos())) {
                 target = new ExperienceTarget(
                         canonicalBlockPos,
-                        target.playerFacing(),
+                        target.approachFrom(),
                         target.entityUUID(),
                         target.registeredAtTicks()
                 );

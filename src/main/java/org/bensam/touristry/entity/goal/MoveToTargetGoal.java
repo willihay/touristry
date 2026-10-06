@@ -27,12 +27,12 @@ public class MoveToTargetGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        return this.tourist.getMoveToTarget() != null && this.tourist.isTraveling();
+        return this.tourist.getMind().getMoveToTarget() != null && this.tourist.isTraveling();
     }
 
     @Override
     public boolean canContinueToUse() {
-        return this.tourist.getMoveToTarget() != null && this.tourist.isTraveling();
+        return this.tourist.getMind().getMoveToTarget() != null && this.tourist.isTraveling();
     }
 
     @Override
@@ -41,7 +41,7 @@ public class MoveToTargetGoal extends Goal {
         this.maxDistanceSq = maxDistanceFromTarget * maxDistanceFromTarget;
         this.nextRepathTicks = 0;
         this.nextCheckProgressTicks = CHECK_PROGRESS_GOALTICKS;
-        BlockPos targetPos = this.tourist.getMoveToTarget();
+        BlockPos targetPos = this.tourist.getMind().getMoveToTarget();
         if (targetPos == null) {
             return;
         }
@@ -77,7 +77,7 @@ public class MoveToTargetGoal extends Goal {
     public void tick() {
         // DEV NOTE: This Goal tick() runs at 10 TPS because Goal.requiresUpdateEveryTick() is false.
 
-        BlockPos targetPos = this.tourist.getMoveToTarget();
+        BlockPos targetPos = this.tourist.getMind().getMoveToTarget();
         if (targetPos == null) {
             return;
         }
@@ -144,7 +144,7 @@ public class MoveToTargetGoal extends Goal {
     }
 
     private void moveToTarget() {
-        BlockPos targetPos = this.tourist.getMoveToTarget();
+        BlockPos targetPos = this.tourist.getMind().getMoveToTarget();
         if (targetPos == null) {
             return;
         }

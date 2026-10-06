@@ -92,10 +92,10 @@ public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
     }
 
     @Override
-    public Direction getApproachDirection() {
+    public Direction getApproachFromDirection() {
         BlockState blockState = this.getBlockState();
         if (blockState.hasProperty(TouristExperienceBlock.FACING)) {
-            return blockState.getValue(TouristExperienceBlock.FACING);
+            return blockState.getValue(TouristExperienceBlock.FACING).getOpposite();
         }
         return Direction.NORTH;
     }
@@ -170,7 +170,7 @@ public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
         // Tourists finish their dining experience at the block entity to pay for their food.
         return List.of(new ExperienceTarget(
                     this.getBlockPos(),
-                    this.getApproachDirection(),
+                    this.getApproachFromDirection(),
                     null,
                     serverLevel.getDayTime()
         ));

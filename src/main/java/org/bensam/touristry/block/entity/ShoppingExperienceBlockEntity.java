@@ -165,7 +165,7 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
             // Add shopping experience block entity as last target so that tourists can return here to pay for items.
             targets.add(new ExperienceTarget(
                     this.getBlockPos(),
-                    this.getApproachDirection(),
+                    this.getApproachFromDirection(),
                     null,
                     serverLevel.getDayTime()
             ));

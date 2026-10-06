@@ -213,10 +213,10 @@ public final class TouristMind {
 
         // Recreate and inject the positioning goal for the current target.
         int idealDistance = experience.getIdealApproachDistance();
-        Goal positioningGoal = new org.bensam.touristry.entity.goal.PositionForViewingGoal(
+        Goal positioningGoal = new PositionForViewingGoal(
                 this.tourist,
                 this.currentExperienceTarget.pos(),
-                this.currentExperienceTarget.playerFacing(),
+                this.currentExperienceTarget.approachFrom(),
                 idealDistance
         );
         this.injectExperienceGoal(positioningGoal);
@@ -1453,7 +1453,7 @@ public final class TouristMind {
         Goal positioningGoal = new PositionForViewingGoal(
                 this.tourist,
                 this.currentExperienceTarget.pos(),
-                this.currentExperienceTarget.playerFacing(),
+                this.currentExperienceTarget.approachFrom(),
                 idealDistance
         );
         this.injectExperienceGoal(positioningGoal);

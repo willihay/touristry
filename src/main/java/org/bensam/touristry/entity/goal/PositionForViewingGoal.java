@@ -15,7 +15,7 @@ import java.util.EnumSet;
 
 /**
  * Goal that positions the tourist at an ideal viewing position relative to a target.
- * Uses the playerFacing direction to determine where the tourist should stand.
+ * Uses the approachFrom direction to determine where the tourist should stand.
  */
 public class PositionForViewingGoal extends Goal {
     private static final int MAX_POSITIONING_TICKS = 20;
@@ -23,27 +23,25 @@ public class PositionForViewingGoal extends Goal {
     
     private final TouristEntity tourist;
     private final BlockPos targetPos;
-    private final Direction playerFacing;
+    private final Direction approachFrom;
     private final int idealDistance;
     private final BlockPos idealViewingPos;
     private int ticksPositioning = 0;
     private boolean positioned = false;
     private boolean aborted = false;
 
-    public PositionForViewingGoal(TouristEntity tourist, BlockPos targetPos, Direction playerFacing, int idealDistance) {
+    public PositionForViewingGoal(TouristEntity tourist, BlockPos targetPos, Direction approachFrom, int idealDistance) {
         this.tourist = tourist;
         this.targetPos = targetPos;
-        this.playerFacing = playerFacing;
+        this.approachFrom = approachFrom;
         this.idealDistance = idealDistance;
         this.idealViewingPos = this.calculateIdealViewingPosition();
         this.setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
     }
 
     private BlockPos calculateIdealViewingPosition() {
-        // Stand at ideal distance from target, on the same side the player was standing when the target was registered.
-        // For example, if player was facing NORTH looking at the target, player was standing SOUTH of target,
-        // so we move SOUTH from target (opposite of player's facing direction).
-        return this.targetPos.relative(this.playerFacing.getOpposite(), this.idealDistance);
+        // Stand at ideal distance from target, on the side designated for the tourist to approach from.
+        return this.targetPos.relative(this.approachFrom, this.idealDistance);
     }
 
     @Override

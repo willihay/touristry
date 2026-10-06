@@ -30,7 +30,10 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
+import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.entity.ContainerOpenersCounter;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.ChestType;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
@@ -454,10 +457,6 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
         return this.mind;
     }
 
-    public @Nullable BlockPos getMoveToTarget() {
-        return this.mind.getMoveToTarget();
-    }
-
     public List<ItemPrice> getShoppingBag() {
         return List.copyOf(this.shoppingBag);
     }
@@ -472,7 +471,15 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
 
     @Override
     public boolean hasContainerOpen(ContainerOpenersCounter containerOpenersCounter, BlockPos blockPos) {
-        return blockPos.equals(this.openContainer);
+        if (this.openContainer == null) {
+            return false;
+        }
+
+        BlockState blockState = this.level().getBlockState(this.openContainer);
+        return this.openContainer.equals(blockPos)
+                || (blockState.getBlock() instanceof ChestBlock
+                    && blockState.getValue(ChestBlock.TYPE) != ChestType.SINGLE
+                    && ChestBlock.getConnectedBlockPos(this.openContainer, blockState).equals(blockPos));
     }
 
     public boolean hasHeldItem() {

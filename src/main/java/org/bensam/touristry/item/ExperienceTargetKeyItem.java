@@ -97,10 +97,10 @@ public class ExperienceTargetKeyItem extends Item {
 
                 // Get the player's current facing direction so that it can be stored in the target, so that pathfinding
                 // goals can lead a tourist to approach from the same direction.
-                Direction approachFrom = player.getDirection();
+                Direction playerFacing = player.getDirection();
 
                 // Try to add target to experience.
-                if (experience.addBlockTarget(serverLevel, blockPos, approachFrom)) {
+                if (experience.addBlockTarget(serverLevel, blockPos, playerFacing)) {
                     ExperienceTargetOverlaySyncManager.refreshPlayersHolding(serverLevel, experience.getUUID());
                     this.displayLinkAdditionMessage(player, experience, true);
                     return InteractionResult.SUCCESS;
