@@ -23,6 +23,7 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.OpenDoorGoal;
+import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.npc.villager.AbstractVillager;
 import net.minecraft.world.entity.player.Player;
@@ -42,10 +43,8 @@ import org.bensam.touristry.config.ClothingOptionsLoader;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
 import org.bensam.touristry.config.ModServerConfigManager;
 import org.bensam.touristry.config.Verbosity;
-import org.bensam.touristry.entity.goal.MoveToTargetGoal;
-import org.bensam.touristry.entity.goal.TouristLookAtEntityGoal;
-import org.bensam.touristry.entity.goal.TouristRandomLookAroundGoal;
-import org.bensam.touristry.entity.goal.TouristRandomStrollGoal;
+import org.bensam.touristry.entity.goal.*;
+import org.bensam.touristry.entity.navigation.TouristPathNavigation;
 import org.bensam.touristry.item.CameraModelType;
 import org.bensam.touristry.tourism.TourismManager;
 import org.bensam.touristry.tourism.TouristLocation;
@@ -106,6 +105,11 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
     }
 
     // Instance creation helpers
+    @Override
+    protected PathNavigation createNavigation(Level level) {
+        return new TouristPathNavigation(this, level);
+    }
+
     public static AttributeSupplier.Builder createTouristAttributes() {
         return Mob.createMobAttributes()
                 .add(Attributes.MOVEMENT_SPEED, 0.3)
@@ -242,6 +246,7 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(1, new MoveToTargetGoal(this)); // MOVE
         this.goalSelector.addGoal(2, new OpenDoorGoal(this, true));
+        this.goalSelector.addGoal(2, new OpenFenceGateGoal(this));
         this.goalSelector.addGoal(4, new TouristRandomStrollGoal(this, 0.6)); // MOVE
         this.goalSelector.addGoal(4, new TouristLookAtEntityGoal(this, Player.class, 18.0f, 0.02f)); // LOOK
         this.goalSelector.addGoal(5, new TouristLookAtEntityGoal(this, AbstractVillager.class, 20.0f, 0.02f)); // LOOK

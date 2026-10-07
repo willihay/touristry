@@ -26,6 +26,7 @@ public record ExperienceTarget(
         @Nullable UUID entityUUID,
         long registeredAtTicks
 ) {
+    // TODO: Remove the legacy codec after all test environments have been updated.
     private static final Codec<ExperienceTarget> APPROACH_FROM_CODEC = createCodec("approach_from", false);
     private static final Codec<ExperienceTarget> LEGACY_PLAYER_FACING_CODEC = createCodec("player_facing", true);
 
