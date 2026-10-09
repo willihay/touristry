@@ -248,10 +248,10 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
         this.goalSelector.addGoal(2, new OpenDoorGoal(this, true));
         this.goalSelector.addGoal(2, new OpenFenceGateGoal(this));
         this.goalSelector.addGoal(4, new TouristRandomStrollGoal(this, 0.6)); // MOVE
-        this.goalSelector.addGoal(4, new TouristLookAtEntityGoal(this, Player.class, 18.0f, 0.02f)); // LOOK
-        this.goalSelector.addGoal(5, new TouristLookAtEntityGoal(this, AbstractVillager.class, 20.0f, 0.02f)); // LOOK
-        this.goalSelector.addGoal(6, new TouristLookAtEntityGoal(this, Animal.class, 8.0f, 0.01f)); // LOOK
-        this.goalSelector.addGoal(7, new TouristRandomLookAroundGoal(this)); // LOOK
+        this.goalSelector.addGoal(5, new TouristLookAtEntityGoal(this, Player.class, false, 18.0f, 0.02f)); // LOOK
+        this.goalSelector.addGoal(5, new TouristLookAtEntityGoal(this, AbstractVillager.class, false, 20.0f, 0.02f)); // LOOK
+        this.goalSelector.addGoal(5, new TouristLookAtEntityGoal(this, Animal.class, true, 8.0f, 0.02f)); // LOOK
+        this.goalSelector.addGoal(6, new TouristRandomLookAroundGoal(this)); // LOOK
     }
 
     public void addExperienceGoal(Goal goal) {
@@ -606,10 +606,6 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
     }
 
     public void takePicture() {
-        if (this.level().isClientSide()) {
-            return;
-        }
-
         if (this.isUsingCamera()) {
             if (this.isCameraFlashNeeded()) {
                 this.playSound(this.cameraModel.getWithFlashSound());

@@ -39,6 +39,7 @@ public class LookAtTargetPosGoal extends Goal {
 
     @Override
     public void start() {
+        this.tickCount = 0;
         TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] Starting to look at target at {}",
                 this.getClass().getSimpleName(),
                 this.targetPos.toShortString()

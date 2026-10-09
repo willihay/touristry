@@ -26,9 +26,10 @@ public class PositionForViewingGoal extends Goal {
     private final Direction approachFrom;
     private final int idealDistance;
     private final BlockPos idealViewingPos;
-    private int ticksPositioning = 0;
-    private boolean positioned = false;
-    private boolean aborted = false;
+
+    private boolean aborted;
+    private boolean positioned;
+    private int ticksPositioning;
 
     public PositionForViewingGoal(TouristEntity tourist, BlockPos targetPos, Direction approachFrom, int idealDistance) {
         this.tourist = tourist;
@@ -56,6 +57,10 @@ public class PositionForViewingGoal extends Goal {
 
     @Override
     public void start() {
+        this.aborted = false;
+        this.positioned = false;
+        this.ticksPositioning = 0;
+
         TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS,
             "[{}] Positioning {} at ideal viewing position {} ({}  blocks from target at {})",
                 this.getClass().getSimpleName(),
