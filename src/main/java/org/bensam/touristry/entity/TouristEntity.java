@@ -243,7 +243,7 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
     // Goal helpers
     @Override
     protected void registerGoals() {
-        this.goalSelector.addGoal(0, new FloatGoal(this));
+        this.goalSelector.addGoal(0, new FloatGoal(this)); // JUMP
         this.goalSelector.addGoal(1, new MoveToTargetGoal(this)); // MOVE
         this.goalSelector.addGoal(2, new OpenDoorGoal(this, true));
         this.goalSelector.addGoal(2, new OpenFenceGateGoal(this));

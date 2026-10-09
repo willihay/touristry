@@ -32,10 +32,6 @@ public class SightseeingExperienceGoal extends LookAtTargetPosGoal {
         super.tick();
         this.tickCount++;
 
-        if (this.tourist.level().isClientSide()) {
-            return;
-        }
-
         if (this.tickCount >= this.adjustedTimeAtTarget && (!this.tourist.isUsingCamera() || (this.tickCount - this.adjustedTimeAtTarget) > this.adjustedTickDelay(20))) {
             this.tourist.getMind().finishTargetGoal();
         }

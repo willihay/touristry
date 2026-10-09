@@ -30,8 +30,6 @@ public class TouristRandomStrollGoal extends RandomStrollGoal {
     public void start() {
         super.start();
 
-        if (this.tourist.level().isClientSide()) return;
-
         if (this.tourist.isAtTouristLocation()) {
             String locationName = this.tourist.getCurrentLocationNameOrPos();
             if (!locationName.isEmpty()) {

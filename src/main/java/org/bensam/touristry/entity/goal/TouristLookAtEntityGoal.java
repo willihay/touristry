@@ -20,8 +20,6 @@ public class TouristLookAtEntityGoal extends LookAtPlayerGoal {
     public void start() {
         super.start();
 
-        if (this.tourist.level().isClientSide()) return;
-
         if (this.lookAt != null) {
             this.canWaveAtEntity = TouristEntity.wouldWaveAt(this.lookAt);
             TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] Looking at {}",

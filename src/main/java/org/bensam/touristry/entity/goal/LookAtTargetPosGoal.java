@@ -39,9 +39,6 @@ public class LookAtTargetPosGoal extends Goal {
 
     @Override
     public void start() {
-        if (this.tourist.level().isClientSide()) {
-            return;
-        }
         TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] Starting to look at target at {}",
                 this.getClass().getSimpleName(),
                 this.targetPos.toShortString()
@@ -57,10 +54,6 @@ public class LookAtTargetPosGoal extends Goal {
     @Override
     public void tick() {
         this.tickCount++;
-
-        if (this.tourist.level().isClientSide()) {
-            return;
-        }
 
         // Vary the look behavior to appear more natural:
         // 1. Initial focused gaze at target (first 2 seconds, approximately)

@@ -56,11 +56,7 @@ public class PositionForViewingGoal extends Goal {
 
     @Override
     public void start() {
-        if (!(this.tourist.level() instanceof ServerLevel)) {
-            return;
-        }
-
-        TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, 
+        TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS,
             "[{}] Positioning {} at ideal viewing position {} ({}  blocks from target at {})",
                 this.getClass().getSimpleName(),
                 this.tourist.getDisplayName().getString(),
@@ -137,17 +133,11 @@ public class PositionForViewingGoal extends Goal {
     }
 
     private void finishPositioning() {
-        if (!(this.tourist.level() instanceof ServerLevel serverLevel)) {
-            return;
-        }
-
-        this.tourist.getMind().finishPositioning(serverLevel);
+        this.tourist.getMind().finishPositioning(getServerLevel(this.tourist));
     }
 
     private boolean hasLineOfSight() {
-        if (!(this.tourist.level() instanceof ServerLevel serverLevel)) {
-            return true; // Assume true if not on server
-        }
+        ServerLevel serverLevel = getServerLevel(this.tourist);
 
         // Create 2 vantage points (fromPos) and check line of sight to target (toPos).
         Vec3 fromPos = new Vec3(

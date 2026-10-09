@@ -2,6 +2,7 @@ package org.bensam.touristry.entity.goal;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Mob;
@@ -28,13 +29,14 @@ public class OpenFenceGateGoal extends Goal {
             return false;
         }
 
+        ServerLevel serverLevel = getServerLevel(this.mob);
         Path path = this.mob.getNavigation().getPath();
         if (path != null && !path.isDone()) {
             for (int i = 0; i < Math.min(path.getNextNodeIndex() + 2, path.getNodeCount()); i++) {
                 Node node = path.getNode(i);
                 this.gatePos = new BlockPos(node.x, node.y, node.z);
                 if (!(this.mob.distanceToSqr(this.gatePos.getX(), this.mob.getY(), this.gatePos.getZ()) > 2.25)) {
-                    BlockState blockState = this.mob.level().getBlockState(this.gatePos);
+                    BlockState blockState = serverLevel.getBlockState(this.gatePos);
                     this.hasGate = blockState.getBlock() instanceof FenceGateBlock;
                     if (this.hasGate) {
                         return true;
@@ -43,7 +45,7 @@ public class OpenFenceGateGoal extends Goal {
             }
 
             this.gatePos = this.mob.blockPosition().above();
-            BlockState blockState = this.mob.level().getBlockState(this.gatePos);
+            BlockState blockState = serverLevel.getBlockState(this.gatePos);
             this.hasGate = blockState.getBlock() instanceof FenceGateBlock;
             return this.hasGate;
         } else {
@@ -78,22 +80,23 @@ public class OpenFenceGateGoal extends Goal {
     }
 
     protected void setOpen(boolean setOpen) {
+        ServerLevel serverLevel = getServerLevel(this.mob);
         if (this.hasGate) {
-            BlockState blockState = this.mob.level().getBlockState(this.gatePos);
+            BlockState blockState = serverLevel.getBlockState(this.gatePos);
             if (blockState.getBlock() instanceof FenceGateBlock) {
-                this.setOpen(setOpen, this.gatePos);
+                this.setOpen(serverLevel, setOpen, this.gatePos);
             }
 
             // Handle double-height gates.
-            blockState = this.mob.level().getBlockState(this.gatePos.above());
+            blockState = serverLevel.getBlockState(this.gatePos.above());
             if (blockState.getBlock() instanceof FenceGateBlock) {
-                this.setOpen(setOpen, this.gatePos.above());
+                this.setOpen(serverLevel, setOpen, this.gatePos.above());
             }
         }
     }
 
-    private void setOpen(boolean setOpen, BlockPos gatePos) {
-        BlockState blockState = this.mob.level().getBlockState(gatePos);
+    private void setOpen(ServerLevel serverLevel, boolean setOpen, BlockPos gatePos) {
+        BlockState blockState = serverLevel.getBlockState(gatePos);
         if (blockState.getValue(FenceGateBlock.OPEN) != setOpen) {
             blockState = blockState.setValue(FenceGateBlock.OPEN, setOpen);
 
@@ -102,14 +105,14 @@ public class OpenFenceGateGoal extends Goal {
                 if (blockState.getValue(FenceGateBlock.FACING) == direction.getOpposite()) {
                     blockState = blockState.setValue(FenceGateBlock.FACING, direction);
                 }
-                this.mob.level().playSound(null, gatePos, SoundEvents.FENCE_GATE_OPEN, SoundSource.BLOCKS, 1.0F, this.mob.level().getRandom().nextFloat() * 0.1F + 0.9F);
-                this.mob.level().gameEvent(this.mob, GameEvent.BLOCK_OPEN, gatePos);
+                serverLevel.playSound(null, gatePos, SoundEvents.FENCE_GATE_OPEN, SoundSource.BLOCKS, 1.0F, serverLevel.getRandom().nextFloat() * 0.1F + 0.9F);
+                serverLevel.gameEvent(this.mob, GameEvent.BLOCK_OPEN, gatePos);
             } else {
-                this.mob.level().playSound(null, gatePos, SoundEvents.FENCE_GATE_CLOSE, SoundSource.BLOCKS, 1.0F, this.mob.level().getRandom().nextFloat() * 0.1F + 0.9F);
-                this.mob.level().gameEvent(this.mob, GameEvent.BLOCK_CLOSE, gatePos);
+                serverLevel.playSound(null, gatePos, SoundEvents.FENCE_GATE_CLOSE, SoundSource.BLOCKS, 1.0F, serverLevel.getRandom().nextFloat() * 0.1F + 0.9F);
+                serverLevel.gameEvent(this.mob, GameEvent.BLOCK_CLOSE, gatePos);
             }
 
-            this.mob.level().setBlock(gatePos, blockState, 10);
+            serverLevel.setBlock(gatePos, blockState, 10);
         }
     }
 }

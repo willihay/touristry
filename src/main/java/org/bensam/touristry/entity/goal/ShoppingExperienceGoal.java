@@ -63,12 +63,10 @@ public class ShoppingExperienceGoal extends LookAtTargetPosGoal {
                     experienceName.getString(),
                     this.durationAtTarget);
         } else {
-            if (this.tourist.level() instanceof ServerLevel serverLevel) {
-                Container container = AbstractExperienceBlockEntity.getTargetContainer(serverLevel, this.targetPos);
-                if (container != null) {
-                    container.startOpen(this.tourist);
-                    this.tourist.setOpenContainer(this.targetPos);
-                }
+            Container container = AbstractExperienceBlockEntity.getTargetContainer(getServerLevel(this.tourist), this.targetPos);
+            if (container != null) {
+                container.startOpen(this.tourist);
+                this.tourist.setOpenContainer(this.targetPos);
             }
 
             float allowance = 0;
@@ -86,12 +84,10 @@ public class ShoppingExperienceGoal extends LookAtTargetPosGoal {
     public void stop() {
         super.stop();
 
-        if (this.tourist.level() instanceof ServerLevel serverLevel) {
-            Container container = AbstractExperienceBlockEntity.getTargetContainer(serverLevel, this.targetPos);
-            if (container != null) {
-                container.stopOpen(this.tourist);
-                this.tourist.setOpenContainer(null);
-            }
+        Container container = AbstractExperienceBlockEntity.getTargetContainer(getServerLevel(this.tourist), this.targetPos);
+        if (container != null) {
+            container.stopOpen(this.tourist);
+            this.tourist.setOpenContainer(null);
         }
     }
 
@@ -99,10 +95,7 @@ public class ShoppingExperienceGoal extends LookAtTargetPosGoal {
     public void tick() {
         super.tick();
         this.tickCount++;
-
-        if (!(this.tourist.level() instanceof ServerLevel serverLevel)) {
-            return;
-        }
+        ServerLevel serverLevel = getServerLevel(this.tourist);
 
         if (this.tickCount >= this.adjustedTimeAtTarget) {
             if (this.isPurchaseCounter) {

@@ -79,10 +79,7 @@ public class DiningExperienceGoal extends LookAtTargetPosGoal {
     public void tick() {
         super.tick();
         this.tickCount++;
-
-        if (!(this.tourist.level() instanceof ServerLevel serverLevel)) {
-            return;
-        }
+        ServerLevel serverLevel = getServerLevel(this.tourist);
 
         if (this.tickCount >= this.adjustedTimeAtTarget) {
             if (this.isOrderingHere) {

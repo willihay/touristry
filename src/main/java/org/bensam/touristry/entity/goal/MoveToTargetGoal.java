@@ -1,7 +1,6 @@
 package org.bensam.touristry.entity.goal;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ai.goal.Goal;
 import org.bensam.touristry.config.Verbosity;
 import org.bensam.touristry.entity.TouristEntity;
@@ -43,10 +42,6 @@ public class MoveToTargetGoal extends Goal {
         this.nextCheckProgressTicks = CHECK_PROGRESS_GOALTICKS;
         BlockPos targetPos = this.tourist.getMind().getMoveToTarget();
         if (targetPos == null) {
-            return;
-        }
-
-        if (this.tourist.level().isClientSide()) {
             return;
         }
 
@@ -123,13 +118,11 @@ public class MoveToTargetGoal extends Goal {
                     }
                     return;
                 } else {
-                    if (this.tourist.level() instanceof ServerLevel) {
-                        TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] {} failed {} consecutive nav progress checks",
-                                this.getClass().getSimpleName(),
-                                this.tourist.getDisplayName().getString(),
-                                consecutiveFailedProgressChecks
-                        );
-                    }
+                    TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] {} failed {} consecutive nav progress checks",
+                            this.getClass().getSimpleName(),
+                            this.tourist.getDisplayName().getString(),
+                            consecutiveFailedProgressChecks
+                    );
                 }
             } else {
                 this.tourist.getMind().recordProgressTowardsTarget(distanceToTarget, 0);
@@ -156,7 +149,7 @@ public class MoveToTargetGoal extends Goal {
                 1.0 // speed modifier
         );
 
-        if (!moveStarted && this.tourist.level() instanceof ServerLevel) {
+        if (!moveStarted) {
             TouristEntity.logActivity(Verbosity.LEVEL_1_DIAGNOSTICS,
                     "[{}] Unable to path {} toward target at {}",
                     this.getClass().getSimpleName(),
