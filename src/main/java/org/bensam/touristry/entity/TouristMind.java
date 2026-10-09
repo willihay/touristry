@@ -105,37 +105,39 @@ public final class TouristMind {
         this.generateInterests();
     }
 
+    //region Initialization Methods
+    private float generateDailyBudget() {
+        double budget = BUDGET_MEAN_EMERALDS + (this.random().nextGaussian() * BUDGET_STD_DEV_EMERALDS);
+        return Math.clamp(Math.round(budget), BUDGET_MIN_EMERALDS, BUDGET_MAX_EMERALDS);
+    }
+
+    private void generateInterests() {
+        for (TouristItemInterest interest : TouristItemInterest.values()) {
+            if (this.random().nextFloat() < interest.probabilityOfInterest()) {
+                this.interests.add(interest);
+                if (interest == TouristItemInterest.EPIC_ITEMS) {
+                    this.dailyBudgetEmeralds += 100;
+                } else if (interest == TouristItemInterest.RARE_ITEMS) {
+                    this.dailyBudgetEmeralds += 25;
+                }
+            }
+        }
+
+        if (this.interests.isEmpty()) {
+            this.interests.add(TouristItemInterest.GENERAL);
+        }
+    }
+
+    private int generateRandomDespawnTime() {
+        return 12000 + this.random().nextInt(1000);
+    }
+
+    private double generateRandomStartingMood() {
+        return 1.0 + this.random().nextDouble();
+    }
+
     public void postInitialize() {
         TourismManager.recordTouristBudget(this.dailyBudgetEmeralds);
-    }
-
-    private void resetBeaconJourneyStats() {
-        this.closestDistanceToDestination = Double.MAX_VALUE;
-        this.consecutiveFailedProgressChecks = 0;
-        this.reportedHurtEnRoute = false;
-        this.reportedHurtOnPremises = false;
-    }
-
-    private void resetExperienceJourneyStats() {
-        this.closestDistanceToDestination = Double.MAX_VALUE;
-        this.consecutiveFailedProgressChecks = 0;
-    }
-
-    private void resetDailyStats() {
-        this.eveningDespawnTimeTicks = 12000 + this.random().nextInt(1000);
-        this.goodExperiencesToday = 0;
-        this.hasPreparedToLeaveEarly = false;
-        this.isHungry = true;
-        this.isStayingOvernight = false;
-        this.lastMapToggleTicks = 0;
-        this.mood = this.generateRandomStartingMood();
-        this.nextMoodCheckTicks = this.random().nextInt(CHECK_MOOD_INTERVAL_TICKS);
-        this.remainingBudgetEmeralds = this.dailyBudgetEmeralds;
-        this.reportedHurtEnRoute = false;
-        this.reportedHurtOnPremises = false;
-        this.ticksAtCurrentTarget = 0;
-        this.tourist.setUnhappyCounter(0);
-        this.waveMemory.clear();
     }
 
     /**
@@ -222,237 +224,125 @@ public final class TouristMind {
         this.injectExperienceGoal(positioningGoal);
         TouristEntity.logActivity(Verbosity.LEVEL_1_DIAGNOSTICS, "[TouristMind] Load: Reconstructed PositionForViewingGoal (distance: {})", idealDistance);
     }
+    //endregion
 
-    public boolean avoidWater() {
-        return this.state == TouristState.WANDERING_AT_BEACON;
-    }
+    //region Persistence Methods
+    public void addAdditionalSaveData(ValueOutput valueOutput) {
+        valueOutput.store("State", TouristState.CODEC, this.state);
 
-    public @Nullable BlockPos getBeaconPos() {
-        return this.beaconPos;
-    }
-
-    public double getClosestDistanceToDestination() {
-        return this.closestDistanceToDestination;
-    }
-
-    public int getConsecutiveFailedProgressChecks() {
-        return this.consecutiveFailedProgressChecks;
-    }
-
-    public @Nullable BlockPos getExperiencePos() {
-        return this.experienceBlockPos;
-    }
-
-    public @Nullable ExperienceVisit getExperienceVisit() {
-        return this.experienceTargetTracker.peekFirst();
-    }
-
-    public List<TouristItemInterest> getInterests() {
-        return List.copyOf(this.interests);
-    }
-
-    public String getLocationNameOrPos() {
-        TouristLocation currentLocation = this.state.touristLocation();
-        switch (currentLocation) {
-            case BEACON -> {
-                return TourismManager.getTouristBlockNameOrPos(this.tourist.level(), currentLocation, this.beaconPos).getString();
-            }
-
-            case EXPERIENCE -> {
-                return TourismManager.getTouristBlockNameOrPos(this.tourist.level(), currentLocation, this.experienceBlockPos).getString();
-            }
-
-            default -> {
-                return "";
-            }
-        }
-    }
-
-    public int getMaxDistanceAwayFromTarget() {
-        if (this.state == TouristState.TRAVELING_TO_EXPERIENCE_TARGET && !this.experienceTargetTracker.isEmpty()) {
-            ExperienceVisit currentVisit = this.experienceTargetTracker.peekFirst();
-            TouristExperience experience = TourismManager.getTouristExperienceById(currentVisit.experienceUUID());
-            if (experience != null) {
-                return experience.getMaxApproachDistance();
-            }
-        }
-        return 3;
-    }
-
-    public @Nullable BlockPos getMoveToTarget() {
-        if (this.state == TouristState.TRAVELING_TO_BEACON) {
-            return this.beaconPos;
-        } else if (this.state == TouristState.TRAVELING_TO_EXPERIENCE) {
-            return this.experienceBlockPos;
-        } else if (this.state == TouristState.TRAVELING_TO_EXPERIENCE_TARGET) {
-            return this.targetPos;
-        }
-        return null;
-    }
-
-    public TouristState getState() {
-        return this.state;
-    }
-
-    public String getStateForLogging() {
-        return this.getStateForLogging(this.state);
-    }
-
-    public String getStateForLogging(TouristState state) {
-        String targetName = this.getStateTargetName(state);
-        if (targetName.isEmpty()) {
-            targetName = "(unknown)";
+        if (!this.availableExperienceUUIDs.isEmpty()) {
+            valueOutput.store("AvailableExperiences", UUIDUtil.CODEC.listOf(), this.availableExperienceUUIDs);
         }
 
-        String logMessageSuffix = switch (state) {
-            case TRAVELING_TO_BEACON, WAIT_AT_BEACON, CHOOSING_EXPERIENCE_AT_BEACON, WANDERING_AT_BEACON,
-                 TRAVELING_TO_EXPERIENCE, WAIT_AT_EXPERIENCE, ENTERING_EXPERIENCE, WANDERING_AT_EXPERIENCE,
-                 TRAVELING_TO_EXPERIENCE_TARGET, POSITIONING_AT_TARGET, EXPERIENCING_TARGET -> " " + targetName;
-            case CHOOSING_EXPERIENCE_TARGET, SLEEPING -> " at " + targetName;
-            default -> "";
-        };
-
-        return state + logMessageSuffix;
-    }
-
-    public String getStateTargetName() {
-        return this.getStateTargetName(this.state);
-    }
-
-    public String getStateTargetName(TouristState state) {
-        switch (state) {
-            case TRAVELING_TO_BEACON, WAIT_AT_BEACON, CHOOSING_EXPERIENCE_AT_BEACON, WANDERING_AT_BEACON -> {
-                TouristBeaconBlockEntity beaconBlockEntity = TourismManager.getBeaconBlockEntity(this.tourist.level(), this.beaconPos);
-                if (beaconBlockEntity != null) {
-                    return beaconBlockEntity.getPlainTextName();
-                } else {
-                    return "";
-                }
-            }
-            case TRAVELING_TO_EXPERIENCE, WAIT_AT_EXPERIENCE, ENTERING_EXPERIENCE, WANDERING_AT_EXPERIENCE,
-                 CHOOSING_EXPERIENCE_TARGET, SLEEPING -> {
-                TouristExperience experience = TourismManager.getTouristExperienceByPos(this.experienceBlockPos);
-                if (experience != null) {
-                    return experience.getDisplayName().getString();
-                } else {
-                    return "";
-                }
-            }
-            case TRAVELING_TO_EXPERIENCE_TARGET, POSITIONING_AT_TARGET, EXPERIENCING_TARGET -> {
-                if (this.targetPos == null) {
-                    return "";
-                }
-                TouristExperience experience = TourismManager.getTouristExperienceByPos(this.experienceBlockPos);
-                if (experience != null) {
-                    return this.targetPos.toShortString() + " from " + experience.getDisplayName().getString();
-                } else {
-                    return this.targetPos.toShortString();
-                }
-            }
-            default -> { return ""; }
-        }
-    }
-
-    public int getTicksAtCurrentTarget() {
-        return this.ticksAtCurrentTarget;
-    }
-
-    public boolean hasReportedHurtEnRoute() {
-        return this.reportedHurtEnRoute;
-    }
-
-    public boolean hasReportedHurtOnPremises() {
-        return this.reportedHurtOnPremises;
-    }
-
-    public boolean isItemOfInterest(ItemStack itemStack) {
-        boolean itemDamaged = itemStack.isDamaged();
-        boolean usedOkay = this.interests.contains(TouristItemInterest.SECONDHAND_ITEMS);
-
-        for (TouristItemInterest interest : this.interests) {
-            if (interest == TouristItemInterest.SECONDHAND_ITEMS) {
-                continue;
-            }
-
-            if (interest.isAMatch(itemStack, this.tourist.level())) {
-                if (!itemDamaged || usedOkay) {
-                    TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[TouristMind] Tourist found {} matching interest {}", itemStack.getItem().getName().getString(), interest);
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    public void recordExperience(ServerLevel serverLevel, TouristReview review) {
-        SoundEvent soundEvent = null;
-
-        switch (review.result()) {
-            case ARRIVED, GOOD, GREAT -> soundEvent = SoundEvents.VILLAGER_CELEBRATE;
-            case LOST, CLOSED_EARLY, PAYMENT_FAILED, UNFAVORABLE -> soundEvent = SoundEvents.VILLAGER_NO;
-            case HURT_EN_ROUTE -> this.reportedHurtEnRoute = true;
-            case HURT_ON_PREMISES -> this.reportedHurtOnPremises = true;
+        // Serialize visited experience set of UUIDs as a list.
+        if (!this.visitedExperienceUUIDs.isEmpty()) {
+            valueOutput.store("VisitedExperiences", UUIDUtil.CODEC.listOf(), List.copyOf(this.visitedExperienceUUIDs));
         }
 
-        this.tourist.applyExperienceToWorld(serverLevel, review, soundEvent);
-    }
-
-    public void recordProgressTowardsTarget(double closestDistanceToTarget, int consecutiveFailedProgressChecks) {
-        this.closestDistanceToDestination = closestDistanceToTarget;
-        this.consecutiveFailedProgressChecks = consecutiveFailedProgressChecks;
-    }
-
-    public void setWavingAtEntity(Entity entity, boolean wave) {
-        if (!wave) {
-            this.tourist.setWaving(false);
-            TouristEntity.logActivity(Verbosity.LEVEL_1_DIAGNOSTICS, "[TouristMind] Stopped waving at {}, UUID={}",
-                    entity == null ? "no one" : entity.getDisplayName().getString(),
-                    entity == null ? "N/A" : entity.getUUID().toString());
-            return;
+        // Serialize experience tracker stack as a list (bottom to top order).
+        if (!this.experienceTargetTracker.isEmpty()) {
+            valueOutput.store("ExperienceTargetTracker", ExperienceVisit.CODEC.listOf(),
+                    List.copyOf(this.experienceTargetTracker));
         }
 
-        if (TouristEntity.wouldWaveAt(entity)) {
-            WaveRecord waveRecord = this.waveMemory.getOrDefault(entity.getUUID(), new WaveRecord(0, -1));
-            int tickTimeOfDay = (int) (entity.level().getDayTime() % 24000L);
-            if (waveRecord.count() < MAX_WAVE_COUNT &&
-                    tickTimeOfDay > (waveRecord.lastWaveTick() + MIN_WAVE_AT_ENTITY_INTERVAL_TICKS)
-            ) {
-                waveRecord = new WaveRecord(waveRecord.count() + 1, tickTimeOfDay);
-                this.waveMemory.put(entity.getUUID(), waveRecord);
-                this.tourist.setWaving(true);
-                TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[TouristMind] Waving at {}, count={}, UUID={}", entity.getDisplayName().getString(), waveRecord.count(), entity.getUUID().toString());
-            }
+        if (!this.interests.isEmpty()) {
+            valueOutput.store("Interests", TouristItemInterest.CODEC.listOf(), List.copyOf(this.interests));
         }
+
+        if (this.beaconPos != null) {
+            valueOutput.store("BeaconPos", BlockPos.CODEC, this.beaconPos);
+        }
+        if (this.experienceBlockPos != null) {
+            valueOutput.store("ExperienceBlockPos", BlockPos.CODEC, this.experienceBlockPos);
+        }
+        if (this.targetPos != null) {
+            valueOutput.store("TargetPos", BlockPos.CODEC, this.targetPos);
+        }
+
+        valueOutput.putDouble("ClosestDistanceToDestination", this.closestDistanceToDestination);
+        valueOutput.putInt("FailedProgressChecks", this.consecutiveFailedProgressChecks);
+        valueOutput.putBoolean("ReportedHurtEnRoute", this.reportedHurtEnRoute);
+        valueOutput.putBoolean("ReportedHurtOnPremises", this.reportedHurtOnPremises);
+        valueOutput.putDouble("Mood", this.mood);
+        valueOutput.putInt("GoodExperiencesToday", this.goodExperiencesToday);
+        valueOutput.putInt("DespawnTimeTicks", this.eveningDespawnTimeTicks);
+        valueOutput.putBoolean("IsHungry", this.isHungry);
+        valueOutput.putBoolean("IsStayingOvernight", this.isStayingOvernight);
+        valueOutput.putInt("CurrentTargetIndex", this.currentTargetIndex);
+        valueOutput.putInt("TicksAtCurrentExperience", this.ticksAtCurrentExperience);
+        valueOutput.putInt("TicksAtCurrentTarget", this.ticksAtCurrentTarget);
+        valueOutput.putInt("WaitTicks", this.waitTicks);
+        valueOutput.putFloat("DailyBudget", this.dailyBudgetEmeralds);
+        valueOutput.putFloat("RemainingBudget", this.remainingBudgetEmeralds);
     }
 
-    public void updateMood(VisitResult result) {
-        double positiveNormalized = Math.max(0.0, this.mood) / (MAX_MOOD + 1.0);
-        double negativeNormalized = Math.max(0.0, -this.mood) / MAX_MOOD;
+    public void readAdditionalSaveData(ValueInput valueInput) {
+        this.beaconPos = valueInput.read("BeaconPos", BlockPos.CODEC).orElse(null);
+        this.state = valueInput.read("State", TouristState.CODEC).orElse(
+                (this.beaconPos != null ? TouristState.TRAVELING_TO_BEACON : TouristState.IDLE));
 
-        double change = switch (result) {
-            case ARRIVED, GOOD, GREAT -> {
-                this.goodExperiencesToday++;
-                VisitResult modifiedResult = this.goodExperiencesToday % 3 == 0 ? VisitResult.GREAT : result;
-                yield modifiedResult.moodDelta() * (1.0 - positiveNormalized) * (1.0 + 0.5 * negativeNormalized);
-            }
-            case UNFAVORABLE, FAILED_SPAWN, LOST, CLOSED_EARLY, UNAFFORDABLE, PAYMENT_FAILED, HURT_EN_ROUTE, HURT_ON_PREMISES, KILLED_EN_ROUTE, KILLED_ON_PREMISES ->
-                    result.moodDelta() * (0.75 + 0.5 * positiveNormalized);
-        };
+        this.availableExperienceUUIDs = new ArrayList<>(
+                valueInput.read("AvailableExperiences", UUIDUtil.CODEC.listOf()).orElse(List.of())
+        );
 
-        this.mood = Mth.clamp(this.mood + change, MIN_MOOD, MAX_MOOD);
+        this.visitedExperienceUUIDs = new HashSet<>(
+                valueInput.read("VisitedExperiences", UUIDUtil.CODEC.listOf()).orElse(List.of())
+        );
+
+        // Deserialize experience tracker (restore as ArrayDeque).
+        List<ExperienceVisit> trackerList = valueInput.read("ExperienceTargetTracker", ExperienceVisit.CODEC.listOf())
+                .orElse(List.of());
+        this.experienceTargetTracker = new ArrayDeque<>(trackerList);
+
+        List<TouristItemInterest> interests = new ArrayList<>(
+                valueInput.read("Interests", TouristItemInterest.CODEC.listOf()).orElse(List.of())
+        );
+        if (!interests.isEmpty()) {
+            this.interests = List.copyOf(interests);
+        }
+
+        this.experienceBlockPos = valueInput.read("ExperienceBlockPos", BlockPos.CODEC).orElse(null);
+        this.targetPos = valueInput.read("TargetPos", BlockPos.CODEC).orElse(null);
+        this.closestDistanceToDestination = valueInput.getDoubleOr("ClosestDistanceToDestination", Double.MAX_VALUE);
+        this.consecutiveFailedProgressChecks = valueInput.getIntOr("FailedProgressChecks", 0);
+        this.reportedHurtEnRoute = valueInput.getBooleanOr("ReportedHurtEnRoute", false);
+        this.reportedHurtOnPremises = valueInput.getBooleanOr("ReportedHurtOnPremises", false);
+        this.mood = valueInput.getDoubleOr("Mood", this.mood);
         this.tourist.setUnhappyCounter(this.mood < 0 ? 1 : 0);
-    }
+        this.goodExperiencesToday = valueInput.getIntOr("GoodExperiencesToday", 0);
+        this.eveningDespawnTimeTicks = valueInput.getIntOr("DespawnTimeTicks", this.eveningDespawnTimeTicks);
+        this.isHungry = valueInput.getBooleanOr("IsHungry", false);
+        this.isStayingOvernight = valueInput.getBooleanOr("IsStayingOvernight", false);
+        this.currentTargetIndex = valueInput.getIntOr("CurrentTargetIndex", 0);
+        this.ticksAtCurrentExperience = valueInput.getIntOr("TicksAtCurrentExperience", 0);
+        this.ticksAtCurrentTarget = valueInput.getIntOr("TicksAtCurrentTarget", 0);
+        this.waitTicks = valueInput.getIntOr("WaitTicks", 0);
+        this.dailyBudgetEmeralds = valueInput.getFloatOr("DailyBudgetEmeralds", this.dailyBudgetEmeralds);
+        this.remainingBudgetEmeralds = valueInput.getFloatOr("RemainingBudgetEmeralds", this.remainingBudgetEmeralds);
 
+        // Reconstruct currentExperienceTarget from experienceTargetTracker.
+        if (!this.experienceTargetTracker.isEmpty()) {
+            ExperienceVisit currentVisit = this.experienceTargetTracker.peekFirst();
+            List<ExperienceTarget> remaining = currentVisit.remainingTargets();
+            if (!remaining.isEmpty()) {
+                this.currentExperienceTarget = remaining.getFirst();
+            }
+        }
+
+        // Run post-initialization steps.
+        this.postInitialize();
+    }
+    //endregion
+
+    //region Tick Methods
     public void tick(ServerLevel serverLevel) {
         if (this.state == TouristState.FINISHED || this.state == TouristState.SLEEPING) {
             return;
         }
 
-        // TODO: remove temp debug code
-        /*
         if (this.state == TouristState.IDLE) {
+            this.tickIdle(serverLevel);
         }
-         */
 
         // Time-based despawn check
         if (this.isTimeToDespawn()) {
@@ -567,245 +457,14 @@ public final class TouristMind {
         this.ticksAtCurrentTarget++;
     }
 
-    private void clearBeaconSession() {
-        this.resetBeaconJourneyStats();
-        this.availableExperienceUUIDs.clear();
-        this.visitedExperienceUUIDs.clear();
-        this.experienceBlockPos = null;
-        this.targetPos = null;
-    }
-
-    private void clearExperienceSession() {
-        this.resetExperienceJourneyStats();
-
-        // Exit any active experiences.
-        ServerLevel serverLevel = (ServerLevel) this.tourist.level();
-        while (!this.experienceTargetTracker.isEmpty()) {
-            this.exitCurrentExperience(serverLevel, VisitResult.UNFAVORABLE, false, null);
+    private void tickIdle(ServerLevel serverLevel) {
+        // TODO: remove temp debug code
+        if (serverLevel.getDayTime() % 100L == 0L) {
+            this.isHungry = true;
         }
 
-        this.targetPos = null;
     }
-
-    private void clearInjectedGoals() {
-        for (Goal goal : this.injectedExperienceGoals) {
-            this.tourist.removeExperienceGoal(goal);
-        }
-        this.injectedExperienceGoals.clear();
-    }
-
-    // Prerequisite: entry fee for current experience has already been paid.
-    private float generateAllowanceForExperience(TouristExperience experience) {
-        if (!experience.canSpendBudgetHere()) {
-            return 0;
-        }
-
-        float remainingBudget = this.remainingBudgetEmeralds;
-        if (remainingBudget <= 1.0F) {
-            return remainingBudget;
-        }
-
-        int remainingPlacesToSpendBudget = 0;
-
-        for (UUID availableExperienceUUID : this.availableExperienceUUIDs) {
-            TouristExperience availableExperience = TourismManager.getTouristExperienceById(availableExperienceUUID);
-            if (availableExperience != null &&
-                    availableExperience.canSpendBudgetHere() &&
-                    TouristEconomy.getEmeraldEquivalent(availableExperience.getEntryFee()) < remainingBudget
-            ) {
-                remainingPlacesToSpendBudget++;
-            }
-        }
-
-        if (remainingPlacesToSpendBudget <= 1) {
-            // The current experience is the only place remaining in the list of available experiences. They can spend it all here!
-            return remainingBudget;
-        }
-
-        // Determine the number of experiences at the moment where the tourist wants to spend their remaining daily budget.
-        // This number will usually be less than the total number of remaining experiences, centered around half of them,
-        // resulting in a larger allowance for the current experience than simply dividing their budget by the number of remaining experiences.
-        double medianPlacesToSpendBudget = remainingPlacesToSpendBudget / 2.0D;
-        int placesTouristWantsToSpendBudget = (int) Math.clamp(medianPlacesToSpendBudget + (this.random().nextGaussian() * 2.0D), 1, remainingPlacesToSpendBudget);
-        return remainingBudget / placesTouristWantsToSpendBudget;
-    }
-
-    private float generateDailyBudget() {
-        double budget = BUDGET_MEAN_EMERALDS + (this.random().nextGaussian() * BUDGET_STD_DEV_EMERALDS);
-        return Math.clamp(Math.round(budget), BUDGET_MIN_EMERALDS, BUDGET_MAX_EMERALDS);
-    }
-
-    private void generateInterests() {
-        for (TouristItemInterest interest : TouristItemInterest.values()) {
-            if (this.random().nextFloat() < interest.probabilityOfInterest()) {
-                this.interests.add(interest);
-                if (interest == TouristItemInterest.EPIC_ITEMS) {
-                    this.dailyBudgetEmeralds += 100;
-                } else if (interest == TouristItemInterest.RARE_ITEMS) {
-                    this.dailyBudgetEmeralds += 25;
-                }
-            }
-        }
-
-        if (this.interests.isEmpty()) {
-            this.interests.add(TouristItemInterest.GENERAL);
-        }
-    }
-
-    private int generateRandomDespawnTime() {
-        return 12000 + this.random().nextInt(1000);
-    }
-
-    private double generateRandomStartingMood() {
-        return 1.0 + this.random().nextDouble();
-    }
-
-    private int getRandomWaitTicks(int min, int max) {
-        return this.random().nextIntBetweenInclusive(min, max);
-    }
-
-    private void injectExperienceGoal(Goal goal) {
-        this.tourist.addExperienceGoal(goal);
-        this.injectedExperienceGoals.add(goal);
-    }
-
-    private boolean isInMoodToDespawn() {
-        if (mood >= 0) {
-            return false;
-        }
-
-        if (mood <= MIN_MOOD) {
-            return true;
-        }
-
-        return this.random().nextDouble() < (mood / MIN_MOOD);
-    }
-
-    private boolean isTimeToCheckMood() {
-        long dayTime = this.tourist.level().getDayTime();
-        int tickTimeOfDay = (int) (dayTime % 24000L);
-        return !this.tourist.isSleeping() && tickTimeOfDay >= 6000;
-    }
-
-    private boolean isTimeToDespawn() {
-        long dayTime = this.tourist.level().getDayTime();
-        int tickTimeOfDay = (int) (dayTime % 24000L);
-        return !this.isStayingOvernight && tickTimeOfDay >= this.eveningDespawnTimeTicks;
-    }
-
-    private RandomSource random() {
-        return this.tourist.getRandom();
-    }
-
-    private void recordGoodExperience(ServerLevel serverLevel) {
-        Component moodMessage;
-        VisitResult result = VisitResult.GOOD;
-
-        this.updateMood(result);
-
-        if (this.mood >= MAX_MOOD) {
-            moodMessage = Component.literal("had a great time at");
-            result = VisitResult.GREAT;
-        } else {
-            moodMessage = Component.literal("had a good time at");
-        }
-
-        TouristReview review = new TouristReview(
-                this.state.reviewTarget(),
-                result,
-                true,
-                false,
-                moodMessage,
-                true,
-                true
-        );
-        this.recordExperience(serverLevel, review);
-    }
-
-    public void spendBudget(float amount) {
-        this.remainingBudgetEmeralds -= amount;
-    }
-
-    private void toggleHeldMap() {
-        if (this.tourist.hasHeldItem()) {
-            this.tourist.clearHeldItem();
-        } else {
-            this.tourist.giveItemToHold(new ItemStack(Items.MAP));
-        }
-    }
-
-    private void toggleHeldMapWhileWaiting(ServerLevel serverLevel) {
-        if (serverLevel.getDayTime() >= (this.lastMapToggleTicks + MIN_TICKS_BEFORE_MAP_TOGGLE)) {
-            if (this.tourist.hasHeldItem() && this.waitTicks < 20) {
-                return; // don't put away the map near the end of the wait cycle
-            }
-            this.toggleHeldMap();
-            this.lastMapToggleTicks = serverLevel.getDayTime();
-        }
-    }
-
-    public void updateExperienceVisitAllowance(float newAllowance) {
-        if (this.experienceTargetTracker.isEmpty()) {
-            return;
-        }
-
-        // Pop current visit, update it, push it back.
-        ExperienceVisit currentVisit = this.experienceTargetTracker.pollFirst();
-
-        ExperienceVisit updatedVisit = new ExperienceVisit(
-                currentVisit.experienceUUID(),
-                newAllowance,
-                currentVisit.remainingTargets(),
-                currentVisit.targetsCompleted(),
-                currentVisit.totalTargets(),
-                currentVisit.result(),
-                currentVisit.hasReviewed()
-        );
-
-        this.experienceTargetTracker.push(updatedVisit);
-    }
-
-    public void updateExperienceVisitResult(VisitResult newResult) {
-        if (this.experienceTargetTracker.isEmpty()) {
-            return;
-        }
-
-        // Pop current visit, update it, push it back.
-        ExperienceVisit currentVisit = this.experienceTargetTracker.pollFirst();
-
-        ExperienceVisit updatedVisit = new ExperienceVisit(
-                currentVisit.experienceUUID(),
-                currentVisit.budgetRemaining(),
-                currentVisit.remainingTargets(),
-                currentVisit.targetsCompleted(),
-                currentVisit.totalTargets(),
-                newResult,
-                currentVisit.hasReviewed()
-        );
-
-        this.experienceTargetTracker.push(updatedVisit);
-    }
-
-    public void updateExperienceVisitReviewed() {
-        if (this.experienceTargetTracker.isEmpty()) {
-            return;
-        }
-
-        // Pop current visit, update it, push it back.
-        ExperienceVisit currentVisit = this.experienceTargetTracker.pollFirst();
-
-        ExperienceVisit updatedVisit = new ExperienceVisit(
-                currentVisit.experienceUUID(),
-                currentVisit.budgetRemaining(),
-                currentVisit.remainingTargets(),
-                currentVisit.targetsCompleted(),
-                currentVisit.totalTargets(),
-                currentVisit.result(),
-                true
-        );
-
-        this.experienceTargetTracker.push(updatedVisit);
-    }
+    //endregion
 
     //region State Transition Methods
     private void transitionTo(TouristState newState) {
@@ -1512,109 +1171,464 @@ public final class TouristMind {
     }
     //endregion
 
-    public void addAdditionalSaveData(ValueOutput valueOutput) {
-        valueOutput.store("State", TouristState.CODEC, this.state);
-
-        if (!this.availableExperienceUUIDs.isEmpty()) {
-            valueOutput.store("AvailableExperiences", UUIDUtil.CODEC.listOf(), this.availableExperienceUUIDs);
-        }
-
-        // Serialize visited experience set of UUIDs as a list.
-        if (!this.visitedExperienceUUIDs.isEmpty()) {
-            valueOutput.store("VisitedExperiences", UUIDUtil.CODEC.listOf(), List.copyOf(this.visitedExperienceUUIDs));
-        }
-
-        // Serialize experience tracker stack as a list (bottom to top order).
-        if (!this.experienceTargetTracker.isEmpty()) {
-            valueOutput.store("ExperienceTargetTracker", ExperienceVisit.CODEC.listOf(),
-                    List.copyOf(this.experienceTargetTracker));
-        }
-
-        if (!this.interests.isEmpty()) {
-            valueOutput.store("Interests", TouristItemInterest.CODEC.listOf(), List.copyOf(this.interests));
-        }
-        
-        if (this.beaconPos != null) {
-            valueOutput.store("BeaconPos", BlockPos.CODEC, this.beaconPos);
-        }
-        if (this.experienceBlockPos != null) {
-            valueOutput.store("ExperienceBlockPos", BlockPos.CODEC, this.experienceBlockPos);
-        }
-        if (this.targetPos != null) {
-            valueOutput.store("TargetPos", BlockPos.CODEC, this.targetPos);
-        }
-
-        valueOutput.putDouble("ClosestDistanceToDestination", this.closestDistanceToDestination);
-        valueOutput.putInt("FailedProgressChecks", this.consecutiveFailedProgressChecks);
-        valueOutput.putBoolean("ReportedHurtEnRoute", this.reportedHurtEnRoute);
-        valueOutput.putBoolean("ReportedHurtOnPremises", this.reportedHurtOnPremises);
-        valueOutput.putDouble("Mood", this.mood);
-        valueOutput.putInt("GoodExperiencesToday", this.goodExperiencesToday);
-        valueOutput.putInt("DespawnTimeTicks", this.eveningDespawnTimeTicks);
-        valueOutput.putBoolean("IsHungry", this.isHungry);
-        valueOutput.putBoolean("IsStayingOvernight", this.isStayingOvernight);
-        valueOutput.putInt("CurrentTargetIndex", this.currentTargetIndex);
-        valueOutput.putInt("TicksAtCurrentExperience", this.ticksAtCurrentExperience);
-        valueOutput.putInt("TicksAtCurrentTarget", this.ticksAtCurrentTarget);
-        valueOutput.putInt("WaitTicks", this.waitTicks);
-        valueOutput.putFloat("DailyBudget", this.dailyBudgetEmeralds);
-        valueOutput.putFloat("RemainingBudget", this.remainingBudgetEmeralds);
+    //region Helper Methods
+    public boolean avoidWater() {
+        return this.state == TouristState.WANDERING_AT_BEACON;
     }
 
-    public void readAdditionalSaveData(ValueInput valueInput) {
-        this.beaconPos = valueInput.read("BeaconPos", BlockPos.CODEC).orElse(null);
-        this.state = valueInput.read("State", TouristState.CODEC).orElse(
-                (this.beaconPos != null ? TouristState.TRAVELING_TO_BEACON : TouristState.IDLE));
+    private void clearBeaconSession() {
+        this.resetBeaconJourneyStats();
+        this.availableExperienceUUIDs.clear();
+        this.visitedExperienceUUIDs.clear();
+        this.experienceBlockPos = null;
+        this.targetPos = null;
+    }
 
-        this.availableExperienceUUIDs = new ArrayList<>(
-                valueInput.read("AvailableExperiences", UUIDUtil.CODEC.listOf()).orElse(List.of())
-        );
+    private void clearExperienceSession() {
+        this.resetExperienceJourneyStats();
 
-        this.visitedExperienceUUIDs = new HashSet<>(
-                valueInput.read("VisitedExperiences", UUIDUtil.CODEC.listOf()).orElse(List.of())
-        );
-
-        // Deserialize experience tracker (restore as ArrayDeque).
-        List<ExperienceVisit> trackerList = valueInput.read("ExperienceTargetTracker", ExperienceVisit.CODEC.listOf())
-                .orElse(List.of());
-        this.experienceTargetTracker = new ArrayDeque<>(trackerList);
-
-        List<TouristItemInterest> interests = new ArrayList<>(
-                valueInput.read("Interests", TouristItemInterest.CODEC.listOf()).orElse(List.of())
-        );
-        if (!interests.isEmpty()) {
-            this.interests = List.copyOf(interests);
+        // Exit any active experiences.
+        ServerLevel serverLevel = (ServerLevel) this.tourist.level();
+        while (!this.experienceTargetTracker.isEmpty()) {
+            this.exitCurrentExperience(serverLevel, VisitResult.UNFAVORABLE, false, null);
         }
 
-        this.experienceBlockPos = valueInput.read("ExperienceBlockPos", BlockPos.CODEC).orElse(null);
-        this.targetPos = valueInput.read("TargetPos", BlockPos.CODEC).orElse(null);
-        this.closestDistanceToDestination = valueInput.getDoubleOr("ClosestDistanceToDestination", Double.MAX_VALUE);
-        this.consecutiveFailedProgressChecks = valueInput.getIntOr("FailedProgressChecks", 0);
-        this.reportedHurtEnRoute = valueInput.getBooleanOr("ReportedHurtEnRoute", false);
-        this.reportedHurtOnPremises = valueInput.getBooleanOr("ReportedHurtOnPremises", false);
-        this.mood = valueInput.getDoubleOr("Mood", this.mood);
-        this.tourist.setUnhappyCounter(this.mood < 0 ? 1 : 0);
-        this.goodExperiencesToday = valueInput.getIntOr("GoodExperiencesToday", 0);
-        this.eveningDespawnTimeTicks = valueInput.getIntOr("DespawnTimeTicks", this.eveningDespawnTimeTicks);
-        this.isHungry = valueInput.getBooleanOr("IsHungry", false);
-        this.isStayingOvernight = valueInput.getBooleanOr("IsStayingOvernight", false);
-        this.currentTargetIndex = valueInput.getIntOr("CurrentTargetIndex", 0);
-        this.ticksAtCurrentExperience = valueInput.getIntOr("TicksAtCurrentExperience", 0);
-        this.ticksAtCurrentTarget = valueInput.getIntOr("TicksAtCurrentTarget", 0);
-        this.waitTicks = valueInput.getIntOr("WaitTicks", 0);
-        this.dailyBudgetEmeralds = valueInput.getFloatOr("DailyBudgetEmeralds", this.dailyBudgetEmeralds);
-        this.remainingBudgetEmeralds = valueInput.getFloatOr("RemainingBudgetEmeralds", this.remainingBudgetEmeralds);
+        this.targetPos = null;
+    }
 
-        // Reconstruct currentExperienceTarget from experienceTargetTracker.
-        if (!this.experienceTargetTracker.isEmpty()) {
-            ExperienceVisit currentVisit = this.experienceTargetTracker.peekFirst();
-            List<ExperienceTarget> remaining = currentVisit.remainingTargets();
-            if (!remaining.isEmpty()) {
-                this.currentExperienceTarget = remaining.getFirst();
+    private void clearInjectedGoals() {
+        for (Goal goal : this.injectedExperienceGoals) {
+            this.tourist.removeExperienceGoal(goal);
+        }
+        this.injectedExperienceGoals.clear();
+    }
+
+    // Prerequisite: entry fee for current experience has already been paid.
+    private float generateAllowanceForExperience(TouristExperience experience) {
+        if (!experience.canSpendBudgetHere()) {
+            return 0;
+        }
+
+        float remainingBudget = this.remainingBudgetEmeralds;
+        if (remainingBudget <= 1.0F) {
+            return remainingBudget;
+        }
+
+        int remainingPlacesToSpendBudget = 0;
+
+        for (UUID availableExperienceUUID : this.availableExperienceUUIDs) {
+            TouristExperience availableExperience = TourismManager.getTouristExperienceById(availableExperienceUUID);
+            if (availableExperience != null &&
+                    availableExperience.canSpendBudgetHere() &&
+                    TouristEconomy.getEmeraldEquivalent(availableExperience.getEntryFee()) < remainingBudget
+            ) {
+                remainingPlacesToSpendBudget++;
             }
         }
 
-        // Run post-initialization steps.
-        this.postInitialize();
+        if (remainingPlacesToSpendBudget <= 1) {
+            // The current experience is the only place remaining in the list of available experiences. They can spend it all here!
+            return remainingBudget;
+        }
+
+        // Determine the number of experiences at the moment where the tourist wants to spend their remaining daily budget.
+        // This number will usually be less than the total number of remaining experiences, centered around half of them,
+        // resulting in a larger allowance for the current experience than simply dividing their budget by the number of remaining experiences.
+        double medianPlacesToSpendBudget = remainingPlacesToSpendBudget / 2.0D;
+        int placesTouristWantsToSpendBudget = (int) Math.clamp(medianPlacesToSpendBudget + (this.random().nextGaussian() * 2.0D), 1, remainingPlacesToSpendBudget);
+        return remainingBudget / placesTouristWantsToSpendBudget;
     }
+
+    public @Nullable BlockPos getBeaconPos() {
+        return this.beaconPos;
+    }
+
+    public double getClosestDistanceToDestination() {
+        return this.closestDistanceToDestination;
+    }
+
+    public int getConsecutiveFailedProgressChecks() {
+        return this.consecutiveFailedProgressChecks;
+    }
+
+    public @Nullable BlockPos getExperiencePos() {
+        return this.experienceBlockPos;
+    }
+
+    public @Nullable ExperienceVisit getExperienceVisit() {
+        return this.experienceTargetTracker.peekFirst();
+    }
+
+    public List<TouristItemInterest> getInterests() {
+        return List.copyOf(this.interests);
+    }
+
+    public String getLocationNameOrPos() {
+        TouristLocation currentLocation = this.state.touristLocation();
+        switch (currentLocation) {
+            case BEACON -> {
+                return TourismManager.getTouristBlockNameOrPos(this.tourist.level(), currentLocation, this.beaconPos).getString();
+            }
+
+            case EXPERIENCE -> {
+                return TourismManager.getTouristBlockNameOrPos(this.tourist.level(), currentLocation, this.experienceBlockPos).getString();
+            }
+
+            default -> {
+                return "";
+            }
+        }
+    }
+
+    public int getMaxDistanceAwayFromTarget() {
+        if (this.state == TouristState.TRAVELING_TO_EXPERIENCE_TARGET && !this.experienceTargetTracker.isEmpty()) {
+            ExperienceVisit currentVisit = this.experienceTargetTracker.peekFirst();
+            TouristExperience experience = TourismManager.getTouristExperienceById(currentVisit.experienceUUID());
+            if (experience != null) {
+                return experience.getMaxApproachDistance();
+            }
+        }
+        return 3;
+    }
+
+    public @Nullable BlockPos getMoveToTarget() {
+        if (this.state == TouristState.TRAVELING_TO_BEACON) {
+            return this.beaconPos;
+        } else if (this.state == TouristState.TRAVELING_TO_EXPERIENCE) {
+            return this.experienceBlockPos;
+        } else if (this.state == TouristState.TRAVELING_TO_EXPERIENCE_TARGET) {
+            return this.targetPos;
+        }
+        return null;
+    }
+
+    private int getRandomWaitTicks(int min, int max) {
+        return this.random().nextIntBetweenInclusive(min, max);
+    }
+
+    public TouristState getState() {
+        return this.state;
+    }
+
+    public String getStateForLogging() {
+        return this.getStateForLogging(this.state);
+    }
+
+    public String getStateForLogging(TouristState state) {
+        String targetName = this.getStateTargetName(state);
+        if (targetName.isEmpty()) {
+            targetName = "(unknown)";
+        }
+
+        String logMessageSuffix = switch (state) {
+            case TRAVELING_TO_BEACON, WAIT_AT_BEACON, CHOOSING_EXPERIENCE_AT_BEACON, WANDERING_AT_BEACON,
+                 TRAVELING_TO_EXPERIENCE, WAIT_AT_EXPERIENCE, ENTERING_EXPERIENCE, WANDERING_AT_EXPERIENCE,
+                 TRAVELING_TO_EXPERIENCE_TARGET, POSITIONING_AT_TARGET, EXPERIENCING_TARGET -> " " + targetName;
+            case CHOOSING_EXPERIENCE_TARGET, SLEEPING -> " at " + targetName;
+            default -> "";
+        };
+
+        return state + logMessageSuffix;
+    }
+
+    public String getStateTargetName() {
+        return this.getStateTargetName(this.state);
+    }
+
+    public String getStateTargetName(TouristState state) {
+        switch (state) {
+            case TRAVELING_TO_BEACON, WAIT_AT_BEACON, CHOOSING_EXPERIENCE_AT_BEACON, WANDERING_AT_BEACON -> {
+                TouristBeaconBlockEntity beaconBlockEntity = TourismManager.getBeaconBlockEntity(this.tourist.level(), this.beaconPos);
+                if (beaconBlockEntity != null) {
+                    return beaconBlockEntity.getPlainTextName();
+                } else {
+                    return "";
+                }
+            }
+            case TRAVELING_TO_EXPERIENCE, WAIT_AT_EXPERIENCE, ENTERING_EXPERIENCE, WANDERING_AT_EXPERIENCE,
+                 CHOOSING_EXPERIENCE_TARGET, SLEEPING -> {
+                TouristExperience experience = TourismManager.getTouristExperienceByPos(this.experienceBlockPos);
+                if (experience != null) {
+                    return experience.getDisplayName().getString();
+                } else {
+                    return "";
+                }
+            }
+            case TRAVELING_TO_EXPERIENCE_TARGET, POSITIONING_AT_TARGET, EXPERIENCING_TARGET -> {
+                if (this.targetPos == null) {
+                    return "";
+                }
+                TouristExperience experience = TourismManager.getTouristExperienceByPos(this.experienceBlockPos);
+                if (experience != null) {
+                    return this.targetPos.toShortString() + " from " + experience.getDisplayName().getString();
+                } else {
+                    return this.targetPos.toShortString();
+                }
+            }
+            default -> { return ""; }
+        }
+    }
+
+    public int getTicksAtCurrentTarget() {
+        return this.ticksAtCurrentTarget;
+    }
+
+    public boolean hasReportedHurtEnRoute() {
+        return this.reportedHurtEnRoute;
+    }
+
+    public boolean hasReportedHurtOnPremises() {
+        return this.reportedHurtOnPremises;
+    }
+
+    private void injectExperienceGoal(Goal goal) {
+        this.tourist.addExperienceGoal(goal);
+        this.injectedExperienceGoals.add(goal);
+    }
+
+    private boolean isInMoodToDespawn() {
+        if (mood >= 0) {
+            return false;
+        }
+
+        if (mood <= MIN_MOOD) {
+            return true;
+        }
+
+        return this.random().nextDouble() < (mood / MIN_MOOD);
+    }
+
+    public boolean isItemOfInterest(ItemStack itemStack) {
+        boolean itemDamaged = itemStack.isDamaged();
+        boolean usedOkay = this.interests.contains(TouristItemInterest.SECONDHAND_ITEMS);
+
+        for (TouristItemInterest interest : this.interests) {
+            if (interest == TouristItemInterest.SECONDHAND_ITEMS) {
+                continue;
+            }
+
+            if (interest.isAMatch(itemStack, this.tourist.level())) {
+                if (!itemDamaged || usedOkay) {
+                    TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[TouristMind] Tourist found {} matching interest {}", itemStack.getItem().getName().getString(), interest);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean isTimeToCheckMood() {
+        long dayTime = this.tourist.level().getDayTime();
+        int tickTimeOfDay = (int) (dayTime % 24000L);
+        return !this.tourist.isSleeping() && tickTimeOfDay >= 6000;
+    }
+
+    private boolean isTimeToDespawn() {
+        long dayTime = this.tourist.level().getDayTime();
+        int tickTimeOfDay = (int) (dayTime % 24000L);
+        return !this.isStayingOvernight && tickTimeOfDay >= this.eveningDespawnTimeTicks;
+    }
+
+    private RandomSource random() {
+        return this.tourist.getRandom();
+    }
+
+    public void recordExperience(ServerLevel serverLevel, TouristReview review) {
+        SoundEvent soundEvent = null;
+
+        switch (review.result()) {
+            case ARRIVED, GOOD, GREAT -> soundEvent = SoundEvents.VILLAGER_CELEBRATE;
+            case LOST, CLOSED_EARLY, PAYMENT_FAILED, UNFAVORABLE -> soundEvent = SoundEvents.VILLAGER_NO;
+            case HURT_EN_ROUTE -> this.reportedHurtEnRoute = true;
+            case HURT_ON_PREMISES -> this.reportedHurtOnPremises = true;
+        }
+
+        this.tourist.applyExperienceToWorld(serverLevel, review, soundEvent);
+    }
+
+    private void recordGoodExperience(ServerLevel serverLevel) {
+        Component moodMessage;
+        VisitResult result = VisitResult.GOOD;
+
+        this.updateMood(result);
+
+        if (this.mood >= MAX_MOOD) {
+            moodMessage = Component.literal("had a great time at");
+            result = VisitResult.GREAT;
+        } else {
+            moodMessage = Component.literal("had a good time at");
+        }
+
+        TouristReview review = new TouristReview(
+                this.state.reviewTarget(),
+                result,
+                true,
+                false,
+                moodMessage,
+                true,
+                true
+        );
+        this.recordExperience(serverLevel, review);
+    }
+
+    public void recordProgressTowardsTarget(double closestDistanceToTarget, int consecutiveFailedProgressChecks) {
+        this.closestDistanceToDestination = closestDistanceToTarget;
+        this.consecutiveFailedProgressChecks = consecutiveFailedProgressChecks;
+    }
+
+    private void resetBeaconJourneyStats() {
+        this.closestDistanceToDestination = Double.MAX_VALUE;
+        this.consecutiveFailedProgressChecks = 0;
+        this.reportedHurtEnRoute = false;
+        this.reportedHurtOnPremises = false;
+    }
+
+    private void resetExperienceJourneyStats() {
+        this.closestDistanceToDestination = Double.MAX_VALUE;
+        this.consecutiveFailedProgressChecks = 0;
+    }
+
+    private void resetDailyStats() {
+        this.eveningDespawnTimeTicks = 12000 + this.random().nextInt(1000);
+        this.goodExperiencesToday = 0;
+        this.hasPreparedToLeaveEarly = false;
+        this.isHungry = true;
+        this.isStayingOvernight = false;
+        this.lastMapToggleTicks = 0;
+        this.mood = this.generateRandomStartingMood();
+        this.nextMoodCheckTicks = this.random().nextInt(CHECK_MOOD_INTERVAL_TICKS);
+        this.remainingBudgetEmeralds = this.dailyBudgetEmeralds;
+        this.reportedHurtEnRoute = false;
+        this.reportedHurtOnPremises = false;
+        this.ticksAtCurrentTarget = 0;
+        this.tourist.setUnhappyCounter(0);
+        this.waveMemory.clear();
+    }
+
+    public void setWavingAtEntity(Entity entity, boolean wave) {
+        if (!wave) {
+            this.tourist.setWaving(false);
+            TouristEntity.logActivity(Verbosity.LEVEL_1_DIAGNOSTICS, "[TouristMind] Stopped waving at {}, UUID={}",
+                    entity == null ? "no one" : entity.getDisplayName().getString(),
+                    entity == null ? "N/A" : entity.getUUID().toString());
+            return;
+        }
+
+        if (TouristEntity.wouldWaveAt(entity)) {
+            WaveRecord waveRecord = this.waveMemory.getOrDefault(entity.getUUID(), new WaveRecord(0, -1));
+            int tickTimeOfDay = (int) (entity.level().getDayTime() % 24000L);
+            if (waveRecord.count() < MAX_WAVE_COUNT &&
+                    tickTimeOfDay > (waveRecord.lastWaveTick() + MIN_WAVE_AT_ENTITY_INTERVAL_TICKS)
+            ) {
+                waveRecord = new WaveRecord(waveRecord.count() + 1, tickTimeOfDay);
+                this.waveMemory.put(entity.getUUID(), waveRecord);
+                this.tourist.setWaving(true);
+                TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[TouristMind] Waving at {}, count={}, UUID={}", entity.getDisplayName().getString(), waveRecord.count(), entity.getUUID().toString());
+            }
+        }
+    }
+
+    public void spendBudget(float amount) {
+        this.remainingBudgetEmeralds -= amount;
+    }
+
+    private void toggleHeldMap() {
+        if (this.tourist.hasHeldItem()) {
+            this.tourist.clearHeldItem();
+        } else {
+            this.tourist.giveItemToHold(new ItemStack(Items.MAP));
+        }
+    }
+
+    private void toggleHeldMapWhileWaiting(ServerLevel serverLevel) {
+        if (serverLevel.getDayTime() >= (this.lastMapToggleTicks + MIN_TICKS_BEFORE_MAP_TOGGLE)) {
+            if (this.tourist.hasHeldItem() && this.waitTicks < 20) {
+                return; // don't put away the map near the end of the wait cycle
+            }
+            this.toggleHeldMap();
+            this.lastMapToggleTicks = serverLevel.getDayTime();
+        }
+    }
+
+    public void updateExperienceVisitAllowance(float newAllowance) {
+        if (this.experienceTargetTracker.isEmpty()) {
+            return;
+        }
+
+        // Pop current visit, update it, push it back.
+        ExperienceVisit currentVisit = this.experienceTargetTracker.pollFirst();
+
+        ExperienceVisit updatedVisit = new ExperienceVisit(
+                currentVisit.experienceUUID(),
+                newAllowance,
+                currentVisit.remainingTargets(),
+                currentVisit.targetsCompleted(),
+                currentVisit.totalTargets(),
+                currentVisit.result(),
+                currentVisit.hasReviewed()
+        );
+
+        this.experienceTargetTracker.push(updatedVisit);
+    }
+
+    public void updateExperienceVisitResult(VisitResult newResult) {
+        if (this.experienceTargetTracker.isEmpty()) {
+            return;
+        }
+
+        // Pop current visit, update it, push it back.
+        ExperienceVisit currentVisit = this.experienceTargetTracker.pollFirst();
+
+        ExperienceVisit updatedVisit = new ExperienceVisit(
+                currentVisit.experienceUUID(),
+                currentVisit.budgetRemaining(),
+                currentVisit.remainingTargets(),
+                currentVisit.targetsCompleted(),
+                currentVisit.totalTargets(),
+                newResult,
+                currentVisit.hasReviewed()
+        );
+
+        this.experienceTargetTracker.push(updatedVisit);
+    }
+
+    public void updateExperienceVisitReviewed() {
+        if (this.experienceTargetTracker.isEmpty()) {
+            return;
+        }
+
+        // Pop current visit, update it, push it back.
+        ExperienceVisit currentVisit = this.experienceTargetTracker.pollFirst();
+
+        ExperienceVisit updatedVisit = new ExperienceVisit(
+                currentVisit.experienceUUID(),
+                currentVisit.budgetRemaining(),
+                currentVisit.remainingTargets(),
+                currentVisit.targetsCompleted(),
+                currentVisit.totalTargets(),
+                currentVisit.result(),
+                true
+        );
+
+        this.experienceTargetTracker.push(updatedVisit);
+    }
+
+    public void updateMood(VisitResult result) {
+        double positiveNormalized = Math.max(0.0, this.mood) / (MAX_MOOD + 1.0);
+        double negativeNormalized = Math.max(0.0, -this.mood) / MAX_MOOD;
+
+        double change = switch (result) {
+            case ARRIVED, GOOD, GREAT -> {
+                this.goodExperiencesToday++;
+                VisitResult modifiedResult = this.goodExperiencesToday % 3 == 0 ? VisitResult.GREAT : result;
+                yield modifiedResult.moodDelta() * (1.0 - positiveNormalized) * (1.0 + 0.5 * negativeNormalized);
+            }
+            case UNFAVORABLE, FAILED_SPAWN, LOST, CLOSED_EARLY, UNAFFORDABLE, PAYMENT_FAILED, HURT_EN_ROUTE, HURT_ON_PREMISES, KILLED_EN_ROUTE, KILLED_ON_PREMISES ->
+                    result.moodDelta() * (0.75 + 0.5 * positiveNormalized);
+        };
+
+        this.mood = Mth.clamp(this.mood + change, MIN_MOOD, MAX_MOOD);
+        this.tourist.setUnhappyCounter(this.mood < 0 ? 1 : 0);
+    }
+    //endregion
 }
