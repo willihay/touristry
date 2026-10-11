@@ -15,9 +15,10 @@ import net.minecraft.world.level.pathfinder.Path;
 
 public class OpenFenceGateGoal extends Goal {
     private final Mob mob;
+
+    protected int closeTimer;
     protected BlockPos gatePos = BlockPos.ZERO;
     protected boolean hasGate;
-    protected int closeTimer;
 
     public OpenFenceGateGoal(Mob mob) {
         this.mob = mob;

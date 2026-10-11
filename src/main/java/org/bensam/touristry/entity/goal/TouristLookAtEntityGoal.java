@@ -33,8 +33,8 @@ public class TouristLookAtEntityGoal extends LookAtPlayerGoal {
         this.willUseCamera = false;
 
         if (this.lookAt != null) {
-            this.canWaveAtEntity = TouristEntity.wouldWaveAt(this.lookAt);
-            this.willUseCamera = this.canUseCamera && this.tourist.getRandom().nextDouble() < 0.2;
+            this.canWaveAtEntity = TouristEntity.wouldWaveAt(this.lookAt) && !this.tourist.isEating();
+            this.willUseCamera = this.canUseCamera && !this.tourist.isEating() && this.tourist.getRandom().nextDouble() < 0.2;
             this.startUsingCameraTicks = this.adjustedTickDelay(this.tourist.getRandom().nextInt(20));
             this.takePictureTicks = this.startUsingCameraTicks + this.adjustedTickDelay(5 + this.tourist.getRandom().nextInt(10));
             this.stopUsingCameraTicks = this.startUsingCameraTicks + this.adjustedTickDelay(40);
@@ -81,7 +81,7 @@ public class TouristLookAtEntityGoal extends LookAtPlayerGoal {
 
         if (this.lookAt instanceof Animal) {
             double eyeLevelDifference = this.tourist.getEyeY() - this.lookAt.getEyeY();
-            if (eyeLevelDifference >= 1.0 && !this.tourist.isCrouching()) {
+            if (eyeLevelDifference >= 1.0 && !this.tourist.isCrouching() && !this.tourist.isEating()) {
                 if (this.tourist.distanceToSqr(this.lookAt) <= 16.0) {
                     this.tourist.setCrouching(true);
                 }
@@ -90,7 +90,7 @@ public class TouristLookAtEntityGoal extends LookAtPlayerGoal {
             }
         }
 
-        if (this.willUseCamera && !this.tourist.isUsingCamera() && !this.tourist.isWaving()) {
+        if (this.willUseCamera && !this.tourist.isUsingCamera() && !this.tourist.isWaving() && !this.tourist.isEating()) {
             if (this.tickCount >= this.startUsingCameraTicks) {
                 this.tourist.setUsingCamera(true);
             }

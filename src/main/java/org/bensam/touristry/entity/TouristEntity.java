@@ -78,6 +78,7 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
     private ItemStack flashCamera;
     private List<ItemPrice> shoppingBag = new ArrayList<>();
 
+    private boolean isEating;
     private BlockPos openContainer = null;
     private boolean registeredWithTourismManager;
 
@@ -245,6 +246,7 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this)); // JUMP
         this.goalSelector.addGoal(1, new MoveToTargetGoal(this)); // MOVE
+        this.goalSelector.addGoal(2, new EatFoodGoal(this));
         this.goalSelector.addGoal(2, new OpenDoorGoal(this, true));
         this.goalSelector.addGoal(2, new OpenFenceGateGoal(this));
         this.goalSelector.addGoal(4, new TouristRandomStrollGoal(this, 0.6)); // MOVE
@@ -539,6 +541,10 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
         return TourismManager.isLowCameraLightLevel(this.level(), eyeBlockPos);
     }
 
+    public boolean isEating() {
+        return this.isEating;
+    }
+
     public boolean isTraveling() {
         return this.mind.getState().isTraveling();
     }
@@ -586,6 +592,10 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
     @Override
     protected void rewardTradeXp(@NonNull MerchantOffer merchantOffer) {
         // not applicable
+    }
+
+    public void setEating(boolean eating) {
+        this.isEating = eating;
     }
 
     public void setOpenContainer(BlockPos blockPos) {

@@ -462,7 +462,6 @@ public final class TouristMind {
         if (serverLevel.getDayTime() % 100L == 0L) {
             this.isHungry = true;
         }
-
     }
     //endregion
 
@@ -1386,6 +1385,10 @@ public final class TouristMind {
         this.injectedExperienceGoals.add(goal);
     }
 
+    public boolean isHungry() {
+        return this.isHungry;
+    }
+
     private boolean isInMoodToDespawn() {
         if (mood >= 0) {
             return false;
@@ -1541,7 +1544,9 @@ public final class TouristMind {
     }
 
     private void toggleHeldMapWhileWaiting(ServerLevel serverLevel) {
-        if (serverLevel.getDayTime() >= (this.lastMapToggleTicks + MIN_TICKS_BEFORE_MAP_TOGGLE)) {
+        if (!this.tourist.isEating() && !this.tourist.isWaving() && !this.tourist.isUsingCamera() &&
+                serverLevel.getDayTime() >= (this.lastMapToggleTicks + MIN_TICKS_BEFORE_MAP_TOGGLE)
+        ) {
             if (this.tourist.hasHeldItem() && this.waitTicks < 20) {
                 return; // don't put away the map near the end of the wait cycle
             }
@@ -1611,6 +1616,10 @@ public final class TouristMind {
         );
 
         this.experienceTargetTracker.push(updatedVisit);
+    }
+
+    public void updateHunger() {
+        this.isHungry = false;
     }
 
     public void updateMood(VisitResult result) {
