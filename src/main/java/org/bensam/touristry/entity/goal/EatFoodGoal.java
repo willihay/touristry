@@ -2,10 +2,8 @@ package org.bensam.touristry.entity.goal;
 
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.sounds.SoundEvents;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.Consumable;
 import org.bensam.touristry.config.Verbosity;
 import org.bensam.touristry.entity.TouristEntity;
@@ -20,7 +18,7 @@ public class EatFoodGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        return this.tourist.getMind().isHungry() && !this.tourist.isUsingCamera() && !this.tourist.isWaving();
+        return this.tourist.getMind().isHungry() && !this.tourist.isUsingCamera() && !this.tourist.isWaving() && this.tourist.hasFood();
     }
 
     @Override
@@ -35,7 +33,7 @@ public class EatFoodGoal extends Goal {
 
     @Override
     public void start() {
-        this.food = new ItemStack(Items.APPLE);
+        this.food = this.tourist.getRandomFoodFromInventory();
         this.tourist.giveItemToHold(this.food);
         this.tourist.setEating(true);
 

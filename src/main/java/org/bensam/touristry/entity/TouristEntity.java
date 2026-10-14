@@ -14,6 +14,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.DifficultyInstance;
+import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -28,6 +29,7 @@ import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.npc.villager.AbstractVillager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
@@ -38,9 +40,10 @@ import net.minecraft.world.level.block.state.properties.ChestType;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
-import org.bensam.touristry.*;
-import org.bensam.touristry.config.ClothingOptionsLoader;
+import org.bensam.touristry.ModEntities;
+import org.bensam.touristry.Touristry;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
+import org.bensam.touristry.config.ClothingOptionsLoader;
 import org.bensam.touristry.config.ModServerConfigManager;
 import org.bensam.touristry.config.Verbosity;
 import org.bensam.touristry.entity.goal.*;
@@ -141,6 +144,11 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
                     this.generateSpeedModifier(),
                     AttributeModifier.Operation.ADD_VALUE
             ));
+        }
+
+        // Give tourists who are spawned via command some food to eat, for testing purposes.
+        if (entitySpawnReason == EntitySpawnReason.COMMAND) {
+            this.getInventory().addItem(new ItemStack(Items.APPLE, 64));
         }
 
         return super.finalizeSpawn(serverLevelAccessor, difficultyInstance, entitySpawnReason, spawnGroupData);
@@ -464,6 +472,29 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
         return this.mind;
     }
 
+    public ItemStack getRandomFoodFromInventory() {
+        SimpleContainer inventory = this.getInventory();
+        List<Integer> foodSlots = new ArrayList<>();
+
+        for (int i = 0; i < inventory.getContainerSize(); i++) {
+            ItemStack itemStack = inventory.getItem(i);
+            if (!itemStack.isEmpty() && TouristItemInterest.FOOD.isAMatch(itemStack, this.level())) {
+                foodSlots.add(i);
+            }
+        }
+
+        if (foodSlots.isEmpty()) {
+            return ItemStack.EMPTY;
+        }
+
+        int randomSlot = foodSlots.get(this.random.nextInt(foodSlots.size()));
+        ItemStack itemStack = inventory.getItem(randomSlot);
+        ItemStack returnStack = itemStack.copyWithCount(1);
+        itemStack.shrink(1);
+
+        return returnStack;
+    }
+
     public List<ItemPrice> getShoppingBag() {
         return List.copyOf(this.shoppingBag);
     }
@@ -487,6 +518,10 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
                 || (blockState.getBlock() instanceof ChestBlock
                     && blockState.getValue(ChestBlock.TYPE) != ChestType.SINGLE
                     && ChestBlock.getConnectedBlockPos(this.openContainer, blockState).equals(blockPos));
+    }
+
+    public boolean hasFood() {
+        return this.getInventory().hasAnyMatching(itemStack -> TouristItemInterest.FOOD.isAMatch(itemStack, this.level()));
     }
 
     public boolean hasHeldItem() {
