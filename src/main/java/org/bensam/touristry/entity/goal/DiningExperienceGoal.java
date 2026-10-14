@@ -4,6 +4,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
+import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.item.ItemStack;
 import org.bensam.touristry.ModSounds;
 import org.bensam.touristry.block.entity.AbstractExperienceBlockEntity;
@@ -119,7 +120,6 @@ public class DiningExperienceGoal extends LookAtTargetPosGoal {
             this.tourist.clearShoppingBag();
             this.tourist.getMind().updateExperienceVisitResult(VisitResult.GOOD);
         } else {
-            this.tourist.dropAll();
             this.tourist.getMind().updateExperienceVisitResult(VisitResult.PAYMENT_FAILED);
         }
     }
@@ -177,21 +177,32 @@ public class DiningExperienceGoal extends LookAtTargetPosGoal {
             for (int i = 0; i <= selectedIndex; i++) {
                 selectedEntry = iterator.next();
             }
-            ItemPrice itemToBuy = selectedEntry.getKey();
+            ItemPrice itemBuyPrice = selectedEntry.getKey();
 
-            if (ALLOW_MULTIPLE_PURCHASE_OF_SAME_MENU_ITEM || !order.contains(itemToBuy)) {
-                TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] Tourist found menu item of interest: {}",
-                        this.getClass().getSimpleName(),
-                        itemToBuy.itemForSale().getItem().getName().getString()
-                );
+            ItemStack itemToBuy = itemBuyPrice.itemForSale();
+            SimpleContainer inventory = this.tourist.getInventory();
 
-                float itemValue = TouristEconomy.getEmeraldEquivalent(itemToBuy.cost());
+            if ((ALLOW_MULTIPLE_PURCHASE_OF_SAME_MENU_ITEM || !order.contains(itemBuyPrice)) && inventory.canAddItem(itemToBuy)) {
+                float itemValue = TouristEconomy.getEmeraldEquivalent(itemBuyPrice.cost());
                 if (itemValue <= allowance) {
-                    order.add(itemToBuy);
+                    TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] Tourist is buying {} {} from menu",
+                            this.getClass().getSimpleName(),
+                            itemToBuy.getCount(),
+                            itemToBuy.getItem().getName().getString()
+                    );
+
+                    // To make sure they can pay for and have room for each item they want,
+                    // add the menu item to their inventory and keep track of how this will affect their allowance.
+                    inventory.addItem(itemToBuy);
                     allowance -= itemValue;
+
+                    // Add its price to their order.
+                    order.add(itemBuyPrice);
+
+                    // Adjust the list of items available to order.
                     if (selectedEntry.getValue() <= 1) {
                         // Tourist bought last of item.
-                        itemPrices.remove(itemToBuy);
+                        itemPrices.remove(itemBuyPrice);
                     } else {
                         selectedEntry.setValue(selectedEntry.getValue() - 1);
                     }
@@ -199,18 +210,12 @@ public class DiningExperienceGoal extends LookAtTargetPosGoal {
             }
         }
 
-        // Move order items from pantry to tourist's shopping bag.
+        // Move order items from pantry to tourist's shopping bag for purchasing later.
         for (ItemPrice itemPrice : order) {
             ItemStack menuItem = itemPrice.itemForSale();
-            int countBuying = menuItem.getCount();
             diningExperienceBlockEntity.removeItemStackFromTargetContainers(serverLevel, menuItem);
 
             // Add menu item's item price to tourist's shopping bag.
-            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] Adding {} {} to shopping bag",
-                    this.getClass().getSimpleName(),
-                    countBuying,
-                    menuItem.getItem().getName().getString()
-            );
             this.tourist.addToShoppingBag(itemPrice);
         }
 

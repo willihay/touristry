@@ -10,7 +10,6 @@ import org.bensam.touristry.entity.TouristEntity;
 
 public class EatFoodGoal extends Goal {
     private final TouristEntity tourist;
-    private ItemStack food;
 
     public EatFoodGoal(TouristEntity tourist) {
         this.tourist = tourist;
@@ -33,21 +32,22 @@ public class EatFoodGoal extends Goal {
 
     @Override
     public void start() {
-        this.food = this.tourist.getRandomFoodFromInventory();
-        this.tourist.giveItemToHold(this.food);
+        ItemStack food = this.tourist.getRandomFoodFromInventory();
+        this.tourist.giveItemToHold(food);
         this.tourist.setEating(true);
 
-        Consumable consumable = this.food.get(DataComponents.CONSUMABLE);
+        Consumable consumable = food.get(DataComponents.CONSUMABLE);
         if (consumable != null) {
-            consumable.startConsuming(this.tourist, this.food, this.tourist.getUsedItemHand());
+            consumable.startConsuming(this.tourist, food, this.tourist.getUsedItemHand());
         }
 
         TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] Start eating {}",
                 this.getClass().getSimpleName(),
-                this.food.getDisplayName().getString()
+                food.getDisplayName().getString()
         );
     }
 
+    // Purposely ignores whether they finished eating, as well as leftover items like empty bowls and bottles.
     @Override
     public void stop() {
         this.tourist.playSound(SoundEvents.PLAYER_BURP);
