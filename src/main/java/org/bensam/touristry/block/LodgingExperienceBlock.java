@@ -25,7 +25,7 @@ import java.util.Map;
 
 public class LodgingExperienceBlock extends AbstractExperienceBlock {
     private static final VoxelShape BASE = Block.box(-7, 0, 1, 23, 1, 15);
-    private static final VoxelShape SHELVES = Block.box(-5, 1, 2, 21, 15, 14);
+    private static final VoxelShape SHELVES = Block.box(-5, 1, 2, 21, 15, 13);
     private static final VoxelShape DESK = Block.box(-7, 15, 1, 23, 20, 15);
     private static final VoxelShape SHAPE = Shapes.or(BASE, SHELVES, DESK);
     private static final Map<Direction, VoxelShape> SHAPE_BY_DIRECTION = Shapes.rotateHorizontal(SHAPE);
