@@ -14,11 +14,11 @@ import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import org.jspecify.annotations.Nullable;
 
-public abstract class TouristExperienceBlock extends BaseEntityBlock {
+public abstract class AbstractExperienceBlock extends BaseEntityBlock {
     public static final EnumProperty<Direction> FACING = HorizontalDirectionalBlock.FACING;
     public static final BooleanProperty OPEN_FOR_BUSINESS = BooleanProperty.create("open_for_business");
 
-    public TouristExperienceBlock(Properties properties) {
+    public AbstractExperienceBlock(Properties properties) {
         super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(OPEN_FOR_BUSINESS, false));
     }

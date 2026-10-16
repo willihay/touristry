@@ -1,0 +1,43 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "touristry:lodging_experience",
+          "functions": [
+            {
+              "function": "minecraft:copy_components",
+              "source": "block_entity",
+              "include": [
+                "minecraft:container",
+                "minecraft:custom_name",
+                "touristry:tourist_experience_uuid",
+                "touristry:tourist_experience_ordered_targets",
+                "touristry:tourist_experience_entry_fee",
+                "touristry:tourist_experience_statistics",
+                "touristry:tourist_experience_status",
+                "touristry:tourist_experience_targets",
+                "touristry:tourist_experience_item_default_cost"
+              ]
+            },
+            {
+              "function": "minecraft:copy_state",
+              "block": "touristry:lodging_experience",
+              "properties": [
+                "open_for_business"
+              ]
+            }
+          ]
+        }
+      ],
+      "conditions": [
+        {
+          "condition": "minecraft:survives_explosion"
+        }
+      ]
+    }
+  ]
+}

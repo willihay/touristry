@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "LSI",
+    "CDK",
+    "###"
+  ],
+  "key": {
+    "L": "minecraft:lapis_lazuli",
+    "S": "minecraft:blackstone",
+    "I": "minecraft:iron_ingot",
+    "C": "minecraft:chest",
+    "D": "touristry:dining_experience",
+    "K": "touristry:key_blank",
+    "#": "#minecraft:wooden_slabs"
+  },
+  "result": {
+    "id": "touristry:lodging_experience"
+  }
+}

@@ -19,7 +19,7 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import org.bensam.touristry.ModBlockEntities;
 import org.bensam.touristry.ModComponents;
-import org.bensam.touristry.block.TouristExperienceBlock;
+import org.bensam.touristry.block.AbstractExperienceBlock;
 import org.bensam.touristry.entity.TouristEntity;
 import org.bensam.touristry.entity.TouristItemInterest;
 import org.bensam.touristry.entity.goal.DiningExperienceGoal;
@@ -94,8 +94,8 @@ public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
     @Override
     public Direction getApproachFromDirection() {
         BlockState blockState = this.getBlockState();
-        if (blockState.hasProperty(TouristExperienceBlock.FACING)) {
-            return blockState.getValue(TouristExperienceBlock.FACING).getOpposite();
+        if (blockState.hasProperty(AbstractExperienceBlock.FACING)) {
+            return blockState.getValue(AbstractExperienceBlock.FACING).getOpposite();
         }
         return Direction.NORTH;
     }
@@ -112,6 +112,26 @@ public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
     @Override
     public int getIdealApproachDistance() {
         return IDEAL_TARGET_APPROACH_DISTANCE;
+    }
+
+    @Override
+    public int getMaxApproachDistance() {
+        return MAX_APPROACH_DISTANCE;
+    }
+
+    @Override
+    public int getMaxRangeToTarget() {
+        return MAX_RANGE_TO_TARGET;
+    }
+
+    @Override
+    public int getMinWaitAfterArrivalTicks() {
+        return MIN_WAIT_AFTER_ARRIVAL_TICKS;
+    }
+
+    @Override
+    public int getMaxWaitAfterArrivalTicks() {
+        return MAX_WAIT_AFTER_ARRIVAL_TICKS;
     }
 
     public @Nullable ItemPrice getMenuPrice(int index) {
@@ -136,26 +156,6 @@ public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
         return this.menuPrices.values().stream()
                 .sorted(ItemPrice.DISPLAY_ORDER)
                 .toList();
-    }
-
-    @Override
-    public int getMaxApproachDistance() {
-        return MAX_APPROACH_DISTANCE;
-    }
-
-    @Override
-    public int getMaxRangeToTarget() {
-        return MAX_RANGE_TO_TARGET;
-    }
-
-    @Override
-    public int getMinWaitAfterArrivalTicks() {
-        return MIN_WAIT_AFTER_ARRIVAL_TICKS;
-    }
-
-    @Override
-    public int getMaxWaitAfterArrivalTicks() {
-        return MAX_WAIT_AFTER_ARRIVAL_TICKS;
     }
 
     @Override

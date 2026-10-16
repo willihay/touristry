@@ -14,10 +14,7 @@ import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.properties.NoteBlockInstrument;
 import net.minecraft.world.level.material.MapColor;
-import org.bensam.touristry.block.DiningExperienceBlock;
-import org.bensam.touristry.block.ShoppingExperienceBlock;
-import org.bensam.touristry.block.SightseeingExperienceBlock;
-import org.bensam.touristry.block.TouristBeaconBlock;
+import org.bensam.touristry.block.*;
 
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -30,6 +27,9 @@ public class ModBlocks {
 
     private static DiningExperienceBlock diningExperience;
     public static final Supplier<DiningExperienceBlock> DINING_EXPERIENCE = () -> diningExperience;
+
+    private static LodgingExperienceBlock lodgingExperience;
+    public static final Supplier<LodgingExperienceBlock> LODGING_EXPERIENCE = () -> lodgingExperience;
 
     private static ShoppingExperienceBlock shoppingExperience;
     public static final Supplier<ShoppingExperienceBlock> SHOPPING_EXPERIENCE = () -> shoppingExperience;
@@ -54,6 +54,14 @@ public class ModBlocks {
         diningExperience = register(
                 "dining_experience",
                 DiningExperienceBlock::new,
+                BlockBehaviour.Properties.of()
+                        .sound(SoundType.WOOD)
+                        .strength(5.0F, 1200.0F)
+        );
+
+        lodgingExperience = register(
+                "lodging_experience",
+                LodgingExperienceBlock::new,
                 BlockBehaviour.Properties.of()
                         .sound(SoundType.WOOD)
                         .strength(5.0F, 1200.0F)

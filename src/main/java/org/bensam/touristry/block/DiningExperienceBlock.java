@@ -23,7 +23,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.Map;
 
-public class DiningExperienceBlock extends TouristExperienceBlock {
+public class DiningExperienceBlock extends AbstractExperienceBlock {
     private static final VoxelShape BASE = Block.column(14.0, 0.0, 2.0);
     private static final VoxelShape SHELVES = Block.box(3.0, 2.0, 4.0, 13.0, 14.0, 13.0);
     private static final VoxelShape SHAPE_COLLISION = Shapes.or(BASE, SHELVES);

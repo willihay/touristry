@@ -20,7 +20,7 @@ import org.bensam.touristry.block.entity.ShoppingExperienceBlockEntity;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-public class ShoppingExperienceBlock extends TouristExperienceBlock {
+public class ShoppingExperienceBlock extends AbstractExperienceBlock {
     private static final VoxelShape SHAPE = Block.box(2, 0, 2, 14, 8, 14);
 
     public static final MapCodec<ShoppingExperienceBlock> CODEC = simpleCodec(ShoppingExperienceBlock::new);

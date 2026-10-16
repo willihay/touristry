@@ -27,7 +27,7 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import org.bensam.touristry.ModComponents;
 import org.bensam.touristry.ModItems;
-import org.bensam.touristry.block.TouristExperienceBlock;
+import org.bensam.touristry.block.AbstractExperienceBlock;
 import org.bensam.touristry.entity.TouristEntity;
 import org.bensam.touristry.entity.TouristItemInterest;
 import org.bensam.touristry.tourism.TourismManager;
@@ -163,8 +163,8 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
 
     public Direction getApproachFromDirection() {
         BlockState blockState = this.getBlockState();
-        if (blockState.hasProperty(TouristExperienceBlock.FACING)) {
-            return blockState.getValue(TouristExperienceBlock.FACING);
+        if (blockState.hasProperty(AbstractExperienceBlock.FACING)) {
+            return blockState.getValue(AbstractExperienceBlock.FACING);
         }
         return Direction.NORTH;
     }
@@ -627,8 +627,8 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
     public void setOpenForBusiness(boolean openForBusiness) {
         this.openForBusiness = openForBusiness;
         BlockState blockState = this.getBlockState();
-        if (blockState.hasProperty(TouristExperienceBlock.OPEN_FOR_BUSINESS) && this.level != null) {
-            this.level.setBlockAndUpdate(this.getBlockPos(), blockState.setValue(TouristExperienceBlock.OPEN_FOR_BUSINESS, openForBusiness));
+        if (blockState.hasProperty(AbstractExperienceBlock.OPEN_FOR_BUSINESS) && this.level != null) {
+            this.level.setBlockAndUpdate(this.getBlockPos(), blockState.setValue(AbstractExperienceBlock.OPEN_FOR_BUSINESS, openForBusiness));
         }
         this.setChanged();
     }

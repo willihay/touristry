@@ -2,6 +2,7 @@
   "replace": false,
   "values": [
     "touristry:dining_experience",
+    "touristry:lodging_experience",
     "touristry:shopping_experience",
     "touristry:sightseeing_experience"
   ]

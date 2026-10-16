@@ -31,6 +31,7 @@ public final class ModCreativeTab {
                 .displayItems((params, output) -> {
                     output.accept(ModBlocks.TOURIST_BEACON.get().asItem());
                     output.accept(ModBlocks.DINING_EXPERIENCE.get().asItem());
+                    output.accept(ModBlocks.LODGING_EXPERIENCE.get().asItem());
                     output.accept(ModBlocks.SHOPPING_EXPERIENCE.get().asItem());
                     output.accept(ModBlocks.SIGHTSEEING_EXPERIENCE.get().asItem());
                     output.accept(ModItems.KEY_BLANK.get());

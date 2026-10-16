@@ -6,10 +6,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
-import org.bensam.touristry.menu.DiningExperienceMenu;
-import org.bensam.touristry.menu.ShoppingExperienceMenu;
-import org.bensam.touristry.menu.SightseeingExperienceMenu;
-import org.bensam.touristry.menu.TouristBeaconMenu;
+import org.bensam.touristry.menu.*;
 
 import java.util.function.Supplier;
 
@@ -22,6 +19,9 @@ public final class ModMenus {
     private static MenuType<DiningExperienceMenu> diningExperienceMenu;
     public static final Supplier<MenuType<DiningExperienceMenu>> DINING_EXPERIENCE_MENU = () -> diningExperienceMenu;
 
+    private static MenuType<LodgingExperienceMenu> lodgingExperienceMenu;
+    public static final Supplier<MenuType<LodgingExperienceMenu>> LODGING_EXPERIENCE_MENU = () -> lodgingExperienceMenu;
+
     private static MenuType<ShoppingExperienceMenu> shoppingExperienceMenu;
     public static final Supplier<MenuType<ShoppingExperienceMenu>> SHOPPING_EXPERIENCE_MENU = () -> shoppingExperienceMenu;
 
@@ -31,6 +31,7 @@ public final class ModMenus {
     public static void initialize() {
         touristBeaconMenu = register("tourist_beacon_menu", TouristBeaconMenu::new);
         diningExperienceMenu = register("dining_experience_menu", DiningExperienceMenu::new);
+        lodgingExperienceMenu = register("lodging_experience_menu", LodgingExperienceMenu::new);
         shoppingExperienceMenu = register("shopping_experience_menu", ShoppingExperienceMenu::new);
         sightseeingExperienceMenu = register("sightseeing_experience_menu", SightseeingExperienceMenu::new);
     }

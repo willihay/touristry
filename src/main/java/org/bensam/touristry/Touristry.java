@@ -14,7 +14,7 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import org.bensam.touristry.block.TouristBeaconBlock;
-import org.bensam.touristry.block.TouristExperienceBlock;
+import org.bensam.touristry.block.AbstractExperienceBlock;
 import org.bensam.touristry.command.TourCommand;
 import org.bensam.touristry.config.ClothingOptionsLoader;
 import org.bensam.touristry.config.ModServerConfigManager;
@@ -108,7 +108,7 @@ public class Touristry implements ModInitializer {
 			if (!level.isClientSide()
 					&& level.dimension() != Level.OVERWORLD
 					&& itemStack.getItem() instanceof BlockItem blockItem
-					&& (blockItem.getBlock() instanceof TouristBeaconBlock || blockItem.getBlock() instanceof TouristExperienceBlock)) {
+					&& (blockItem.getBlock() instanceof TouristBeaconBlock || blockItem.getBlock() instanceof AbstractExperienceBlock)) {
 				player.displayClientMessage(net.minecraft.network.chat.Component.literal("Tourism blocks can only be placed in the overworld"), true);
 				return InteractionResult.FAIL;
 			}

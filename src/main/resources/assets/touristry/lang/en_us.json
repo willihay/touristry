@@ -5,6 +5,7 @@
   "advancement.touristry.tourist_beacon.description": "Crafted a Tourist Beacon",
 
   "block.touristry.dining_experience": "Dining Experience",
+  "block.touristry.lodging_experience": "Lodging Experience",
   "block.touristry.shopping_experience": "Shopping Experience",
   "block.touristry.sightseeing_experience": "Sightseeing Experience",
   "block.touristry.tourist_beacon": "Tourist Beacon",
@@ -60,5 +61,5 @@
   "sound.touristry.cash_register": "Cash register cha-ching",
   "sound.touristry.desk_bell": "Desk bell dings",
   "sound.touristry.tourist_camera": "Tourist takes a photo",
-  "sound.touristry.tourist_what": "Tourist goes whaaa?"
+  "sound.touristry.tourist_what": "Tourist expresses confusion"
 }

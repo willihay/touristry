@@ -4,11 +4,9 @@ import net.fabricmc.fabric.api.object.builder.v1.block.entity.FabricBlockEntityT
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import org.bensam.touristry.block.entity.DiningExperienceBlockEntity;
-import org.bensam.touristry.block.entity.ShoppingExperienceBlockEntity;
-import org.bensam.touristry.block.entity.SightseeingExperienceBlockEntity;
-import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
+import org.bensam.touristry.block.entity.*;
 
 import java.util.function.Supplier;
 
@@ -20,6 +18,9 @@ public final class ModBlockEntities {
 
     private static BlockEntityType<DiningExperienceBlockEntity> diningExperience;
     public static final Supplier<BlockEntityType<DiningExperienceBlockEntity>> DINING_EXPERIENCE = () -> diningExperience;
+
+    private static BlockEntityType<LodgingExperienceBlockEntity> lodgingExperience;
+    public static final Supplier<BlockEntityType<LodgingExperienceBlockEntity>> LODGING_EXPERIENCE = () -> lodgingExperience;
 
     private static BlockEntityType<ShoppingExperienceBlockEntity> shoppingExperience;
     public static final Supplier<BlockEntityType<ShoppingExperienceBlockEntity>> SHOPPING_EXPERIENCE = () -> shoppingExperience;
@@ -43,6 +44,15 @@ public final class ModBlockEntities {
                 FabricBlockEntityTypeBuilder.create(
                         DiningExperienceBlockEntity::new,
                         ModBlocks.DINING_EXPERIENCE.get()
+                ).build()
+        );
+
+        lodgingExperience = Registry.register(
+                BuiltInRegistries.BLOCK_ENTITY_TYPE,
+                Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "lodging_experience"),
+                FabricBlockEntityTypeBuilder.create(
+                        LodgingExperienceBlockEntity::new,
+                        ModBlocks.LODGING_EXPERIENCE.get()
                 ).build()
         );
 

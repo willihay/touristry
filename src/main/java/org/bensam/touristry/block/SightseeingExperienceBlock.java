@@ -21,10 +21,9 @@ import org.bensam.touristry.block.entity.SightseeingExperienceBlockEntity;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-import java.util.EnumMap;
 import java.util.Map;
 
-public class SightseeingExperienceBlock extends TouristExperienceBlock {
+public class SightseeingExperienceBlock extends AbstractExperienceBlock {
     private static final VoxelShape BASE = Block.box(2, 0, 2, 14, 13, 14);
     private static final VoxelShape BACKBOARD = Block.box(2, 13, 11.5, 14, 28, 14);
     private static final VoxelShape SHAPE = Shapes.or(BASE, BACKBOARD);
