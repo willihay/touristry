@@ -28,11 +28,11 @@ import org.jspecify.annotations.Nullable;
 import java.util.Arrays;
 import java.util.List;
 
-public class PricingTab<T extends Enum<T>> extends AbstractScreenTab<T> {
+public class ItemPricingTab<T extends Enum<T>> extends AbstractScreenTab<T> {
     private static final Component TAB_TITLE = Component.translatable("screen.touristry.tourist_block.tab.pricing");
 
     //region Constants: Textures and sprites
-    private static final Identifier BACKGROUND_TEXTURE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "textures/gui/tourist_experience_pricing.png");
+    private static final Identifier BACKGROUND_TEXTURE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "textures/gui/tourist_experience_item_pricing.png");
     private static final Identifier ACCEPT_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "accept");
     private static final Identifier ACCEPT_HIGHLIGHTED_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "accept_highlighted");
     private static final Identifier CANCEL_SPRITE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "cancel");
@@ -55,13 +55,13 @@ public class PricingTab<T extends Enum<T>> extends AbstractScreenTab<T> {
 
     //region Constants: Labels and positions
     private static final boolean PRICING_SHOW_REMOVE_ALL_BUTTON = false;
-    private static final Component PRICING_IMPORT_TOOLTIP = Component.translatable("screen.touristry.tourist_block.pricing.import.tooltip");
-    private static final Component PRICING_DEFAULT_LABEL = Component.translatable("screen.touristry.tourist_block.pricing.default.label");
-    private static final Component PRICING_DEFAULT_LABEL_TOOLTIP = Component.translatable("screen.touristry.tourist_block.pricing.default.label.tooltip");
-    private static final Component PRICING_RESET_DEFAULT_TOOLTIP = Component.translatable("screen.touristry.tourist_block.pricing.reset_default_cost.tooltip");
-    private static final Component PRICING_REMOVE_TOOLTIP = Component.translatable("screen.touristry.tourist_block.pricing.remove.tooltip");
-    private static final Component PRICING_ACCEPT_TOOLTIP = Component.translatable("screen.touristry.tourist_block.pricing.accept.tooltip");
-    private static final Component PRICING_CANCEL_TOOLTIP = Component.translatable("screen.touristry.tourist_block.pricing.cancel.tooltip");
+    private static final Component PRICING_IMPORT_TOOLTIP = Component.translatable("screen.touristry.tourist_block.item_pricing.import.tooltip");
+    private static final Component PRICING_DEFAULT_LABEL = Component.translatable("screen.touristry.tourist_block.item_pricing.default.label");
+    private static final Component PRICING_DEFAULT_LABEL_TOOLTIP = Component.translatable("screen.touristry.tourist_block.item_pricing.default.label.tooltip");
+    private static final Component PRICING_RESET_DEFAULT_TOOLTIP = Component.translatable("screen.touristry.tourist_block.item_pricing.reset_default_cost.tooltip");
+    private static final Component PRICING_REMOVE_TOOLTIP = Component.translatable("screen.touristry.tourist_block.item_pricing.remove.tooltip");
+    private static final Component PRICING_ACCEPT_TOOLTIP = Component.translatable("screen.touristry.tourist_block.item_pricing.accept.tooltip");
+    private static final Component PRICING_CANCEL_TOOLTIP = Component.translatable("screen.touristry.tourist_block.item_pricing.cancel.tooltip");
     private static final Component PRICING_REMOVE_ALL_TOOLTIP = Component.translatable("screen.touristry.tourist_block.pricings.remove_all.tooltip");
     private static final Component PRICING_REMOVE_DEFAULTS_TOOLTIP = Component.translatable("screen.touristry.tourist_block.pricings.remove_defaults.tooltip");
     private static final int ARGB_SCROLLBOX_BUTTON_TEXT_COLOR = 0xFFFFFFFF; // white
@@ -118,15 +118,15 @@ public class PricingTab<T extends Enum<T>> extends AbstractScreenTab<T> {
     private ImageButton itemPriceAcceptButton;
     private ImageButton itemPriceCancelButton;
 
-    public PricingTab(T tabEnum, Item tabIcon) {
+    public ItemPricingTab(T tabEnum, Item tabIcon) {
         this(TAB_TITLE, tabEnum, tabIcon, PRICING_IMPORT_TOOLTIP);
     }
 
-    public PricingTab(Component tabTitle, T tabEnum, Item tabIcon) {
+    public ItemPricingTab(Component tabTitle, T tabEnum, Item tabIcon) {
         this(tabTitle, tabEnum, tabIcon, PRICING_IMPORT_TOOLTIP);
     }
 
-    public PricingTab(Component tabTitle, T tabEnum, Item tabIcon, Component importTooltip) {
+    public ItemPricingTab(Component tabTitle, T tabEnum, Item tabIcon, Component importTooltip) {
         super(tabTitle, tabEnum, tabIcon, BACKGROUND_TEXTURE);
         this.importTooltip = importTooltip;
     }

@@ -5,7 +5,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.Items;
 import org.bensam.touristry.ModBlocks;
 import org.bensam.touristry.ModItems;
-import org.bensam.touristry.client.screen.tabs.PricingTab;
+import org.bensam.touristry.client.screen.tabs.ItemPricingTab;
 import org.bensam.touristry.client.screen.tabs.StatusTab;
 import org.bensam.touristry.client.screen.tabs.TargetsTab;
 import org.bensam.touristry.menu.DiningExperienceMenu;
@@ -24,7 +24,7 @@ public class DiningExperienceScreen extends AbstractTabbedExperienceScreen<Dinin
         super(containerMenu, inventory, title, List.of(
                 new StatusTab<>(DiningExperienceMenu.Tab.STATUS, ModBlocks.DINING_EXPERIENCE.get().asItem()),
                 new TargetsTab<>(FOOD_STORAGE_TAB_TITLE, DiningExperienceMenu.Tab.TARGETS, ModItems.EXPERIENCE_TARGET_KEY.get(), false),
-                new PricingTab<>(MENU_TAB_TITLE, DiningExperienceMenu.Tab.MENU, Items.EMERALD, MENU_IMPORT_TOOLTIP)
+                new ItemPricingTab<>(MENU_TAB_TITLE, DiningExperienceMenu.Tab.MENU, Items.EMERALD, MENU_IMPORT_TOOLTIP)
         ));
         this.imageWidth = BG_SCREEN_WIDTH;
     }

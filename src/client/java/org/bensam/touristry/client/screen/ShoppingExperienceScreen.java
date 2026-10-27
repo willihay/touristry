@@ -5,7 +5,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.Items;
 import org.bensam.touristry.ModBlocks;
 import org.bensam.touristry.ModItems;
-import org.bensam.touristry.client.screen.tabs.PricingTab;
+import org.bensam.touristry.client.screen.tabs.ItemPricingTab;
 import org.bensam.touristry.client.screen.tabs.StatusTab;
 import org.bensam.touristry.client.screen.tabs.TargetsTab;
 import org.bensam.touristry.menu.ShoppingExperienceMenu;
@@ -22,7 +22,7 @@ public class ShoppingExperienceScreen extends AbstractTabbedExperienceScreen<Sho
         super(containerMenu, inventory, title, List.of(
                 new StatusTab<>(ShoppingExperienceMenu.Tab.STATUS, ModBlocks.SHOPPING_EXPERIENCE.get().asItem()),
                 new TargetsTab<>(SHOPPING_STORAGE_TAB_TITLE, ShoppingExperienceMenu.Tab.TARGETS, ModItems.EXPERIENCE_TARGET_KEY.get(), true),
-                new PricingTab<>(ShoppingExperienceMenu.Tab.PRICING, Items.EMERALD)
+                new ItemPricingTab<>(ShoppingExperienceMenu.Tab.PRICING, Items.EMERALD)
         ));
         this.imageWidth = BG_SCREEN_WIDTH;
     }
