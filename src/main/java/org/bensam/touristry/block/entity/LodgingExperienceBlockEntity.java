@@ -9,6 +9,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.entity.BedBlockEntity;
@@ -20,11 +21,14 @@ import org.bensam.touristry.ModBlockEntities;
 import org.bensam.touristry.ModComponents;
 import org.bensam.touristry.block.AbstractExperienceBlock;
 import org.bensam.touristry.entity.TouristEntity;
+import org.bensam.touristry.menu.LodgingExperienceMenu;
 import org.bensam.touristry.tourism.experience.ExperienceTarget;
 import org.bensam.touristry.tourism.experience.ExperienceVisit;
+import org.bensam.touristry.tourism.experience.LodgingBedInfo;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 
 public class LodgingExperienceBlockEntity extends AbstractExperienceBlockEntity {
@@ -37,9 +41,12 @@ public class LodgingExperienceBlockEntity extends AbstractExperienceBlockEntity 
     public static final int PAYMENT_SLOT_SIZE = 9;
 
     private ItemStack defaultCost = ItemStack.EMPTY;
+    private LinkedHashMap<BlockPos, LodgingBedInfo> bedInfo;
 
     public LodgingExperienceBlockEntity(BlockPos blockPos, BlockState blockState) {
         super(ModBlockEntities.LODGING_EXPERIENCE.get(), blockPos, blockState, PAYMENT_SLOT_SIZE);
+
+        this.bedInfo = new LinkedHashMap<>();
 
         if (this.defaultCost.isEmpty()) {
             this.defaultCost = new ItemStack(Items.EMERALD);
@@ -58,7 +65,7 @@ public class LodgingExperienceBlockEntity extends AbstractExperienceBlockEntity 
 
     @Override
     protected AbstractContainerMenu createMenu(int i, Inventory inventory) {
-        return null;
+        return new LodgingExperienceMenu(i, inventory, this, this.data, ContainerLevelAccess.create(this.level, this.getBlockPos()));
     }
 
     @Override
@@ -176,6 +183,7 @@ public class LodgingExperienceBlockEntity extends AbstractExperienceBlockEntity 
         super.loadAdditional(valueInput);
 
         this.defaultCost = valueInput.read("DefaultCost", ItemStack.OPTIONAL_CODEC).orElse(this.defaultCost);
+        this.bedInfo = valueInput.read("BedInfo", LodgingBedInfo.BED_INFO_CODEC).orElse(new LinkedHashMap<>());
     }
 
     @Override
@@ -183,6 +191,7 @@ public class LodgingExperienceBlockEntity extends AbstractExperienceBlockEntity 
         super.saveAdditional(valueOutput);
 
         valueOutput.store("DefaultCost", ItemStack.OPTIONAL_CODEC, this.defaultCost);
+        valueOutput.store("BedInfo", LodgingBedInfo.BED_INFO_CODEC, this.bedInfo);
     }
 
     @Override
@@ -191,6 +200,7 @@ public class LodgingExperienceBlockEntity extends AbstractExperienceBlockEntity 
 
         // Restore additional components when BlockItem is placed as a Block/Block Entity.
         this.defaultCost = dataComponentGetter.getOrDefault(ModComponents.TOURIST_EXPERIENCE_ITEM_DEFAULT_COST, this.defaultCost);
+        this.bedInfo = dataComponentGetter.getOrDefault(ModComponents.TOURIST_EXPERIENCE_BED_INFO, new LinkedHashMap<>());
     }
 
     @Override
@@ -199,6 +209,10 @@ public class LodgingExperienceBlockEntity extends AbstractExperienceBlockEntity 
 
         // Collect additional components to save in components container in BlockItem when block breaks.
         builder.set(ModComponents.TOURIST_EXPERIENCE_ITEM_DEFAULT_COST, this.defaultCost.copy());
+
+        if (!this.bedInfo.isEmpty()) {
+            builder.set(ModComponents.TOURIST_EXPERIENCE_BED_INFO, this.bedInfo);
+        }
     }
 
     @Override
@@ -207,6 +221,7 @@ public class LodgingExperienceBlockEntity extends AbstractExperienceBlockEntity 
 
         // Remove raw tag entries for data that is carried by custom components in the block item form.
         valueOutput.discard("DefaultCost");
+        valueOutput.discard("BedInfo");
     }
     //endregion
 }

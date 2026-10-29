@@ -17,7 +17,7 @@ import org.jspecify.annotations.NonNull;
 
 public class LodgingExperienceMenu extends AbstractExperienceMenu<LodgingExperienceMenu.Tab> {
     // Slot layout
-    private static final int CONFIGURATION_SLOT_COUNT = 3; // target key + entry fee + default cost
+    private static final int CONFIGURATION_SLOT_COUNT = 2; // target key + default cost
     private static final int EXPERIENCE_PAYMENT_SLOT_COUNT = LodgingExperienceBlockEntity.PAYMENT_SLOT_SIZE;
     private static final int EXPERIENCE_PAYMENT_SLOT_START_X = 216;
     private static final int EXPERIENCE_PAYMENT_SLOT_START_Y = 17;
@@ -25,14 +25,10 @@ public class LodgingExperienceMenu extends AbstractExperienceMenu<LodgingExperie
     private static final int CONFIGURATION_TARGET_KEY_SLOT = 0;
     private static final int EXPERIENCE_TARGET_KEY_SLOT_X = 180;
     private static final int EXPERIENCE_TARGET_KEY_SLOT_Y = 35;
-    private static final int EXPERIENCE_ENTRY_FEE_SLOT = EXPERIENCE_TARGET_KEY_SLOT + 1;
-    private static final int CONFIGURATION_ENTRY_FEE_SLOT = 1;
-    private static final int EXPERIENCE_ENTRY_FEE_SLOT_X = 180;
-    private static final int EXPERIENCE_ENTRY_FEE_SLOT_Y = 53;
-    private static final int MENU_DEFAULT_COST_SLOT = EXPERIENCE_ENTRY_FEE_SLOT + 1;
-    private static final int CONFIGURATION_DEFAULT_COST_SLOT = 2;
-    private static final int MENU_DEFAULT_COST_SLOT_X = 216;
-    private static final int MENU_DEFAULT_COST_SLOT_Y = 19;
+    private static final int BED_DEFAULT_COST_SLOT = EXPERIENCE_TARGET_KEY_SLOT + 1;
+    private static final int CONFIGURATION_DEFAULT_COST_SLOT = 1;
+    private static final int BED_DEFAULT_COST_SLOT_X = 180;
+    private static final int BED_DEFAULT_COST_SLOT_Y = 53;
     private static final int EXPERIENCE_SLOT_COUNT = EXPERIENCE_PAYMENT_SLOT_COUNT + CONFIGURATION_SLOT_COUNT;
 
     // Player inventory layout
@@ -71,17 +67,14 @@ public class LodgingExperienceMenu extends AbstractExperienceMenu<LodgingExperie
         // Add target key slot.
         this.addTargetKeySlot(Tab.STATUS, CONFIGURATION_TARGET_KEY_SLOT, EXPERIENCE_TARGET_KEY_SLOT_X, EXPERIENCE_TARGET_KEY_SLOT_Y);
 
-        // Add entry fee slot.
-        this.addEntryFeeSlot(Tab.STATUS, CONFIGURATION_ENTRY_FEE_SLOT, EXPERIENCE_ENTRY_FEE_SLOT_X, EXPERIENCE_ENTRY_FEE_SLOT_Y);
-
         // Add default cost slot.
         this.addSlot(new CloneSlot<>(
                 this,
                 this.getConfigurationContainer(),
                 CONFIGURATION_DEFAULT_COST_SLOT,
-                MENU_DEFAULT_COST_SLOT_X,
-                MENU_DEFAULT_COST_SLOT_Y,
-                menu -> menu.isSelectedTab(Tab.TARGETS)
+                BED_DEFAULT_COST_SLOT_X,
+                BED_DEFAULT_COST_SLOT_Y,
+                menu -> menu.isSelectedTab(Tab.STATUS)
         ) {
             @Override
             public void setChanged() {
@@ -106,7 +99,6 @@ public class LodgingExperienceMenu extends AbstractExperienceMenu<LodgingExperie
         SimpleContainer configurationContainer = new SimpleContainer(CONFIGURATION_SLOT_COUNT);
         if (experienceContainer instanceof LodgingExperienceBlockEntity lodgingExperienceBlockEntity) {
             configurationContainer.setItem(CONFIGURATION_TARGET_KEY_SLOT, lodgingExperienceBlockEntity.createTargetKey());
-            configurationContainer.setItem(CONFIGURATION_ENTRY_FEE_SLOT, lodgingExperienceBlockEntity.getEntryFee());
             configurationContainer.setItem(CONFIGURATION_DEFAULT_COST_SLOT, lodgingExperienceBlockEntity.getDefaultCost());
         }
         return configurationContainer;
@@ -128,11 +120,11 @@ public class LodgingExperienceMenu extends AbstractExperienceMenu<LodgingExperie
     }
 
     public ItemStack getDefaultCost() {
-        return this.getSlot(MENU_DEFAULT_COST_SLOT).getItem();
+        return this.getSlot(BED_DEFAULT_COST_SLOT).getItem();
     }
 
     public Slot getDefaultCostSlot() {
-        return this.getSlot(MENU_DEFAULT_COST_SLOT);
+        return this.getSlot(BED_DEFAULT_COST_SLOT);
     }
 
     @Override
@@ -141,7 +133,29 @@ public class LodgingExperienceMenu extends AbstractExperienceMenu<LodgingExperie
     }
 
     public boolean isDefaultCostFree() {
-        return !this.getSlot(MENU_DEFAULT_COST_SLOT).hasItem();
+        return !this.getSlot(BED_DEFAULT_COST_SLOT).hasItem();
+    }
+
+    @Override
+    public @NonNull ItemStack quickMoveStack(@NonNull Player player, int slotId) {
+        Slot slot = this.slots.get(slotId);
+
+        if (!slot.hasItem()) {
+            return ItemStack.EMPTY;
+        }
+
+        ItemStack sourceStack = slot.getItem();
+
+        // Player inventory -> experience slot
+        if (slotId >= PLAYER_SLOT_START) {
+            if (this.isSelectedTab(Tab.STATUS)) {
+                if (!this.moveItemStackTo(sourceStack, 0, EXPERIENCE_PAYMENT_SLOT_COUNT, false)) {
+                    return ItemStack.EMPTY;
+                }
+            }
+        }
+
+        return super.quickMoveStack(player, slotId);
     }
 
     @Override

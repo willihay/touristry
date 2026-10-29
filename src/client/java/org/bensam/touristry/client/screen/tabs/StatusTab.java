@@ -40,22 +40,29 @@ public class StatusTab<T extends Enum<T>> extends AbstractScreenTab<T> {
     private static final int ON_OFF_SLIDER_Y = 21;
     private static final int TARGET_KEY_LABEL_X = STATUS_LABEL_X;
     private static final int TARGET_KEY_LABEL_Y = 39;
-    private static final int ENTRY_FEE_LABEL_X = STATUS_LABEL_X;
-    private static final int ENTRY_FEE_LABEL_Y = 57;
+    private static final int OPTIONAL_SLOT_LABEL_X = STATUS_LABEL_X;
+    private static final int OPTIONAL_SLOT_LABEL_Y = 57;
     private static final int INVENTORY_LABEL_X = 107;
     private static final int INVENTORY_LABEL_Y = 72;
     //endregion
+
+    private final Component optionalSlotLabel;
 
     private boolean hasReceivedSync;
     private boolean openForBusiness;
     private OnOffSliderButton statusToggleButton;
 
     public StatusTab(T tabEnum, Item tabIcon) {
-        this(TAB_TITLE, tabEnum, tabIcon);
+        this(TAB_TITLE, ENTRY_FEE_LABEL, tabEnum, tabIcon);
     }
 
-    public StatusTab(Component tabTitle, T tabEnum, Item tabIcon) {
+    public StatusTab(Component optionalSlotLabel, T tabEnum, Item tabIcon) {
+        this(TAB_TITLE, optionalSlotLabel, tabEnum, tabIcon);
+    }
+
+    public StatusTab(Component tabTitle, Component optionalSlotLabel, T tabEnum, Item tabIcon) {
         super(tabTitle, tabEnum, tabIcon, BACKGROUND_TEXTURE);
+        this.optionalSlotLabel = optionalSlotLabel;
     }
 
     // Screen setup handlers
@@ -153,14 +160,16 @@ public class StatusTab<T extends Enum<T>> extends AbstractScreenTab<T> {
                 false
         );
 
-        guiGraphics.drawString(
-                screen.getFont(),
-                ENTRY_FEE_LABEL,
-                ENTRY_FEE_LABEL_X,
-                ENTRY_FEE_LABEL_Y,
-                AbstractTabbedExperienceScreen.ARGB_SCREEN_TEXT_COLOR,
-                false
-        );
+        if (this.optionalSlotLabel != null) {
+            guiGraphics.drawString(
+                    screen.getFont(),
+                    this.optionalSlotLabel,
+                    OPTIONAL_SLOT_LABEL_X,
+                    OPTIONAL_SLOT_LABEL_Y,
+                    AbstractTabbedExperienceScreen.ARGB_SCREEN_TEXT_COLOR,
+                    false
+            );
+        }
 
         guiGraphics.drawString(
                 screen.getFont(),

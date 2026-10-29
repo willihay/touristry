@@ -1,6 +1,7 @@
 package org.bensam.touristry;
 
 import com.mojang.serialization.Codec;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Registry;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.component.DataComponentType;
@@ -11,6 +12,7 @@ import net.minecraft.world.item.ItemStack;
 import org.bensam.touristry.block.entity.ItemStackKey;
 import org.bensam.touristry.tourism.experience.ExperienceTarget;
 import org.bensam.touristry.tourism.experience.ItemPrice;
+import org.bensam.touristry.tourism.experience.LodgingBedInfo;
 import org.bensam.touristry.tourism.experience.TouristLocationStats;
 
 import java.util.LinkedHashMap;
@@ -98,6 +100,14 @@ public final class ModComponents {
             DataComponentType.<List<ExperienceTarget>>builder()
                     .persistent(ExperienceTarget.CODEC.listOf())
                     .networkSynchronized(ExperienceTarget.STREAM_CODEC.apply(ByteBufCodecs.list()))
+                    .build()
+    );
+
+    public static final DataComponentType<LinkedHashMap<BlockPos, LodgingBedInfo>> TOURIST_EXPERIENCE_BED_INFO = Registry.register(
+            BuiltInRegistries.DATA_COMPONENT_TYPE,
+            Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tourist_experience_bed_info"),
+            DataComponentType.<LinkedHashMap<BlockPos, LodgingBedInfo>>builder()
+                    .persistent(LodgingBedInfo.BED_INFO_CODEC)
                     .build()
     );
 
