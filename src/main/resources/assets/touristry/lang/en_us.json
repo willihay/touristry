@@ -32,6 +32,7 @@
   "screen.touristry.tourist_block.tab.shopping_storage": "Target Containers",
   "screen.touristry.tourist_block.tab.status": "Status",
   "screen.touristry.tourist_block.tab.targets": "Targets",
+  "screen.touristry.tourist_block.bed_cost.label": "Bed Cost:",
   "screen.touristry.tourist_block.entry_fee.label": "Entry Fee:",
   "screen.touristry.tourist_block.menu.import.tooltip": "Import new consumable food items for sale from target containers",
   "screen.touristry.tourist_block.item_pricing.default.label": "Default Cost:",

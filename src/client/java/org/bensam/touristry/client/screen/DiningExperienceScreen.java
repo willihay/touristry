@@ -22,7 +22,7 @@ public class DiningExperienceScreen extends AbstractTabbedExperienceScreen<Dinin
 
     public DiningExperienceScreen(DiningExperienceMenu containerMenu, Inventory inventory, Component title) {
         super(containerMenu, inventory, title, List.of(
-                new StatusTab<>(DiningExperienceMenu.Tab.STATUS, ModBlocks.DINING_EXPERIENCE.get().asItem()),
+                new StatusTab<>(null, DiningExperienceMenu.Tab.STATUS, ModBlocks.DINING_EXPERIENCE.get().asItem()),
                 new TargetsTab<>(FOOD_STORAGE_TAB_TITLE, DiningExperienceMenu.Tab.TARGETS, ModItems.EXPERIENCE_TARGET_KEY.get(), false),
                 new ItemPricingTab<>(MENU_TAB_TITLE, DiningExperienceMenu.Tab.MENU, Items.EMERALD, MENU_IMPORT_TOOLTIP)
         ));

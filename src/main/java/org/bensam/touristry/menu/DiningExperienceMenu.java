@@ -24,7 +24,7 @@ import java.util.List;
 
 public class DiningExperienceMenu extends AbstractExperienceMenu<DiningExperienceMenu.Tab> implements PricingMenu {
     // Slot layout
-    private static final int CONFIGURATION_SLOT_COUNT = 3; // target key + entry fee + default cost
+    private static final int CONFIGURATION_SLOT_COUNT = 2; // target key + default cost
     private static final int EXPERIENCE_PAYMENT_SLOT_COUNT = DiningExperienceBlockEntity.PAYMENT_SLOT_SIZE;
     private static final int EXPERIENCE_PAYMENT_SLOT_START_X = 216;
     private static final int EXPERIENCE_PAYMENT_SLOT_START_Y = 17;
@@ -32,12 +32,8 @@ public class DiningExperienceMenu extends AbstractExperienceMenu<DiningExperienc
     private static final int CONFIGURATION_TARGET_KEY_SLOT = 0;
     private static final int EXPERIENCE_TARGET_KEY_SLOT_X = 180;
     private static final int EXPERIENCE_TARGET_KEY_SLOT_Y = 35;
-    private static final int EXPERIENCE_ENTRY_FEE_SLOT = EXPERIENCE_TARGET_KEY_SLOT + 1;
-    private static final int CONFIGURATION_ENTRY_FEE_SLOT = 1;
-    private static final int EXPERIENCE_ENTRY_FEE_SLOT_X = 180;
-    private static final int EXPERIENCE_ENTRY_FEE_SLOT_Y = 53;
-    private static final int MENU_DEFAULT_COST_SLOT = EXPERIENCE_ENTRY_FEE_SLOT + 1;
-    private static final int CONFIGURATION_DEFAULT_COST_SLOT = 2;
+    private static final int MENU_DEFAULT_COST_SLOT = EXPERIENCE_TARGET_KEY_SLOT + 1;
+    private static final int CONFIGURATION_DEFAULT_COST_SLOT = 1;
     private static final int MENU_DEFAULT_COST_SLOT_X = 216;
     private static final int MENU_DEFAULT_COST_SLOT_Y = 19;
     private static final int MENU_ITEM_FOR_SALE_SLOT = MENU_DEFAULT_COST_SLOT + 1;
@@ -90,9 +86,6 @@ public class DiningExperienceMenu extends AbstractExperienceMenu<DiningExperienc
         // Add target key slot.
         this.addTargetKeySlot(Tab.STATUS, CONFIGURATION_TARGET_KEY_SLOT, EXPERIENCE_TARGET_KEY_SLOT_X, EXPERIENCE_TARGET_KEY_SLOT_Y);
 
-        // Add entry fee slot.
-        this.addEntryFeeSlot(Tab.STATUS, CONFIGURATION_ENTRY_FEE_SLOT, EXPERIENCE_ENTRY_FEE_SLOT_X, EXPERIENCE_ENTRY_FEE_SLOT_Y);
-
         // Add default cost slot.
         this.addSlot(new CloneSlot<>(
                 this,
@@ -144,7 +137,6 @@ public class DiningExperienceMenu extends AbstractExperienceMenu<DiningExperienc
         SimpleContainer configurationContainer = new SimpleContainer(CONFIGURATION_SLOT_COUNT);
         if (experienceContainer instanceof DiningExperienceBlockEntity diningExperienceBlockEntity) {
             configurationContainer.setItem(CONFIGURATION_TARGET_KEY_SLOT, diningExperienceBlockEntity.createTargetKey());
-            configurationContainer.setItem(CONFIGURATION_ENTRY_FEE_SLOT, diningExperienceBlockEntity.getEntryFee());
             configurationContainer.setItem(CONFIGURATION_DEFAULT_COST_SLOT, diningExperienceBlockEntity.getDefaultCost());
         }
         return configurationContainer;

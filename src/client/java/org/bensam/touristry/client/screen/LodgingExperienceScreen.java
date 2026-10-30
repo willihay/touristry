@@ -15,10 +15,11 @@ public class LodgingExperienceScreen extends AbstractTabbedExperienceScreen<Lodg
     private static final int BG_SCREEN_WIDTH = 276;
     private static final int BG_SCREEN_HEIGHT = 166;
     private static final Component BED_TARGETS_TAB_TITLE = Component.translatable("screen.touristry.tourist_block.tab.beds");
+    private static final Component BED_COST_SLOT_LABEL = Component.translatable("screen.touristry.tourist_block.bed_cost.label");
 
     public LodgingExperienceScreen(LodgingExperienceMenu containerMenu, Inventory inventory, Component title) {
         super(containerMenu, inventory, title, List.of(
-                new StatusTab<>(null, LodgingExperienceMenu.Tab.STATUS, ModBlocks.LODGING_EXPERIENCE.get().asItem()),
+                new StatusTab<>(BED_COST_SLOT_LABEL, LodgingExperienceMenu.Tab.STATUS, ModBlocks.LODGING_EXPERIENCE.get().asItem()),
                 new TargetsTab<>(BED_TARGETS_TAB_TITLE, LodgingExperienceMenu.Tab.TARGETS, ModItems.EXPERIENCE_TARGET_KEY.get(), false)
         ));
         this.imageWidth = BG_SCREEN_WIDTH;

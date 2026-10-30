@@ -20,7 +20,7 @@ public class ShoppingExperienceScreen extends AbstractTabbedExperienceScreen<Sho
 
     public ShoppingExperienceScreen(ShoppingExperienceMenu containerMenu, Inventory inventory, Component title) {
         super(containerMenu, inventory, title, List.of(
-                new StatusTab<>(ShoppingExperienceMenu.Tab.STATUS, ModBlocks.SHOPPING_EXPERIENCE.get().asItem()),
+                new StatusTab<>(null, ShoppingExperienceMenu.Tab.STATUS, ModBlocks.SHOPPING_EXPERIENCE.get().asItem()),
                 new TargetsTab<>(SHOPPING_STORAGE_TAB_TITLE, ShoppingExperienceMenu.Tab.TARGETS, ModItems.EXPERIENCE_TARGET_KEY.get(), true),
                 new ItemPricingTab<>(ShoppingExperienceMenu.Tab.PRICING, Items.EMERALD)
         ));

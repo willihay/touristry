@@ -18,6 +18,7 @@ public class StatusTab<T extends Enum<T>> extends AbstractScreenTab<T> {
 
     //region Constants: Textures and sprites
     private static final Identifier BACKGROUND_TEXTURE = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "textures/gui/tourist_experience_status.png");
+    private static final Identifier BACKGROUND_TEXTURE_OPTIONAL = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "textures/gui/tourist_experience_status_optional_slot.png");
     //endregion
 
     //region Constants: Labels and positions
@@ -61,7 +62,7 @@ public class StatusTab<T extends Enum<T>> extends AbstractScreenTab<T> {
     }
 
     public StatusTab(Component tabTitle, Component optionalSlotLabel, T tabEnum, Item tabIcon) {
-        super(tabTitle, tabEnum, tabIcon, BACKGROUND_TEXTURE);
+        super(tabTitle, tabEnum, tabIcon, optionalSlotLabel == null ? BACKGROUND_TEXTURE : BACKGROUND_TEXTURE_OPTIONAL);
         this.optionalSlotLabel = optionalSlotLabel;
     }
 
