@@ -1,7 +1,6 @@
 package org.bensam.touristry.tourism.experience;
 
 import com.mojang.serialization.Codec;
-import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -24,32 +23,18 @@ public record ExperienceTarget(
         BlockPos pos,
         Direction approachFrom,
         @Nullable UUID entityUUID,
-        long registeredAtTicks
+        long registeredAtTicks,
+        String customName
 ) {
-    // TODO: Remove the legacy codec after all test environments have been updated.
-    private static final Codec<ExperienceTarget> APPROACH_FROM_CODEC = createCodec("approach_from", false);
-    private static final Codec<ExperienceTarget> LEGACY_PLAYER_FACING_CODEC = createCodec("player_facing", true);
-
-    public static final Codec<ExperienceTarget> CODEC = Codec.either(APPROACH_FROM_CODEC, LEGACY_PLAYER_FACING_CODEC)
-            .xmap(
-                    target -> target.map(value -> value, value -> value),
-                    Either::left
-            );
-
-    private static Codec<ExperienceTarget> createCodec(String approachFieldName, boolean invertDirection) {
-        Codec<Direction> directionCodec = invertDirection
-                ? Direction.CODEC.xmap(Direction::getOpposite, Direction::getOpposite)
-                : Direction.CODEC;
-
-        return RecordCodecBuilder.create(instance -> instance.group(
-                BlockPos.CODEC.fieldOf("pos").forGetter(ExperienceTarget::pos),
-                directionCodec.fieldOf(approachFieldName).forGetter(ExperienceTarget::approachFrom),
-                UUIDUtil.CODEC.optionalFieldOf("entity_uuid").forGetter(target -> Optional.ofNullable(target.entityUUID())),
-                Codec.LONG.fieldOf("registered_at_ticks").forGetter(ExperienceTarget::registeredAtTicks)
-        ).apply(instance, (pos, approachFrom, entityUUID, time) ->
-                new ExperienceTarget(pos, approachFrom, entityUUID.orElse(null), time))
-        );
-    }
+    public static final Codec<ExperienceTarget> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+            BlockPos.CODEC.fieldOf("pos").forGetter(ExperienceTarget::pos),
+            Direction.CODEC.fieldOf("approach_from").forGetter(ExperienceTarget::approachFrom),
+            UUIDUtil.CODEC.optionalFieldOf("entity_uuid").forGetter(target -> Optional.ofNullable(target.entityUUID())),
+            Codec.LONG.fieldOf("registered_at_ticks").forGetter(ExperienceTarget::registeredAtTicks),
+            Codec.STRING.optionalFieldOf("custom_name").forGetter(target -> target.customName().isEmpty() ? Optional.empty() : Optional.of(target.customName()))
+    ).apply(instance, (pos, approachFrom, entityUUID, registeredTime, customName) ->
+            new ExperienceTarget(pos, approachFrom, entityUUID.orElse(null), registeredTime, customName.orElse(""))
+    ));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, ExperienceTarget> STREAM_CODEC = StreamCodec.composite(
             BlockPos.STREAM_CODEC,
@@ -60,11 +45,17 @@ public record ExperienceTarget(
             target -> Optional.ofNullable(target.entityUUID()),
             ByteBufCodecs.VAR_LONG,
             ExperienceTarget::registeredAtTicks,
-            (pos, approach, entityUUID, time) ->
-                    new ExperienceTarget(pos, approach, entityUUID.orElse(null), time)
+            ByteBufCodecs.STRING_UTF8,
+            ExperienceTarget::customName,
+            (pos, approach, entityUUID, registeredTime, customName) ->
+                    new ExperienceTarget(pos, approach, entityUUID.orElse(null), registeredTime, customName)
     );
 
     public Component getDisplayName(ServerLevel serverLevel) {
+        if (!this.customName().isEmpty()) {
+            return Component.literal(this.customName());
+        }
+
         if (this.isEntity()) {
             Entity entity = serverLevel.getEntity(this.entityUUID);
             return entity != null ? entity.getDisplayName() : Component.literal("Unknown target");

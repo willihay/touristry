@@ -19,11 +19,12 @@ public class DiningExperienceScreen extends AbstractTabbedExperienceScreen<Dinin
     private static final Component FOOD_STORAGE_TAB_TITLE = Component.translatable("screen.touristry.tourist_block.tab.food_storage");
     private static final Component MENU_TAB_TITLE = Component.translatable("screen.touristry.tourist_block.tab.menu");
     private static final Component MENU_IMPORT_TOOLTIP = Component.translatable("screen.touristry.tourist_block.menu.import.tooltip");
+    private static final Component TARGET_NAME_EDITBOX_LABEL = Component.translatable("screen.touristry.tourist_block.target.food_storage_name.label");
 
     public DiningExperienceScreen(DiningExperienceMenu containerMenu, Inventory inventory, Component title) {
         super(containerMenu, inventory, title, List.of(
                 new StatusTab<>(null, DiningExperienceMenu.Tab.STATUS, ModBlocks.DINING_EXPERIENCE.get().asItem()),
-                new TargetsTab<>(FOOD_STORAGE_TAB_TITLE, DiningExperienceMenu.Tab.TARGETS, ModItems.EXPERIENCE_TARGET_KEY.get(), false),
+                new TargetsTab<>(FOOD_STORAGE_TAB_TITLE, DiningExperienceMenu.Tab.TARGETS, ModItems.EXPERIENCE_TARGET_KEY.get(), true, TARGET_NAME_EDITBOX_LABEL, false),
                 new ItemPricingTab<>(MENU_TAB_TITLE, DiningExperienceMenu.Tab.MENU, Items.EMERALD, MENU_IMPORT_TOOLTIP)
         ));
         this.imageWidth = BG_SCREEN_WIDTH;

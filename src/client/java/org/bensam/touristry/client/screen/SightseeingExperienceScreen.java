@@ -14,11 +14,12 @@ public class SightseeingExperienceScreen extends AbstractTabbedExperienceScreen<
     private static final int BG_TEXTURE_WIDTH = 512;
     private static final int BG_SCREEN_WIDTH = 276;
     private static final int BG_SCREEN_HEIGHT = 166;
+    private static final Component TARGET_NAME_EDITBOX_LABEL = Component.translatable("screen.touristry.tourist_block.target.sightseeing_target_name.label");
 
     public SightseeingExperienceScreen(SightseeingExperienceMenu containerMenu, Inventory inventory, Component title) {
         super(containerMenu, inventory, title, List.of(
                 new StatusTab<>(SightseeingExperienceMenu.Tab.STATUS, ModBlocks.SIGHTSEEING_EXPERIENCE.get().asItem()),
-                new TargetsTab<>(SightseeingExperienceMenu.Tab.TARGETS, ModItems.EXPERIENCE_TARGET_KEY.get())
+                new TargetsTab<>(SightseeingExperienceMenu.Tab.TARGETS, ModItems.EXPERIENCE_TARGET_KEY.get(), true, TARGET_NAME_EDITBOX_LABEL, true)
         ));
         this.imageWidth = BG_SCREEN_WIDTH;
     }

@@ -167,7 +167,8 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
                     this.getBlockPos(),
                     this.getApproachFromDirection(),
                     null,
-                    serverLevel.getDayTime()
+                    serverLevel.getDayTime(),
+                    ""
             ));
         }
 

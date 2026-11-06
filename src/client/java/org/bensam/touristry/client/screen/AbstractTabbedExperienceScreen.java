@@ -3,10 +3,13 @@ package org.bensam.touristry.client.screen;
 import com.mojang.blaze3d.platform.cursor.CursorTypes;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.narration.NarratableEntry;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.input.CharacterEvent;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
@@ -17,6 +20,7 @@ import org.bensam.touristry.Touristry;
 import org.bensam.touristry.client.screen.tabs.AbstractScreenTab;
 import org.bensam.touristry.menu.AbstractExperienceMenu;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 
@@ -24,6 +28,9 @@ public abstract class AbstractTabbedExperienceScreen<M extends AbstractExperienc
     public static final int ARGB_SCREEN_TEXT_COLOR = 0xFF404040; // gray
     private static final int TAB_WIDTH = 26;
     private static final int TAB_HEIGHT = 32;
+
+    @Nullable
+    private EditBox activeTextInput; // stored here for JEI reflection to find
 
     // Tab textures
     protected static final Identifier[] UNSELECTED_TOP_TABS = new Identifier[]{
@@ -57,12 +64,12 @@ public abstract class AbstractTabbedExperienceScreen<M extends AbstractExperienc
     protected void init() {
         super.init();
 
-        if (this.selectedTab != null) {
-            this.selectTab(this.selectedTab);
+        for (AbstractScreenTab<T> tab : this.tabs) {
+            tab.init(this, this.menu);
         }
 
-        for (AbstractScreenTab<T> tab : this.tabs) {
-            tab.init(this.menu);
+        if (this.selectedTab != null) {
+            this.selectTab(this.selectedTab);
         }
     }
 
@@ -74,8 +81,17 @@ public abstract class AbstractTabbedExperienceScreen<M extends AbstractExperienc
     }
 
     // Helpers
-    public <B extends GuiEventListener & Renderable & NarratableEntry> B addButton(B button) {
-        return this.addRenderableWidget(button);
+    public <W extends GuiEventListener & Renderable & NarratableEntry> W addScreenWidget(W widget) {
+        return this.addRenderableWidget(widget);
+    }
+
+    @Override
+    public boolean charTyped(CharacterEvent characterEvent) {
+        if (this.selectedTab != null && this.selectedTab.charTyped(characterEvent)) {
+            return true;
+        }
+
+        return super.charTyped(characterEvent);
     }
 
     private boolean checkTabClicked(double mouseLocalX, double mouseLocalY, AbstractScreenTab<T> tab) {
@@ -149,6 +165,20 @@ public abstract class AbstractTabbedExperienceScreen<M extends AbstractExperienc
     }
 
     @Override
+    public boolean keyPressed(KeyEvent keyEvent) {
+        if (keyEvent.isEscape()) {
+            this.minecraft.player.closeContainer();
+            return true;
+        }
+
+        if (this.selectedTab != null && this.selectedTab.keyPressed(keyEvent)) {
+            return true;
+        }
+
+        return super.keyPressed(keyEvent);
+    }
+
+    @Override
     public boolean mouseClicked(MouseButtonEvent mouseButtonEvent, boolean doubleClick) {
         double mouseLocalX = mouseButtonEvent.x() - this.leftPos;
         double mouseLocalY = mouseButtonEvent.y() - this.topPos;
@@ -211,9 +241,9 @@ public abstract class AbstractTabbedExperienceScreen<M extends AbstractExperienc
         return super.mouseScrolled(x, y, scrollX, scrollY);
     }
 
-    public void removeButton(GuiEventListener button) {
-        if (button != null) {
-            this.removeWidget(button);
+    public void removeScreenWidget(GuiEventListener widget) {
+        if (widget != null) {
+            this.removeWidget(widget);
         }
     }
 
@@ -252,6 +282,8 @@ public abstract class AbstractTabbedExperienceScreen<M extends AbstractExperienc
                     this.getBackgroundTextureWidth(),
                     this.getBackgroundTextureHeight()
             );
+
+            this.selectedTab.renderAdditionalBackground(guiGraphics, mouseX, mouseY, this, this.menu);
 
             // Render tab in forefront.
             this.renderTabButton(guiGraphics, mouseX, mouseY, this.selectedTab, true);
@@ -303,5 +335,10 @@ public abstract class AbstractTabbedExperienceScreen<M extends AbstractExperienc
                     tab.getTabEnum().ordinal()
             );
         }
+    }
+
+    // Records a reference to an EditBox that's in use by a screen tab so that JEI can find it (through reflection) and avoid stealing keyboard input.
+    public void setActiveTextInput(@Nullable EditBox activeTextInput) {
+        this.activeTextInput = activeTextInput;
     }
 }

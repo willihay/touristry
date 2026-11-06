@@ -20,5 +20,19 @@ public class ExperienceServerPackets {
                 menu.handleScreenAction(context.player(), payload);
             });
         });
+
+        ServerPlayNetworking.registerGlobalReceiver(ExperienceTargetRenameC2SPayload.TYPE, (payload, context) -> {
+            context.server().execute(() -> {
+                if (!(context.player().containerMenu instanceof AbstractExperienceMenu<?> menu)) {
+                    return;
+                }
+
+                if (menu.getContainerId() != payload.containerId()) {
+                    return;
+                }
+
+                menu.handleTargetRename(context.player(), payload);
+            });
+        });
     }
 }

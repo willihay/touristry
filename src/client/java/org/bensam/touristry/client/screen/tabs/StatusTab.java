@@ -70,7 +70,7 @@ public class StatusTab<T extends Enum<T>> extends AbstractScreenTab<T> {
     @Override
     public void onSelected(AbstractTabbedExperienceScreen<?, ?> screen, AbstractExperienceMenu<?> menu) {
         if (this.statusToggleButton == null) {
-            this.statusToggleButton = screen.addButton(new OnOffSliderButton(
+            this.statusToggleButton = screen.addScreenWidget(new OnOffSliderButton(
                     this.openForBusiness, // open == on, closed == off
                     screen.getScreenLeft() + ON_OFF_SLIDER_X,
                     screen.getScreenTop() + ON_OFF_SLIDER_Y,
@@ -93,7 +93,7 @@ public class StatusTab<T extends Enum<T>> extends AbstractScreenTab<T> {
     @Override
     public void onDeselected(AbstractTabbedExperienceScreen<?, ?> screen) {
         if (this.statusToggleButton != null) {
-            screen.removeButton(this.statusToggleButton);
+            screen.removeScreenWidget(this.statusToggleButton);
             this.statusToggleButton = null;
         }
     }
@@ -103,7 +103,7 @@ public class StatusTab<T extends Enum<T>> extends AbstractScreenTab<T> {
         int generation = menu.getSyncGeneration();
         boolean openStatus = menu.isOpenForBusiness();
 
-        if (!hasReceivedSync && generation > 0) {
+        if (!this.hasReceivedSync && generation > 0) {
             // Set the initial value of openForBusiness, update the button state, and make the toggle button visible.
             this.hasReceivedSync = true;
             if (this.statusToggleButton != null) {

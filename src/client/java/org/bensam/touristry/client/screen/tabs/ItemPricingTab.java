@@ -133,7 +133,7 @@ public class ItemPricingTab<T extends Enum<T>> extends AbstractScreenTab<T> {
 
     // Screen setup handlers
     @Override
-    public void init(AbstractExperienceMenu<?> menu) {
+    public void init(AbstractTabbedExperienceScreen<?, ?> screen, AbstractExperienceMenu<?> menu) {
         // Request sync-to-client of all item prices.
         ClientPlayNetworking.send(new ExperienceScreenActionC2SPayload(
                 menu.getContainerId(),
@@ -159,7 +159,7 @@ public class ItemPricingTab<T extends Enum<T>> extends AbstractScreenTab<T> {
         int buttonY = screen.getScreenTop() + SCROLLBOX_TOP_Y;
 
         for (int m = 0; m < SCROLLBOX_ROWS; m++) {
-            this.scrollBox.setPricingButton(m, screen.addButton(new ExperienceScrollBoxButton(m, buttonX, buttonY, button -> {
+            this.scrollBox.setPricingButton(m, screen.addScreenWidget(new ExperienceScrollBoxButton(m, buttonX, buttonY, button -> {
                 if (button instanceof ExperienceScrollBoxButton selectedButton) {
                     this.scrollBox.selectScrollBoxRow(selectedButton.getIndex(), pricingMenu.getSyncedItemPrices().size(), menu.getContainerId());
                 }
@@ -173,7 +173,7 @@ public class ItemPricingTab<T extends Enum<T>> extends AbstractScreenTab<T> {
         // Add pricing import button.
         buttonX = screen.getScreenLeft() + PRICING_IMPORT_BUTTON_X;
         buttonY = screen.getScreenTop() + PRICING_IMPORT_BUTTON_Y;
-        this.itemImportButton = screen.addButton(new NoFocusImageButton(
+        this.itemImportButton = screen.addScreenWidget(new NoFocusImageButton(
                 buttonX, buttonY,
                 32, 16,
                 new WidgetSprites(IMPORT_FROM_CONTAINER_SPRITE, IMPORT_FROM_CONTAINER_HIGHLIGHTED_SPRITE),
@@ -193,7 +193,7 @@ public class ItemPricingTab<T extends Enum<T>> extends AbstractScreenTab<T> {
         // Add reset button for default price.
         buttonX = screen.getScreenLeft() + PRICING_RESET_DEFAULT_BUTTON_X;
         buttonY = screen.getScreenTop() + PRICING_RESET_DEFAULT_BUTTON_Y;
-        this.itemPriceResetDefaultButton = screen.addButton(new NoFocusImageButton(
+        this.itemPriceResetDefaultButton = screen.addScreenWidget(new NoFocusImageButton(
                 buttonX, buttonY,
                 8, 8,
                 new WidgetSprites(RESET_DEFAULT_SPRITE, RESET_DEFAULT_HIGHLIGHTED_SPRITE),
@@ -211,7 +211,7 @@ public class ItemPricingTab<T extends Enum<T>> extends AbstractScreenTab<T> {
         // Add button to remove all item prices that have default values.
         buttonX = screen.getScreenLeft() + PRICING_REMOVE_DEFAULTS_BUTTON_X;
         buttonY = screen.getScreenTop() + PRICING_REMOVE_DEFAULTS_BUTTON_Y;
-        this.itemPriceRemoveDefaultsButton = screen.addButton(new NoFocusImageButton(
+        this.itemPriceRemoveDefaultsButton = screen.addScreenWidget(new NoFocusImageButton(
                 buttonX, buttonY,
                 32, 16,
                 new WidgetSprites(REMOVE_ALL_SPRITE, REMOVE_ALL_HIGHLIGHTED_SPRITE),
@@ -235,7 +235,7 @@ public class ItemPricingTab<T extends Enum<T>> extends AbstractScreenTab<T> {
         // Add button to remove all item prices.
         buttonX = screen.getScreenLeft() + PRICING_REMOVE_ALL_BUTTON_X;
         buttonY = screen.getScreenTop() + PRICING_REMOVE_ALL_BUTTON_Y;
-        this.itemPriceRemoveAllButton = screen.addButton(new NoFocusImageButton(
+        this.itemPriceRemoveAllButton = screen.addScreenWidget(new NoFocusImageButton(
                 buttonX, buttonY,
                 32, 16,
                 new WidgetSprites(REMOVE_ALL_SPRITE, REMOVE_ALL_HIGHLIGHTED_SPRITE),
@@ -262,7 +262,7 @@ public class ItemPricingTab<T extends Enum<T>> extends AbstractScreenTab<T> {
         buttonY = screen.getScreenTop() + PRICING_CHANGE_FOR_SALE_QTY_BUTTON_Y;
         int u = 16;
         int v = 0;
-        this.itemPriceForSaleQtyUpButton = screen.addButton(new NoFocusImageButton(
+        this.itemPriceForSaleQtyUpButton = screen.addScreenWidget(new NoFocusImageButton(
                 buttonX, buttonY,
                 8, 8,
                 u, v,
@@ -285,7 +285,7 @@ public class ItemPricingTab<T extends Enum<T>> extends AbstractScreenTab<T> {
         // Add button to decrement the quantity of the item for sale in the item pricing slot.
         buttonY += 9;
         v = 16;
-        this.itemPriceForSaleQtyDownButton = screen.addButton(new NoFocusImageButton(
+        this.itemPriceForSaleQtyDownButton = screen.addScreenWidget(new NoFocusImageButton(
                 buttonX, buttonY,
                 8, 8,
                 u, v,
@@ -309,7 +309,7 @@ public class ItemPricingTab<T extends Enum<T>> extends AbstractScreenTab<T> {
         buttonX = screen.getScreenLeft() + PRICING_CHANGE_COST_QTY_BUTTON_X;
         buttonY = screen.getScreenTop() + PRICING_CHANGE_COST_QTY_BUTTON_Y;
         v = 0;
-        this.itemPriceCostQtyUpButton = screen.addButton(new NoFocusImageButton(
+        this.itemPriceCostQtyUpButton = screen.addScreenWidget(new NoFocusImageButton(
                 buttonX, buttonY,
                 8, 8,
                 u, v,
@@ -328,7 +328,7 @@ public class ItemPricingTab<T extends Enum<T>> extends AbstractScreenTab<T> {
         // Add button to decrement the cost of the item for sale in the item pricing slot.
         buttonY += 9;
         v = 16;
-        this.itemPriceCostQtyDownButton = screen.addButton(new NoFocusImageButton(
+        this.itemPriceCostQtyDownButton = screen.addScreenWidget(new NoFocusImageButton(
                 buttonX, buttonY,
                 8, 8,
                 u, v,
@@ -351,7 +351,7 @@ public class ItemPricingTab<T extends Enum<T>> extends AbstractScreenTab<T> {
         // Add button to accept the new cost and quantities of the item for sale in the item pricing slot.
         buttonX = screen.getScreenLeft() + PRICING_ACCEPT_BUTTON_X;
         buttonY = screen.getScreenTop() + PRICING_ACCEPT_BUTTON_Y;
-        this.itemPriceAcceptButton = screen.addButton(new NoFocusImageButton(
+        this.itemPriceAcceptButton = screen.addScreenWidget(new NoFocusImageButton(
                 buttonX, buttonY,
                 9, 9,
                 new WidgetSprites(ACCEPT_SPRITE, ACCEPT_HIGHLIGHTED_SPRITE),
@@ -369,7 +369,7 @@ public class ItemPricingTab<T extends Enum<T>> extends AbstractScreenTab<T> {
         // Add button to cancel any changes to the cost or quantities of the item for sale in the item pricing slot.
         buttonX = screen.getScreenLeft() + PRICING_CANCEL_BUTTON_X;
         buttonY = screen.getScreenTop() + PRICING_CANCEL_BUTTON_Y;
-        this.itemPriceCancelButton = screen.addButton(new NoFocusImageButton(
+        this.itemPriceCancelButton = screen.addScreenWidget(new NoFocusImageButton(
                 buttonX, buttonY,
                 9, 9,
                 new WidgetSprites(CANCEL_SPRITE, CANCEL_HIGHLIGHTED_SPRITE),
@@ -388,7 +388,7 @@ public class ItemPricingTab<T extends Enum<T>> extends AbstractScreenTab<T> {
         // Add button to remove the item pricing for the item in the item pricing slot.
         buttonX = screen.getScreenLeft() + PRICING_REMOVE_BUTTON_X;
         buttonY = screen.getScreenTop() + PRICING_REMOVE_BUTTON_Y;
-        this.itemPriceRemoveButton = screen.addButton(new NoFocusImageButton(
+        this.itemPriceRemoveButton = screen.addScreenWidget(new NoFocusImageButton(
                 buttonX, buttonY,
                 8, 8,
                 new WidgetSprites(TRASH_SPRITE, TRASH_HIGHLIGHTED_SPRITE),
@@ -419,21 +419,21 @@ public class ItemPricingTab<T extends Enum<T>> extends AbstractScreenTab<T> {
         }
 
         for (var button : this.scrollBox.getPricingButtons()) {
-            screen.removeButton(button);
+            screen.removeScreenWidget(button);
         }
         Arrays.fill(this.scrollBox.getPricingButtons(), null);
 
-        screen.removeButton(this.itemImportButton);
-        screen.removeButton(this.itemPriceResetDefaultButton);
-        screen.removeButton(this.itemPriceRemoveDefaultsButton);
-        screen.removeButton(this.itemPriceRemoveAllButton);
-        screen.removeButton(this.itemPriceForSaleQtyUpButton);
-        screen.removeButton(this.itemPriceForSaleQtyDownButton);
-        screen.removeButton(this.itemPriceCostQtyUpButton);
-        screen.removeButton(this.itemPriceCostQtyDownButton);
-        screen.removeButton(this.itemPriceAcceptButton);
-        screen.removeButton(this.itemPriceCancelButton);
-        screen.removeButton(this.itemPriceRemoveButton);
+        screen.removeScreenWidget(this.itemImportButton);
+        screen.removeScreenWidget(this.itemPriceResetDefaultButton);
+        screen.removeScreenWidget(this.itemPriceRemoveDefaultsButton);
+        screen.removeScreenWidget(this.itemPriceRemoveAllButton);
+        screen.removeScreenWidget(this.itemPriceForSaleQtyUpButton);
+        screen.removeScreenWidget(this.itemPriceForSaleQtyDownButton);
+        screen.removeScreenWidget(this.itemPriceCostQtyUpButton);
+        screen.removeScreenWidget(this.itemPriceCostQtyDownButton);
+        screen.removeScreenWidget(this.itemPriceAcceptButton);
+        screen.removeScreenWidget(this.itemPriceCancelButton);
+        screen.removeScreenWidget(this.itemPriceRemoveButton);
     }
 
     @Override

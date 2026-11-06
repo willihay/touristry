@@ -169,10 +169,11 @@ public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
 
         // Tourists finish their dining experience at the block entity to pay for their food.
         return List.of(new ExperienceTarget(
-                    this.getBlockPos(),
-                    this.getApproachFromDirection(),
-                    null,
-                    serverLevel.getDayTime()
+                this.getBlockPos(),
+                this.getApproachFromDirection(),
+                null,
+                serverLevel.getDayTime(),
+                ""
         ));
     }
 

@@ -1,6 +1,8 @@
 package org.bensam.touristry.client.screen.tabs;
 
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.input.CharacterEvent;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -25,7 +27,7 @@ public abstract class AbstractScreenTab<T extends Enum<T>> {
     }
 
     // Screen setup handlers
-    public void init(AbstractExperienceMenu<?> menu) {}
+    public void init(AbstractTabbedExperienceScreen<?, ?> screen, AbstractExperienceMenu<?> menu) {}
     public abstract void onSelected(AbstractTabbedExperienceScreen<?, ?> screen, AbstractExperienceMenu<?> menu);
     public abstract void onDeselected(AbstractTabbedExperienceScreen<?, ?> screen);
     public void tick(AbstractExperienceMenu<?> menu) {}
@@ -48,6 +50,8 @@ public abstract class AbstractScreenTab<T extends Enum<T>> {
     }
 
     // Input methods
+    public boolean charTyped(CharacterEvent characterEvent) { return false; }
+    public boolean keyPressed(KeyEvent keyEvent) { return false; }
     public boolean onMouseClicked(MouseButtonEvent mouseButtonEvent, boolean doubleClick, double mouseLocalX, double mouseLocalY, AbstractExperienceMenu<?> menu) { return false; }
     public boolean onMouseReleased(MouseButtonEvent mouseButtonEvent, double mouseLocalX, double mouseLocalY, AbstractExperienceMenu<?> menu) { return false; }
     public boolean onMouseDragged(MouseButtonEvent mouseButtonEvent, double dx, double dy, double mouseLocalX, double mouseLocalY, AbstractExperienceMenu<?> menu) { return false; }
@@ -62,6 +66,7 @@ public abstract class AbstractScreenTab<T extends Enum<T>> {
         return this.tabIcon.copy();
     }
 
+    public void renderAdditionalBackground(GuiGraphics guiGraphics, int mouseX, int mouseY, AbstractTabbedExperienceScreen<?, ?> screen, AbstractExperienceMenu<?> menu) {}
     public abstract void renderContents(GuiGraphics guiGraphics, int mouseX, int mouseY, AbstractTabbedExperienceScreen<?, ?> screen, AbstractExperienceMenu<?> menu);
     public abstract void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY, AbstractTabbedExperienceScreen<?, ?> screen, AbstractExperienceMenu<?> menu);
 }

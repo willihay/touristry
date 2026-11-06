@@ -124,7 +124,8 @@ public class LodgingExperienceBlockEntity extends AbstractExperienceBlockEntity 
                 this.getBlockPos(),
                 this.getApproachFromDirection(),
                 null,
-                serverLevel.getDayTime()
+                serverLevel.getDayTime(),
+                ""
         ));
     }
 

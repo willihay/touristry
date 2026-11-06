@@ -10,6 +10,7 @@ import net.minecraft.world.inventory.*;
 import net.minecraft.world.item.ItemStack;
 import org.bensam.touristry.block.entity.AbstractExperienceBlockEntity;
 import org.bensam.touristry.network.ExperienceScreenActionC2SPayload;
+import org.bensam.touristry.network.ExperienceTargetRenameC2SPayload;
 import org.bensam.touristry.network.SyncTargetViewS2CPayload;
 import org.bensam.touristry.tourism.ExperienceTargetOverlaySyncManager;
 import org.bensam.touristry.tourism.experience.TargetView;
@@ -33,6 +34,7 @@ public abstract class AbstractExperienceMenu<T extends Enum<T>> extends Abstract
     // Client-side snapshot fields:
     private boolean syncedOrderedTargets = true;
     private List<TargetView> syncedTargets = List.of();
+    private Runnable targetsSyncedListener = () -> {};
 
     // Server-side constructor:
     protected AbstractExperienceMenu(
@@ -301,6 +303,11 @@ public abstract class AbstractExperienceMenu<T extends Enum<T>> extends Abstract
                     }
                 }
 
+                case REMOVE_CUSTOM_TARGET_NAME -> {
+                    experienceBlockEntity.removeTargetCustomName(payload.primary());
+                    this.syncTargets(serverPlayer, serverLevel, experienceBlockEntity);
+                }
+
                 case REMOVE_TARGET -> {
                     experienceBlockEntity.removeTarget(payload.primary());
                     ExperienceTargetOverlaySyncManager.refreshPlayersHolding(serverLevel, experienceBlockEntity.getUUID());
@@ -317,6 +324,22 @@ public abstract class AbstractExperienceMenu<T extends Enum<T>> extends Abstract
                     experienceBlockEntity.setOrderedTargets(payload.primary() != 0);
                     this.syncTargets(serverPlayer, serverLevel, experienceBlockEntity);
                 }
+            }
+        });
+    }
+
+    public void handleTargetRename(ServerPlayer serverPlayer, ExperienceTargetRenameC2SPayload payload) {
+        this.containerLevelAccess.execute((level, blockPos) -> {
+            if (!(level instanceof ServerLevel serverLevel)) {
+                return;
+            }
+
+            if (!(this.getExperienceContainer() instanceof AbstractExperienceBlockEntity experienceBlockEntity)) {
+                return;
+            }
+
+            if (experienceBlockEntity.setTargetCustomName(payload.targetIndex(), payload.customName())) {
+                this.syncTargets(serverPlayer, serverLevel, experienceBlockEntity);
             }
         });
     }
@@ -413,6 +436,11 @@ public abstract class AbstractExperienceMenu<T extends Enum<T>> extends Abstract
     public void setSyncedTargets(boolean orderedTargets, List<TargetView> targets) {
         this.syncedOrderedTargets = orderedTargets;
         this.syncedTargets = List.copyOf(targets);
+        this.targetsSyncedListener.run();
+    }
+
+    public void setTargetsSyncedListener(Runnable listener) {
+        this.targetsSyncedListener = listener;
     }
 
     // server-side sync initiator

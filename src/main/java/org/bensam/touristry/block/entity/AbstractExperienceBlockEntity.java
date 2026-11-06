@@ -113,7 +113,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         }
 
         long timeAdded = serverLevel.getDayTime();
-        ExperienceTarget target = new ExperienceTarget(blockPos, playerFacing.getOpposite(), null, timeAdded);
+        ExperienceTarget target = new ExperienceTarget(blockPos, playerFacing.getOpposite(), null, timeAdded, "");
         return this.addTarget(serverLevel, target);
     }
 
@@ -124,7 +124,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         }
 
         long timeAdded = serverLevel.getDayTime();
-        ExperienceTarget target = new ExperienceTarget(entityPos, playerFacing.getOpposite(), entityUUID, timeAdded);
+        ExperienceTarget target = new ExperienceTarget(entityPos, playerFacing.getOpposite(), entityUUID, timeAdded, "");
         return this.addTarget(serverLevel, target);
     }
 
@@ -456,7 +456,8 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
                         canonicalBlockPos,
                         target.approachFrom(),
                         target.entityUUID(),
-                        target.registeredAtTicks()
+                        target.registeredAtTicks(),
+                        target.customName()
                 );
                 changed = true;
             }
@@ -604,6 +605,17 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         return removed;
     }
 
+    public void removeTargetCustomName(int targetIndex) {
+        if (targetIndex < 0 || targetIndex >= this.targets.size()) {
+            return; // invalid target index
+        }
+
+        ExperienceTarget target = this.targets.get(targetIndex);
+        if (!target.customName().isEmpty()) {
+            this.setTargetCustomName(targetIndex, "");
+        }
+    }
+
     public void resetAllStats() {
         this.statistics.resetAll();
         this.setChanged();
@@ -642,6 +654,27 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
     public void setRemoved() {
         TourismManager.unregisterTouristExperience(this);
         super.setRemoved();
+    }
+
+    public boolean setTargetCustomName(int targetIndex, String name) {
+        if (targetIndex < 0 || targetIndex >= this.targets.size()) {
+            return false; // invalid target index
+        }
+
+        ExperienceTarget target = this.targets.get(targetIndex);
+        if (target.customName().equals(name)) {
+            return false; // no change
+        }
+
+        this.targets.set(targetIndex, new ExperienceTarget(
+                target.pos(),
+                target.approachFrom(),
+                target.entityUUID(),
+                target.registeredAtTicks(),
+                name
+        ));
+        this.setChanged();
+        return true;
     }
 
     private void syncTourismRegistration() {
