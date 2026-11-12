@@ -164,7 +164,9 @@ public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
     }
 
     @Override
-    public List<ExperienceTarget> getTargetsForVisit(ServerLevel serverLevel) {
+    public List<ExperienceTarget> getTargetsForVisit(TouristEntity tourist, ServerLevel serverLevel) {
+        this.pruneInvalidTargets(serverLevel);
+
         // If the dining experience has seating available, most tourists will elect to sit.
 
         // Tourists finish their dining experience at the block entity to pay for their food.
@@ -173,7 +175,8 @@ public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
                 this.getApproachFromDirection(),
                 null,
                 serverLevel.getDayTime(),
-                ""
+                "",
+                null
         ));
     }
 

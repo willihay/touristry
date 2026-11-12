@@ -16,6 +16,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import org.bensam.touristry.block.entity.AbstractExperienceBlockEntity;
+import org.bensam.touristry.block.entity.LodgingExperienceBlockEntity;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
 import org.bensam.touristry.config.ModServerConfigManager;
 import org.bensam.touristry.config.Verbosity;
@@ -36,6 +37,7 @@ public final class TouristMind {
     private static final float BUDGET_MAX_EMERALDS = 1000.0F;
     private static final double BUDGET_MEAN_EMERALDS = 8.0F;
     private static final double BUDGET_STD_DEV_EMERALDS = 2.0D;
+    private static final float CHANCE_TO_STAY_OVERNIGHT = 0.75F;
     private static final int CHECK_MOOD_INTERVAL_TICKS = 250;
     private static final double MIN_MOOD = -3.0;
     private static final double MAX_MOOD = 4.0;
@@ -55,11 +57,12 @@ public final class TouristMind {
     private double closestDistanceToDestination;
     private int consecutiveFailedProgressChecks;
     private float dailyBudgetEmeralds; // does not include budget for overnight accommodations, which is handled separately
-    private int eveningDespawnTimeTicks;
+    private int dayNumberOfVisit;
+    private int eveningActivityStartTimeTicks;
     private int goodExperiencesToday;
     private List<TouristItemInterest> interests = new ArrayList<>();
     private boolean isHungry;
-    private boolean isStayingOvernight;
+    private boolean wantsToStayOvernight;
     private long lastMapToggleTicks; // (not persisted)
     private double mood;
     private int nextMoodCheckTicks; // (not persisted)
@@ -75,6 +78,7 @@ public final class TouristMind {
     // Experience-related
     private BlockPos experienceBlockPos; // position of the current experience block
     private List<UUID> availableExperienceUUIDs = new ArrayList<>(); // experiences at current beacon (cached on arrival)
+    private UUID overnightExperienceUUID;
     private Set<UUID> visitedExperienceUUIDs = new HashSet<>(); // set of experiences already visited at current beacon
     private int ticksAtCurrentExperience;
     private boolean hasPreparedToLeaveEarly; // (not persisted)
@@ -95,23 +99,29 @@ public final class TouristMind {
         this.beaconPos = null;
         this.closestDistanceToDestination = Double.MAX_VALUE;
         this.dailyBudgetEmeralds = this.generateDailyBudget();
-        this.eveningDespawnTimeTicks = this.generateRandomDespawnTime();
+        this.dayNumberOfVisit = 1;
         this.experienceBlockPos = null;
         this.mood = this.generateRandomStartingMood();
         this.nextMoodCheckTicks = this.random().nextInt(CHECK_MOOD_INTERVAL_TICKS);
         this.remainingBudgetEmeralds = this.dailyBudgetEmeralds;
         this.state = TouristState.IDLE;
         this.targetPos = null;
-        this.generateInterests();
+        this.decideOvernightInterest();
+        this.generatePersonalInterests();
     }
 
     //region Initialization Methods
+    private void decideOvernightInterest() {
+        this.eveningActivityStartTimeTicks = 12000 + this.random().nextInt(1000);
+        this.wantsToStayOvernight = this.random().nextFloat() < (CHANCE_TO_STAY_OVERNIGHT - (0.1F * (this.dayNumberOfVisit - 1)));
+    }
+
     private float generateDailyBudget() {
         double budget = BUDGET_MEAN_EMERALDS + (this.random().nextGaussian() * BUDGET_STD_DEV_EMERALDS);
         return Math.clamp(Math.round(budget), BUDGET_MIN_EMERALDS, BUDGET_MAX_EMERALDS);
     }
 
-    private void generateInterests() {
+    private void generatePersonalInterests() {
         for (TouristItemInterest interest : TouristItemInterest.values()) {
             if (this.random().nextFloat() < interest.probabilityOfInterest()) {
                 this.interests.add(interest);
@@ -126,10 +136,6 @@ public final class TouristMind {
         if (this.interests.isEmpty()) {
             this.interests.add(TouristItemInterest.GENERAL);
         }
-    }
-
-    private int generateRandomDespawnTime() {
-        return 12000 + this.random().nextInt(1000);
     }
 
     private double generateRandomStartingMood() {
@@ -234,6 +240,10 @@ public final class TouristMind {
             valueOutput.store("AvailableExperiences", UUIDUtil.CODEC.listOf(), this.availableExperienceUUIDs);
         }
 
+        if (this.overnightExperienceUUID != null) {
+            valueOutput.store("OvernightExperience", UUIDUtil.CODEC, this.overnightExperienceUUID);
+        }
+
         // Serialize visited experience set of UUIDs as a list.
         if (!this.visitedExperienceUUIDs.isEmpty()) {
             valueOutput.store("VisitedExperiences", UUIDUtil.CODEC.listOf(), List.copyOf(this.visitedExperienceUUIDs));
@@ -265,15 +275,16 @@ public final class TouristMind {
         valueOutput.putBoolean("ReportedHurtOnPremises", this.reportedHurtOnPremises);
         valueOutput.putDouble("Mood", this.mood);
         valueOutput.putInt("GoodExperiencesToday", this.goodExperiencesToday);
-        valueOutput.putInt("DespawnTimeTicks", this.eveningDespawnTimeTicks);
+        valueOutput.putInt("EveningActivityStartTime", this.eveningActivityStartTimeTicks);
         valueOutput.putBoolean("IsHungry", this.isHungry);
-        valueOutput.putBoolean("IsStayingOvernight", this.isStayingOvernight);
+        valueOutput.putBoolean("WantsToStayOvernight", this.wantsToStayOvernight);
         valueOutput.putInt("CurrentTargetIndex", this.currentTargetIndex);
         valueOutput.putInt("TicksAtCurrentExperience", this.ticksAtCurrentExperience);
         valueOutput.putInt("TicksAtCurrentTarget", this.ticksAtCurrentTarget);
         valueOutput.putInt("WaitTicks", this.waitTicks);
         valueOutput.putFloat("DailyBudget", this.dailyBudgetEmeralds);
         valueOutput.putFloat("RemainingBudget", this.remainingBudgetEmeralds);
+        valueOutput.putInt("DayNumberOfVisit", this.dayNumberOfVisit);
     }
 
     public void readAdditionalSaveData(ValueInput valueInput) {
@@ -284,6 +295,8 @@ public final class TouristMind {
         this.availableExperienceUUIDs = new ArrayList<>(
                 valueInput.read("AvailableExperiences", UUIDUtil.CODEC.listOf()).orElse(List.of())
         );
+
+        this.overnightExperienceUUID = valueInput.read("OvernightExperience", UUIDUtil.CODEC).orElse(null);
 
         this.visitedExperienceUUIDs = new HashSet<>(
                 valueInput.read("VisitedExperiences", UUIDUtil.CODEC.listOf()).orElse(List.of())
@@ -310,15 +323,16 @@ public final class TouristMind {
         this.mood = valueInput.getDoubleOr("Mood", this.mood);
         this.tourist.setUnhappyCounter(this.mood < 0 ? 1 : 0);
         this.goodExperiencesToday = valueInput.getIntOr("GoodExperiencesToday", 0);
-        this.eveningDespawnTimeTicks = valueInput.getIntOr("DespawnTimeTicks", this.eveningDespawnTimeTicks);
+        this.eveningActivityStartTimeTicks = valueInput.getIntOr("EveningActivityStartTime", this.eveningActivityStartTimeTicks);
         this.isHungry = valueInput.getBooleanOr("IsHungry", false);
-        this.isStayingOvernight = valueInput.getBooleanOr("IsStayingOvernight", false);
+        this.wantsToStayOvernight = valueInput.getBooleanOr("WantsToStayOvernight", false);
         this.currentTargetIndex = valueInput.getIntOr("CurrentTargetIndex", 0);
         this.ticksAtCurrentExperience = valueInput.getIntOr("TicksAtCurrentExperience", 0);
         this.ticksAtCurrentTarget = valueInput.getIntOr("TicksAtCurrentTarget", 0);
         this.waitTicks = valueInput.getIntOr("WaitTicks", 0);
         this.dailyBudgetEmeralds = valueInput.getFloatOr("DailyBudgetEmeralds", this.dailyBudgetEmeralds);
         this.remainingBudgetEmeralds = valueInput.getFloatOr("RemainingBudgetEmeralds", this.remainingBudgetEmeralds);
+        this.dayNumberOfVisit = valueInput.getIntOr("DayNumberOfVisit", this.dayNumberOfVisit);
 
         // Reconstruct currentExperienceTarget from experienceTargetTracker.
         if (!this.experienceTargetTracker.isEmpty()) {
@@ -344,14 +358,17 @@ public final class TouristMind {
             this.tickIdle(serverLevel);
         }
 
-        // Time-based despawn check
-        if (this.isTimeToDespawn()) {
-            if (this.state.isAtExperience() && this.state != TouristState.WANDERING_AT_EXPERIENCE) {
+        // Evening activity transition check
+        if (this.isTimeForEveningActivity()) {
+            if (this.state.isAtExperience()
+                    && this.state != TouristState.WANDERING_AT_EXPERIENCE
+                    && !this.isAtOvernightLodging()
+            ) {
                 if (!this.hasPreparedToLeaveEarly) {
                     this.updateExperienceVisitResult(VisitResult.GOOD);
                     this.prepareToLeaveExperienceEarly();
                 }
-            } else {
+            } else if (!this.wantsToStayOvernight || this.isMidnightOrLater()) {
                 this.transitionTo(TouristState.DESPAWNING);
                 return;
             }
@@ -408,7 +425,7 @@ public final class TouristMind {
             case EXPERIENCING_TARGET -> this.tickExperiencingTarget(serverLevel);
 
             case WANDERING_AT_BEACON, WANDERING_WORLD -> {
-                if (this.waitTicks <= 0) {
+                if (this.waitTicks <= 0 || this.isTimeForEveningActivity()) {
                     this.transitionTo(TouristState.PLANNING_NEXT_MOVE);
                 } else {
                     this.waitTicks--;
@@ -665,7 +682,7 @@ public final class TouristMind {
         ) {
             this.waitTicks = experienceBlockEntity.getPostArrivalWaitTicks(this.random());
         } else {
-            this.waitTicks = this.getRandomWaitTicks(MIN_WAIT_AT_BEACON_AFTER_ARRIVAL_TICKS, MAX_WAIT_AT_BEACON_AFTER_ARRIVAL_TICKS);
+            this.waitTicks = this.random().nextIntBetweenInclusive(MIN_WAIT_AT_BEACON_AFTER_ARRIVAL_TICKS, MAX_WAIT_AT_BEACON_AFTER_ARRIVAL_TICKS);
         }
     }
 
@@ -673,7 +690,7 @@ public final class TouristMind {
         this.tourist.clearHeldItem();
         this.lastMapToggleTicks = this.tourist.level().getDayTime();
         if (this.waitTicks <= 0) {
-            this.waitTicks = this.getRandomWaitTicks(MIN_ACTIVITY_INTERVAL_TICKS, MAX_ACTIVITY_INTERVAL_TICKS);
+            this.waitTicks = this.random().nextIntBetweenInclusive(MIN_ACTIVITY_INTERVAL_TICKS, MAX_ACTIVITY_INTERVAL_TICKS);
         }
     }
 
@@ -681,16 +698,22 @@ public final class TouristMind {
         this.beaconPos = null;
         this.clearBeaconSession();
         this.tourist.clearHeldItem();
-        this.waitTicks = this.getRandomWaitTicks(MIN_ACTIVITY_INTERVAL_TICKS, MAX_ACTIVITY_INTERVAL_TICKS);
+        this.waitTicks = this.random().nextIntBetweenInclusive(MIN_ACTIVITY_INTERVAL_TICKS, MAX_ACTIVITY_INTERVAL_TICKS);
     }
 
     private void chooseExperienceAtBeacon(ServerLevel serverLevel, TouristBeaconBlockEntity beaconBlockEntity) {
+        if (this.wantsToStayOvernight && this.isTimeForEveningActivity()) {
+            this.chooseOvernightLodging(serverLevel, beaconBlockEntity);
+            return;
+        }
+
         if (this.availableExperienceUUIDs.isEmpty()) {
             List<TouristExperience> experiences = TourismManager.getTouristExperiencesNearBeacon(serverLevel, beaconBlockEntity);
 
-            // Filter by open-for-business and not already visited.
+            // Filter by open-for-business and not a lodging experience.
             this.availableExperienceUUIDs = experiences.stream()
                     .filter(TouristExperience::isOpenForBusiness)
+                    .filter(experience -> !experience.isLodgingExperience())
                     .map(TouristExperience::getUUID)
                     .collect(Collectors.toList());
 
@@ -756,7 +779,28 @@ public final class TouristMind {
         this.transitionTo(TouristState.TRAVELING_TO_EXPERIENCE_TARGET);
     }
 
+    private void chooseOvernightLodging(ServerLevel serverLevel, TouristBeaconBlockEntity beaconBlockEntity) {
+        List<UUID> candidates = TourismManager.getTouristExperiencesNearBeacon(serverLevel, beaconBlockEntity).stream()
+                .filter(TouristExperience::isOpenForBusiness)
+                .filter(TouristExperience::hasAvailableBeds)
+                .map(TouristExperience::getUUID)
+                .collect(Collectors.toList());
+
+        candidates.removeAll(this.visitedExperienceUUIDs);
+
+        if (candidates.isEmpty()) {
+            this.transitionTo(TouristState.DESPAWNING);
+            return;
+        }
+
+        this.overnightExperienceUUID = candidates.get(this.random().nextInt(candidates.size()));
+        TouristExperience lodging = TourismManager.getTouristExperienceById(overnightExperienceUUID); // won't be null because of previous call to TourismManager.getTouristExperiencesNearBeacon
+        this.experienceBlockPos = lodging.getBlockPos().immutable();
+        this.transitionTo(TouristState.TRAVELING_TO_EXPERIENCE);
+    }
+
     private void deSpawn() {
+        this.cancelOvernightReservation();
         this.tourist.onDespawn();
         this.transitionTo(TouristState.FINISHED);
     }
@@ -831,10 +875,13 @@ public final class TouristMind {
         this.currentTargetIndex = 0;
 
         // Get experience targets.
-        List<ExperienceTarget> targets = experience.getTargetsForVisit(serverLevel);
+        List<ExperienceTarget> targets = experience.getTargetsForVisit(this.tourist, serverLevel);
 
         if (targets.isEmpty()) {
             // Experience has no targets. Just wander here briefly.
+            if (this.isTimeForEveningActivity()) {
+                this.waitTicks = this.random().nextIntBetweenInclusive(20, 100); // in the evening, override with shorter wander time for urgency
+            }
             this.transitionTo(TouristState.WANDERING_AT_EXPERIENCE);
             return;
         }
@@ -1014,11 +1061,11 @@ public final class TouristMind {
     }
 
     public void onStoppedSleeping(ServerLevel serverLevel) {
-        this.resetDailyStats();
+        this.startNewDay();
 
         int tickTimeOfDay = (int) (serverLevel.getDayTime() % 24000L);
         if (tickTimeOfDay <= 1000 && !this.reportedHurtOnPremises) {
-            Component experienceMessage = Component.literal("woke up in a good mood at"); // resetDailyStats() determines how good of a mood
+            Component experienceMessage = Component.literal("woke up in a good mood at"); // startNewDay() determines how good of a mood
             this.recordExperience(serverLevel, new TouristReview(
                     this.state.reviewTarget(),
                     VisitResult.GOOD,
@@ -1175,6 +1222,16 @@ public final class TouristMind {
         return this.state == TouristState.WANDERING_AT_BEACON;
     }
 
+    private void cancelOvernightReservation() {
+        if (this.overnightExperienceUUID != null) {
+            TouristExperience experience = TourismManager.getTouristExperienceById(this.overnightExperienceUUID);
+            if (experience instanceof LodgingExperienceBlockEntity lodging) {
+                lodging.cancelReservation(this.tourist);
+                this.overnightExperienceUUID = null;
+            }
+        }
+    }
+
     private void clearBeaconSession() {
         this.resetBeaconJourneyStats();
         this.availableExperienceUUIDs.clear();
@@ -1301,10 +1358,6 @@ public final class TouristMind {
         return null;
     }
 
-    private int getRandomWaitTicks(int min, int max) {
-        return this.random().nextIntBetweenInclusive(min, max);
-    }
-
     public TouristState getState() {
         return this.state;
     }
@@ -1385,6 +1438,14 @@ public final class TouristMind {
         this.injectedExperienceGoals.add(goal);
     }
 
+    public boolean isAtOvernightLodging() {
+        if (!this.experienceTargetTracker.isEmpty()) {
+            ExperienceVisit currentVisit = this.experienceTargetTracker.peekFirst();
+            return currentVisit.experienceUUID().equals(this.overnightExperienceUUID);
+        }
+        return false;
+    }
+
     public boolean isHungry() {
         return this.isHungry;
     }
@@ -1420,16 +1481,18 @@ public final class TouristMind {
         return false;
     }
 
-    private boolean isTimeToCheckMood() {
-        long dayTime = this.tourist.level().getDayTime();
-        int tickTimeOfDay = (int) (dayTime % 24000L);
-        return !this.tourist.isSleeping() && tickTimeOfDay >= 6000;
+    private boolean isMidnightOrLater() {
+        return (this.tourist.level().getDayTime() % 24000L) >= 18000L;
     }
 
-    private boolean isTimeToDespawn() {
-        long dayTime = this.tourist.level().getDayTime();
-        int tickTimeOfDay = (int) (dayTime % 24000L);
-        return !this.isStayingOvernight && tickTimeOfDay >= this.eveningDespawnTimeTicks;
+    private boolean isTimeToCheckMood() {
+        int timeOfDayTicks = (int) (this.tourist.level().getDayTime() % 24000L);
+        return !this.tourist.isSleeping() && timeOfDayTicks >= 6000;
+    }
+
+    private boolean isTimeForEveningActivity() {
+        int timeOfDayTicks = (int) (this.tourist.level().getDayTime() % 24000L);
+        return timeOfDayTicks >= this.eveningActivityStartTimeTicks;
     }
 
     private RandomSource random() {
@@ -1491,13 +1554,15 @@ public final class TouristMind {
         this.consecutiveFailedProgressChecks = 0;
     }
 
-    private void resetDailyStats() {
-        this.eveningDespawnTimeTicks = 12000 + this.random().nextInt(1000);
+    private void startNewDay() {
+        this.dayNumberOfVisit++;
+        this.availableExperienceUUIDs.clear();
+        this.visitedExperienceUUIDs.clear();
         this.goodExperiencesToday = 0;
         this.hasPreparedToLeaveEarly = false;
         this.isHungry = true;
-        this.isStayingOvernight = false;
         this.lastMapToggleTicks = 0;
+        this.overnightExperienceUUID = null;
         this.mood = this.generateRandomStartingMood();
         this.nextMoodCheckTicks = this.random().nextInt(CHECK_MOOD_INTERVAL_TICKS);
         this.remainingBudgetEmeralds = this.dailyBudgetEmeralds;
@@ -1506,6 +1571,7 @@ public final class TouristMind {
         this.ticksAtCurrentTarget = 0;
         this.tourist.setUnhappyCounter(0);
         this.waveMemory.clear();
+        this.decideOvernightInterest();
     }
 
     public void setWavingAtEntity(Entity entity, boolean wave) {

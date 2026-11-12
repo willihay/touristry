@@ -53,9 +53,9 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
 
     // persisted fields
     protected UUID uuid;
-    private boolean openForBusiness;
-    private boolean orderedTargets;
-    private ItemStack entryFee = ItemStack.EMPTY;
+    protected boolean openForBusiness;
+    protected boolean orderedTargets;
+    protected ItemStack entryFee = ItemStack.EMPTY;
     protected List<ExperienceTarget> targets;
     protected TouristLocationStats statistics;
     protected NonNullList<ItemStack> inventory;
@@ -113,7 +113,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         }
 
         long timeAdded = serverLevel.getDayTime();
-        ExperienceTarget target = new ExperienceTarget(blockPos, playerFacing.getOpposite(), null, timeAdded, "");
+        ExperienceTarget target = new ExperienceTarget(blockPos, playerFacing.getOpposite(), null, timeAdded, "", null);
         return this.addTarget(serverLevel, target);
     }
 
@@ -124,7 +124,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         }
 
         long timeAdded = serverLevel.getDayTime();
-        ExperienceTarget target = new ExperienceTarget(entityPos, playerFacing.getOpposite(), entityUUID, timeAdded, "");
+        ExperienceTarget target = new ExperienceTarget(entityPos, playerFacing.getOpposite(), entityUUID, timeAdded, "", null);
         return this.addTarget(serverLevel, target);
     }
 
@@ -145,6 +145,21 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         // Register this block entity for tourism when block entity is attached back into a chunk/world.
         // This handles BOTH world load and item placement paths.
         this.syncTourismRegistration();
+    }
+
+    protected void clearTargetReservations(UUID reservation) {
+        boolean changed = false;
+        for (int i = 0; i < this.targets.size(); i++) {
+            ExperienceTarget target = this.targets.get(i);
+            if (reservation.equals(target.reservation())) {
+                this.targets.set(i, target.withoutReservation());
+                changed = true;
+            }
+        }
+
+        if (changed) {
+            this.setChanged();
+        }
     }
 
     public ItemStack createTargetKey() {
@@ -300,7 +315,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
     }
 
     @Override
-    public List<ExperienceTarget> getTargetsForVisit(ServerLevel serverLevel) {
+    public List<ExperienceTarget> getTargetsForVisit(TouristEntity tourist, ServerLevel serverLevel) {
         if (serverLevel != serverLevel.getServer().overworld()) {
             return Collections.emptyList();
         }
@@ -342,7 +357,9 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
                     target.entityUUID(),
                     targetItemStack,
                     isWideChest,
-                    target.getDisplayName(serverLevel).getString()));
+                    target.hasReservation(),
+                    target.getDisplayName(serverLevel).getString())
+            );
         }
         return targetView;
     }
@@ -377,7 +394,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
     }
 
     @Override
-    public boolean hasBeds() {
+    public boolean hasAvailableBeds() {
         return false;
     }
 
@@ -399,6 +416,11 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
 
     public void incrementSyncGeneration() {
         this.syncGeneration++;
+    }
+
+    @Override
+    public boolean isLodgingExperience() {
+        return false;
     }
 
     @Override
@@ -457,7 +479,8 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
                         target.approachFrom(),
                         target.entityUUID(),
                         target.registeredAtTicks(),
-                        target.customName()
+                        target.customName(),
+                        target.reservation()
                 );
                 changed = true;
             }
@@ -666,13 +689,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
             return false; // no change
         }
 
-        this.targets.set(targetIndex, new ExperienceTarget(
-                target.pos(),
-                target.approachFrom(),
-                target.entityUUID(),
-                target.registeredAtTicks(),
-                name
-        ));
+        this.targets.set(targetIndex, target.withCustomName(name));
         this.setChanged();
         return true;
     }
@@ -734,9 +751,9 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         super.loadAdditional(valueInput);
 
         valueInput.read("UUID", UUIDUtil.CODEC).ifPresent(UUID -> this.uuid = UUID);
-        this.setOpenForBusiness(valueInput.getBooleanOr("OpenForBusiness", false));
-        this.setOrderedTargets(valueInput.getBooleanOr("OrderedTargets", true));
-        this.entryFee = valueInput.read("EntryFee", ItemStack.CODEC).orElse(ItemStack.EMPTY);
+        this.setOpenForBusiness(valueInput.getBooleanOr("OpenForBusiness", this.openForBusiness));
+        this.setOrderedTargets(valueInput.getBooleanOr("OrderedTargets", this.orderedTargets));
+        this.entryFee = valueInput.read("EntryFee", ItemStack.CODEC).orElse(this.entryFee);
         this.targets = new ArrayList<>(valueInput.read("Targets", ExperienceTarget.CODEC.listOf()).orElse(List.of()));
         valueInput.read("Statistics", TouristLocationStats.CODEC).ifPresent(statistics -> this.statistics = statistics);
         this.inventory = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
@@ -771,15 +788,15 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         );
         this.setOpenForBusiness(dataComponentGetter.getOrDefault(
                 ModComponents.TOURIST_EXPERIENCE_STATUS,
-                false
+                this.openForBusiness
         ));
         this.setOrderedTargets(dataComponentGetter.getOrDefault(
                 ModComponents.TOURIST_EXPERIENCE_ORDERED_TARGETS,
-                true
+                this.orderedTargets
         ));
         this.entryFee = dataComponentGetter.getOrDefault(
                 ModComponents.TOURIST_EXPERIENCE_ENTRY_FEE,
-                ItemStack.EMPTY
+                this.entryFee
         );
         this.targets = new ArrayList<>(dataComponentGetter.getOrDefault(
                 ModComponents.TOURIST_EXPERIENCE_TARGETS,

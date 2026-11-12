@@ -21,7 +21,7 @@ public class LodgingExperienceScreen extends AbstractTabbedExperienceScreen<Lodg
     public LodgingExperienceScreen(LodgingExperienceMenu containerMenu, Inventory inventory, Component title) {
         super(containerMenu, inventory, title, List.of(
                 new StatusTab<>(BED_COST_SLOT_LABEL, LodgingExperienceMenu.Tab.STATUS, ModBlocks.LODGING_EXPERIENCE.get().asItem()),
-                new TargetsTab<>(BED_TARGETS_TAB_TITLE, LodgingExperienceMenu.Tab.TARGETS, ModItems.EXPERIENCE_TARGET_KEY.get(), true, TARGET_NAME_EDITBOX_LABEL, false)
+                new TargetsTab<>(BED_TARGETS_TAB_TITLE, LodgingExperienceMenu.Tab.TARGETS, ModItems.EXPERIENCE_TARGET_KEY.get(), true, TARGET_NAME_EDITBOX_LABEL, true)
         ));
         this.imageWidth = BG_SCREEN_WIDTH;
     }

@@ -17,6 +17,7 @@ public record TargetView(
         @Nullable UUID entityUUID,
         ItemStack itemStack,
         boolean isWideChest,
+        boolean hasReservation,
         String displayName
 ) {
     public static final StreamCodec<RegistryFriendlyByteBuf, TargetView> STREAM_CODEC = StreamCodec.composite(
@@ -25,8 +26,9 @@ public record TargetView(
             ByteBufCodecs.optional(UUIDUtil.STREAM_CODEC), target -> Optional.ofNullable(target.entityUUID()),
             ItemStack.STREAM_CODEC, TargetView::itemStack,
             ByteBufCodecs.BOOL, TargetView::isWideChest,
+            ByteBufCodecs.BOOL, TargetView::hasReservation,
             ByteBufCodecs.STRING_UTF8, TargetView::displayName,
-            (pos, alternatePos, entityUUID, itemStack, isWideChest, displayName) ->
-                    new TargetView(pos, alternatePos, entityUUID.orElse(null), itemStack, isWideChest, displayName)
+            (pos, alternatePos, entityUUID, itemStack, isWideChest, hasReservation, displayName) ->
+                    new TargetView(pos, alternatePos, entityUUID.orElse(null), itemStack, isWideChest, hasReservation, displayName)
     );
 }

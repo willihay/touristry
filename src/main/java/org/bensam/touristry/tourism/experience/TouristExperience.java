@@ -28,11 +28,12 @@ public interface TouristExperience extends Nameable {
     int getMaxApproachDistance();
     int getMaxRangeToTarget();
     TouristLocationStats getStatistics();
-    List<ExperienceTarget> getTargetsForVisit(ServerLevel serverLevel);
+    List<ExperienceTarget> getTargetsForVisit(TouristEntity tourist, ServerLevel serverLevel);
     List<TargetOverlayView> getTargetOverlayViews(ServerLevel serverLevel);
-    boolean hasBeds(); // return true if this experience has beds where the tourists can spend the night (does not guarantee availability of beds)
+    boolean hasAvailableBeds(); // return true if this experience has available beds where the tourists can spend the night
     boolean hasEntryFee();
     boolean hasTarget(ServerLevel serverLevel, BlockPos blockPos);
+    boolean isLodgingExperience();
     boolean isOpenForBusiness();
     void onTouristArrival(TouristEntity tourist, ServerLevel serverLevel);
     void onTouristDeparture(TouristEntity tourist, ServerLevel serverLevel, boolean completed);

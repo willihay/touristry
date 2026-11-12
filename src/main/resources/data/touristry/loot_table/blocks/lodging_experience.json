@@ -20,8 +20,7 @@
                 "touristry:tourist_experience_statistics",
                 "touristry:tourist_experience_status",
                 "touristry:tourist_experience_targets",
-                "touristry:tourist_experience_item_default_cost",
-                "touristry:tourist_experience_bed_info"
+                "touristry:tourist_experience_item_default_cost"
               ]
             },
             {

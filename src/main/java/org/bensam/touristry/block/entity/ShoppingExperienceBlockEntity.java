@@ -158,8 +158,8 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
     }
 
     @Override
-    public List<ExperienceTarget> getTargetsForVisit(ServerLevel serverLevel) {
-        List<ExperienceTarget> targets = super.getTargetsForVisit(serverLevel);
+    public List<ExperienceTarget> getTargetsForVisit(TouristEntity tourist, ServerLevel serverLevel) {
+        List<ExperienceTarget> targets = super.getTargetsForVisit(tourist, serverLevel);
 
         if (!targets.isEmpty()) {
             // Add shopping experience block entity as last target so that tourists can return here to pay for items.
@@ -168,7 +168,8 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
                     this.getApproachFromDirection(),
                     null,
                     serverLevel.getDayTime(),
-                    ""
+                    "",
+                    null
             ));
         }
 

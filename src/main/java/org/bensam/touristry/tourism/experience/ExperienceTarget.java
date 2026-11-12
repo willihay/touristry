@@ -24,16 +24,18 @@ public record ExperienceTarget(
         Direction approachFrom,
         @Nullable UUID entityUUID,
         long registeredAtTicks,
-        String customName
+        String customName,
+        @Nullable UUID reservation
 ) {
     public static final Codec<ExperienceTarget> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             BlockPos.CODEC.fieldOf("pos").forGetter(ExperienceTarget::pos),
             Direction.CODEC.fieldOf("approach_from").forGetter(ExperienceTarget::approachFrom),
             UUIDUtil.CODEC.optionalFieldOf("entity_uuid").forGetter(target -> Optional.ofNullable(target.entityUUID())),
             Codec.LONG.fieldOf("registered_at_ticks").forGetter(ExperienceTarget::registeredAtTicks),
-            Codec.STRING.optionalFieldOf("custom_name").forGetter(target -> target.customName().isEmpty() ? Optional.empty() : Optional.of(target.customName()))
-    ).apply(instance, (pos, approachFrom, entityUUID, registeredTime, customName) ->
-            new ExperienceTarget(pos, approachFrom, entityUUID.orElse(null), registeredTime, customName.orElse(""))
+            Codec.STRING.optionalFieldOf("custom_name").forGetter(target -> target.customName().isEmpty() ? Optional.empty() : Optional.of(target.customName())),
+            UUIDUtil.CODEC.optionalFieldOf("reservation").forGetter(target -> Optional.ofNullable(target.reservation()))
+    ).apply(instance, (pos, approachFrom, entityUUID, registeredTime, customName, reservation) ->
+            new ExperienceTarget(pos, approachFrom, entityUUID.orElse(null), registeredTime, customName.orElse(""), reservation.orElse(null))
     ));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, ExperienceTarget> STREAM_CODEC = StreamCodec.composite(
@@ -47,8 +49,10 @@ public record ExperienceTarget(
             ExperienceTarget::registeredAtTicks,
             ByteBufCodecs.STRING_UTF8,
             ExperienceTarget::customName,
-            (pos, approach, entityUUID, registeredTime, customName) ->
-                    new ExperienceTarget(pos, approach, entityUUID.orElse(null), registeredTime, customName)
+            ByteBufCodecs.optional(UUIDUtil.STREAM_CODEC),
+            target -> Optional.ofNullable(target.reservation()),
+            (pos, approach, entityUUID, registeredTime, customName, reservation) ->
+                    new ExperienceTarget(pos, approach, entityUUID.orElse(null), registeredTime, customName, reservation.orElse(null))
     );
 
     public Component getDisplayName(ServerLevel serverLevel) {
@@ -77,11 +81,52 @@ public record ExperienceTarget(
         return new ItemStack(serverLevel.getBlockState(this.pos).getBlock().asItem());
     }
 
+    public boolean hasReservation() {
+        return this.reservation != null;
+    }
+
     public boolean isBlock() {
         return this.entityUUID == null;
     }
 
     public boolean isEntity() {
         return this.entityUUID != null;
+    }
+
+    public boolean isReservedBy(UUID touristUUID) {
+        return touristUUID.equals(this.reservation);
+    }
+
+    public ExperienceTarget withCustomName(String customName) {
+        return new ExperienceTarget(
+                this.pos(),
+                this.approachFrom(),
+                this.entityUUID(),
+                this.registeredAtTicks(),
+                customName,
+                this.reservation()
+        );
+    }
+
+    public ExperienceTarget withReservation(UUID touristUUID) {
+        return new ExperienceTarget(
+                this.pos(),
+                this.approachFrom(),
+                this.entityUUID(),
+                this.registeredAtTicks(),
+                this.customName(),
+                touristUUID
+        );
+    }
+
+    public ExperienceTarget withoutReservation() {
+        return this.reservation == null ? this : new ExperienceTarget(
+                this.pos(),
+                this.approachFrom(),
+                this.entityUUID(),
+                this.registeredAtTicks(),
+                this.customName(),
+                null
+        );
     }
 }
