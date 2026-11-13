@@ -243,15 +243,7 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
             }
         }
 
-        return new ExperienceVisit(
-                visit.experienceUUID(),
-                visit.budgetRemaining(),
-                updatedTargets,
-                visit.targetsCompleted(),
-                visit.totalTargets(),
-                visit.result(),
-                visit.hasReviewed()
-        );
+        return visit.withTargets(updatedTargets);
     }
 
     public boolean removeItemPrice(@NonNull ItemPrice itemPrice) {

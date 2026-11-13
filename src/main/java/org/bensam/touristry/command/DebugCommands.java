@@ -145,14 +145,19 @@ public final class DebugCommands {
     ) {
         return parent
                 .then(Commands.literal("reset")
-                .then(Commands.literal("allStats")
-                        .executes(ctx -> resetExperienceStats(
-                                ctx.getSource(),
-                                resolver.resolve(ctx))))
-                .then(Commands.literal("reputation")
-                        .executes(ctx -> resetExperienceReputation(
-                                ctx.getSource(),
-                                resolver.resolve(ctx)))))
+                        .then(Commands.literal("allStats")
+                                .executes(ctx -> resetExperienceStats(
+                                        ctx.getSource(),
+                                        resolver.resolve(ctx))))
+                        .then(Commands.literal("reputation")
+                                .executes(ctx -> resetExperienceReputation(
+                                        ctx.getSource(),
+                                        resolver.resolve(ctx))))
+                        .then(Commands.literal("reservations")
+                                .executes(ctx -> resetExperienceReservations(
+                                        ctx.getSource(),
+                                        resolver.resolve(ctx)
+                                ))))
                 .then(Commands.literal("spawnTouristHere")
                         .executes(ctx -> spawnExperienceTouristHere(
                                 ctx.getSource(),
@@ -171,6 +176,15 @@ public final class DebugCommands {
     private static int resetExperienceReputation(CommandSourceStack source, @NonNull AbstractExperienceBlockEntity experienceBlockEntity) {
         experienceBlockEntity.resetReputation();
         Component message = Component.literal("Reset reputation for ")
+                .append(experienceBlockEntity.getName().copy())
+                .append(Component.literal(" @ " + experienceBlockEntity.getBlockPos().toShortString()));
+        source.sendSuccess(() -> message, true);
+        return 1;
+    }
+
+    private static int resetExperienceReservations(CommandSourceStack source, @NonNull AbstractExperienceBlockEntity experienceBlockEntity) {
+        experienceBlockEntity.clearAllTargetReservations();
+        Component message = Component.literal("Reset reservations for ")
                 .append(experienceBlockEntity.getName().copy())
                 .append(Component.literal(" @ " + experienceBlockEntity.getBlockPos().toShortString()));
         source.sendSuccess(() -> message, true);

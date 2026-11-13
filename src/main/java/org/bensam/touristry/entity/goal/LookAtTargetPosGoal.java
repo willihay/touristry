@@ -97,7 +97,7 @@ public class LookAtTargetPosGoal extends Goal {
         RandomSource random = this.tourist.getRandom();
 
         // Determine if tourist is going to use (or continue using) camera.
-        boolean usingCamera = this.canUseCamera && random.nextDouble() < 0.25;
+        boolean usingCamera = !this.tourist.isSleeping() && this.canUseCamera && random.nextDouble() < 0.25;
         this.tourist.setUsingCamera(usingCamera);
 
         // Calculate look offsets.
@@ -113,7 +113,9 @@ public class LookAtTargetPosGoal extends Goal {
         this.tourist.setCrouching(this.targetPos.getY() + 0.75 + this.yVariation < this.tourist.blockPosition().getY());
 
         // Determine ticks before next change.
-        if (usingCamera) {
+        if (this.tourist.isSleeping()) {
+            this.ticksUntilNextLookChange = this.adjustedTickDelay(100 + random.nextInt(700)); // 5 to 40 seconds
+        } else if (usingCamera) {
             this.ticksUntilNextLookChange = this.adjustedTickDelay(60 + random.nextInt(60)); // 3 to 6 seconds
         } else {
             this.ticksUntilNextLookChange = this.adjustedTickDelay(20 + random.nextInt(20)); // 1 to 2 seconds

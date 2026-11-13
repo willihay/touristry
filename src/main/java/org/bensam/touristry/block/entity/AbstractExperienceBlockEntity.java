@@ -133,6 +133,21 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         return this.hasEntryFee();
     }
 
+    public void clearAllTargetReservations() {
+        boolean changed = false;
+        for (int i = 0; i < this.targets.size(); i++) {
+            ExperienceTarget target = this.targets.get(i);
+            if (target.hasReservation()) {
+                this.targets.set(i, target.withoutReservation());
+                changed = true;
+            }
+        }
+
+        if (changed) {
+            this.setChanged();
+        }
+    }
+
     @Override
     public void clearContent() {
         super.clearContent();
@@ -147,7 +162,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         this.syncTourismRegistration();
     }
 
-    protected void clearTargetReservations(UUID reservation) {
+    public void clearTargetReservations(UUID reservation) {
         boolean changed = false;
         for (int i = 0; i < this.targets.size(); i++) {
             ExperienceTarget target = this.targets.get(i);
@@ -511,15 +526,7 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         List<ExperienceTarget> updatedTargets = new ArrayList<>();
         updatedTargets.add(visit.remainingTargets().getFirst());
 
-        return new ExperienceVisit(
-                visit.experienceUUID(),
-                visit.budgetRemaining(),
-                updatedTargets,
-                visit.targetsCompleted(),
-                visit.totalTargets(),
-                visit.result(),
-                visit.hasReviewed()
-        );
+        return visit.withTargets(updatedTargets);
     }
 
     protected void pruneInvalidTargets() {

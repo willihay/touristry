@@ -247,15 +247,7 @@ public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
             }
         }
 
-        return new ExperienceVisit(
-                visit.experienceUUID(),
-                visit.budgetRemaining(),
-                updatedTargets,
-                visit.targetsCompleted(),
-                visit.totalTargets(),
-                visit.result(),
-                visit.hasReviewed()
-        );
+        return visit.withTargets(updatedTargets);
     }
 
     public boolean removeMenuPrice(@NonNull ItemPrice menuPrice) {

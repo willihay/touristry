@@ -148,7 +148,7 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
 
         // Give tourists who are spawned via command some food to eat, for testing purposes.
         if (entitySpawnReason == EntitySpawnReason.COMMAND) {
-            this.getInventory().addItem(new ItemStack(Items.APPLE, 64));
+            this.getInventory().addItem(new ItemStack(Items.APPLE, 32));
         }
 
         return super.finalizeSpawn(serverLevelAccessor, difficultyInstance, entitySpawnReason, spawnGroupData);
@@ -646,7 +646,7 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
         super.stopSleeping();
 
         if (this.level() instanceof ServerLevel serverLevel) {
-            this.mind.onStoppedSleeping(serverLevel);
+            this.mind.onStopSleeping(serverLevel);
         }
     }
 

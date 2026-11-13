@@ -350,7 +350,7 @@ public final class TouristMind {
 
     //region Tick Methods
     public void tick(ServerLevel serverLevel) {
-        if (this.state == TouristState.FINISHED || this.state == TouristState.SLEEPING) {
+        if (this.state == TouristState.FINISHED) {
             return;
         }
 
@@ -358,39 +358,41 @@ public final class TouristMind {
             this.tickIdle(serverLevel);
         }
 
-        // Evening activity transition check
-        if (this.isTimeForEveningActivity()) {
-            if (this.state.isAtExperience()
-                    && this.state != TouristState.WANDERING_AT_EXPERIENCE
-                    && !this.isAtOvernightLodging()
-            ) {
-                if (!this.hasPreparedToLeaveEarly) {
-                    this.updateExperienceVisitResult(VisitResult.GOOD);
-                    this.prepareToLeaveExperienceEarly();
-                }
-            } else if (!this.wantsToStayOvernight || this.isMidnightOrLater()) {
-                this.transitionTo(TouristState.DESPAWNING);
-                return;
-            }
-        }
-
-        // Mood check
-        if (this.isTimeToCheckMood() && this.nextMoodCheckTicks <= 0) {
-            if (this.isInMoodToDespawn()) {
-                if (this.state.isAtExperience() && this.state != TouristState.WANDERING_AT_EXPERIENCE) {
+        if (!this.tourist.isSleeping()) {
+            // Evening activity transition check
+            if (this.isTimeForEveningActivity()) {
+                if (this.state.isAtExperience()
+                        && this.state != TouristState.WANDERING_AT_EXPERIENCE
+                        && !this.isAtOvernightLodging()
+                ) {
                     if (!this.hasPreparedToLeaveEarly) {
+                        this.updateExperienceVisitResult(VisitResult.GOOD);
                         this.prepareToLeaveExperienceEarly();
                     }
-                } else {
-                    this.recordBadMood(serverLevel);
+                } else if (!this.wantsToStayOvernight || this.isMidnightOrLater()) {
                     this.transitionTo(TouristState.DESPAWNING);
                     return;
                 }
-            } else {
-                this.nextMoodCheckTicks = CHECK_MOOD_INTERVAL_TICKS;
             }
-        } else {
-            this.nextMoodCheckTicks--;
+
+            // Mood check
+            if (this.isTimeToCheckMood() && this.nextMoodCheckTicks <= 0) {
+                if (this.isInMoodToDespawn()) {
+                    if (this.state.isAtExperience() && this.state != TouristState.WANDERING_AT_EXPERIENCE) {
+                        if (!this.hasPreparedToLeaveEarly) {
+                            this.prepareToLeaveExperienceEarly();
+                        }
+                    } else {
+                        this.recordBadMood(serverLevel);
+                        this.transitionTo(TouristState.DESPAWNING);
+                        return;
+                    }
+                } else {
+                    this.nextMoodCheckTicks = CHECK_MOOD_INTERVAL_TICKS;
+                }
+            } else {
+                this.nextMoodCheckTicks--;
+            }
         }
 
         // State-specific tick handlers
@@ -452,7 +454,7 @@ public final class TouristMind {
             return;
         }
 
-        if (!this.hasPreparedToLeaveEarly) {
+        if (!this.tourist.isSleeping() && !this.hasPreparedToLeaveEarly) {
             if (!experience.isOpenForBusiness()) {
                 if (!currentVisit.hasReviewed()) {
                     this.updateMood(VisitResult.CLOSED_EARLY);
@@ -794,7 +796,7 @@ public final class TouristMind {
         }
 
         this.overnightExperienceUUID = candidates.get(this.random().nextInt(candidates.size()));
-        TouristExperience lodging = TourismManager.getTouristExperienceById(overnightExperienceUUID); // won't be null because of previous call to TourismManager.getTouristExperiencesNearBeacon
+        TouristExperience lodging = TourismManager.getTouristExperienceById(this.overnightExperienceUUID); // won't be null because of previous call to TourismManager.getTouristExperiencesNearBeacon
         this.experienceBlockPos = lodging.getBlockPos().immutable();
         this.transitionTo(TouristState.TRAVELING_TO_EXPERIENCE);
     }
@@ -1060,11 +1062,10 @@ public final class TouristMind {
         }
     }
 
-    public void onStoppedSleeping(ServerLevel serverLevel) {
-        this.startNewDay();
-
+    public void onStopSleeping(ServerLevel serverLevel) {
         int tickTimeOfDay = (int) (serverLevel.getDayTime() % 24000L);
         if (tickTimeOfDay <= 1000 && !this.reportedHurtOnPremises) {
+            this.startNewDay();
             Component experienceMessage = Component.literal("woke up in a good mood at"); // startNewDay() determines how good of a mood
             this.recordExperience(serverLevel, new TouristReview(
                     this.state.reviewTarget(),
@@ -1074,7 +1075,10 @@ public final class TouristMind {
                     experienceMessage,
                     true,
                     true));
-            this.transitionTo(TouristState.CHOOSING_EXPERIENCE_AT_BEACON);
+
+            if (!this.isAtOvernightLodging()) {
+                this.transitionTo(TouristState.CHOOSING_EXPERIENCE_AT_BEACON);
+            }
         } else {
             this.updateMood(VisitResult.UNFAVORABLE);
             Component experienceMessage = Component.literal("woke up abruptly at");
@@ -1164,9 +1168,12 @@ public final class TouristMind {
         if (blockEntity instanceof TouristBeaconBlockEntity) {
             this.beaconPos = target.immutable();
             this.transitionTo(TouristState.TRAVELING_TO_BEACON);
-        } else if (blockEntity instanceof AbstractExperienceBlockEntity) {
+        } else if (blockEntity instanceof AbstractExperienceBlockEntity experienceBlockEntity) {
             this.beaconPos = null;
             this.experienceBlockPos = target.immutable();
+            if (experienceBlockEntity.isLodgingExperience()) {
+                this.overnightExperienceUUID = experienceBlockEntity.getUUID();
+            }
             this.transitionTo(TouristState.TRAVELING_TO_EXPERIENCE);
         }
     }
@@ -1367,6 +1374,7 @@ public final class TouristMind {
     }
 
     public String getStateForLogging(TouristState state) {
+        String stateName = this.tourist.isSleeping() ? "SLEEPING in" : state.toString();
         String targetName = this.getStateTargetName(state);
         if (targetName.isEmpty()) {
             targetName = "(unknown)";
@@ -1376,11 +1384,11 @@ public final class TouristMind {
             case TRAVELING_TO_BEACON, WAIT_AT_BEACON, CHOOSING_EXPERIENCE_AT_BEACON, WANDERING_AT_BEACON,
                  TRAVELING_TO_EXPERIENCE, WAIT_AT_EXPERIENCE, ENTERING_EXPERIENCE, WANDERING_AT_EXPERIENCE,
                  TRAVELING_TO_EXPERIENCE_TARGET, POSITIONING_AT_TARGET, EXPERIENCING_TARGET -> " " + targetName;
-            case CHOOSING_EXPERIENCE_TARGET, SLEEPING -> " at " + targetName;
+            case CHOOSING_EXPERIENCE_TARGET -> " at " + targetName;
             default -> "";
         };
 
-        return state + logMessageSuffix;
+        return stateName + logMessageSuffix;
     }
 
     public String getStateTargetName() {
@@ -1398,7 +1406,7 @@ public final class TouristMind {
                 }
             }
             case TRAVELING_TO_EXPERIENCE, WAIT_AT_EXPERIENCE, ENTERING_EXPERIENCE, WANDERING_AT_EXPERIENCE,
-                 CHOOSING_EXPERIENCE_TARGET, SLEEPING -> {
+                 CHOOSING_EXPERIENCE_TARGET -> {
                 TouristExperience experience = TourismManager.getTouristExperienceByPos(this.experienceBlockPos);
                 if (experience != null) {
                     return experience.getDisplayName().getString();
@@ -1410,11 +1418,17 @@ public final class TouristMind {
                 if (this.targetPos == null) {
                     return "";
                 }
+                String targetName;
+                if (this.currentExperienceTarget != null && this.tourist.level() instanceof ServerLevel serverLevel) {
+                    targetName = this.currentExperienceTarget.getDisplayName(serverLevel).getString() + " at " + this.targetPos.toShortString();
+                } else {
+                    targetName = this.targetPos.toShortString();
+                }
                 TouristExperience experience = TourismManager.getTouristExperienceByPos(this.experienceBlockPos);
                 if (experience != null) {
-                    return this.targetPos.toShortString() + " from " + experience.getDisplayName().getString();
+                    return targetName + " from " + experience.getDisplayName().getString();
                 } else {
-                    return this.targetPos.toShortString();
+                    return targetName;
                 }
             }
             default -> { return ""; }

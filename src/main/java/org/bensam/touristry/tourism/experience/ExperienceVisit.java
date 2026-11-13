@@ -30,4 +30,16 @@ public record ExperienceVisit(
     public boolean allTargetsCompleted() {
         return this.targetsCompleted == this.totalTargets;
     }
+
+    public ExperienceVisit withTargets(List<ExperienceTarget> targets) {
+        return new ExperienceVisit(
+                this.experienceUUID(),
+                this.budgetRemaining(),
+                targets,
+                this.targetsCompleted(),
+                this.totalTargets(),
+                this.result(),
+                this.hasReviewed()
+        );
+    }
 }

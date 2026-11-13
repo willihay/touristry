@@ -15,9 +15,10 @@ public class LodgingExperienceGoal extends LookAtTargetPosGoal {
     private final TouristEntity tourist;
     private final BlockPos targetPos;
     private final int durationTicks;
-    private final int adjustedTimeAtTarget;
+    private final int minimumTimeAtTarget;
 
     private int tickCount;
+    private boolean startedSleeping;
 
     public LodgingExperienceGoal(TouristEntity tourist, GoalType goalType, BlockPos targetPos, int startingTickCount, int timeAtTarget) {
         super(tourist, targetPos, false, true);
@@ -25,7 +26,8 @@ public class LodgingExperienceGoal extends LookAtTargetPosGoal {
         this.tourist = tourist;
         this.targetPos = targetPos;
         this.tickCount = this.adjustedTickDelay(startingTickCount);
-        this.adjustedTimeAtTarget = this.adjustedTickDelay(timeAtTarget);
+        this.startedSleeping = this.tourist.isSleeping();
+        this.minimumTimeAtTarget = this.startedSleeping ? this.tickCount : this.adjustedTickDelay(timeAtTarget);
         this.durationTicks = Math.max(0, timeAtTarget - startingTickCount);
     }
 
@@ -34,26 +36,40 @@ public class LodgingExperienceGoal extends LookAtTargetPosGoal {
         super.start();
 
         ExperienceVisit visit = this.tourist.getMind().getExperienceVisit();
+        String targetName = "target";
+
         float allowance = 0;
         if (visit != null) {
             allowance = visit.budgetRemaining();
+            if (!visit.remainingTargets().isEmpty()) {
+                targetName = visit.remainingTargets().getFirst().getDisplayName(getServerLevel(this.tourist)).getString();
+            }
         }
 
         if (this.goalType == GoalType.SLEEP) {
-            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] Sleeping in bed at {} after looking around for {} ticks",
-                    this.getClass().getSimpleName(),
-                    this.targetPos.toShortString(),
-                    this.durationTicks);
+            if (this.startedSleeping) {
+                TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] Sleeping in {} at {}",
+                        this.getClass().getSimpleName(),
+                        targetName,
+                        this.targetPos.toShortString());
+            } else {
+                TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] Sleeping in {} at {} after looking around for {} ticks",
+                        this.getClass().getSimpleName(),
+                        targetName,
+                        this.targetPos.toShortString(),
+                        this.durationTicks);
+            }
         } else if (this.goalType == GoalType.PAY) {
-            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] Paying for stay with budget of {} for {} ticks",
+            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] Paying for stay at {} with budget of {} for {} ticks",
                     this.getClass().getSimpleName(),
+                    targetName,
                     allowance,
                     this.durationTicks);
         } else {
-            TouristEntity.logActivity(Verbosity.GAMEPLAY_WARNINGS, "[{}] Unknown goal type: {}",
+            TouristEntity.logActivity(Verbosity.GAMEPLAY_WARNINGS, "[{}] Unexpected goal type: {}",
                     this.getClass().getSimpleName(),
                     this.goalType);
-            this.tickCount = this.adjustedTimeAtTarget;
+            this.tickCount = this.minimumTimeAtTarget;
         }
     }
 
@@ -63,15 +79,20 @@ public class LodgingExperienceGoal extends LookAtTargetPosGoal {
         this.tickCount++;
         ServerLevel serverLevel = getServerLevel(this.tourist);
 
-        if (this.tickCount >= this.adjustedTimeAtTarget) {
+        if (this.tickCount >= this.minimumTimeAtTarget) {
             if (this.goalType == GoalType.SLEEP) {
-                this.tourist.startSleeping(this.targetPos);
+                if (!this.tourist.isSleeping()) {
+                    if (!this.startedSleeping) {
+                        this.tourist.startSleeping(this.targetPos);
+                        this.startedSleeping = true;
+                    } else {
+                        this.tourist.getMind().finishTargetGoal();
+                    }
+                }
             } else if (this.goalType == GoalType.PAY) {
                 this.payForStay(serverLevel);
+                this.tourist.getMind().finishTargetGoal();
             }
-
-            // Mark finished at this target.
-            this.tourist.getMind().finishTargetGoal();
         }
     }
 

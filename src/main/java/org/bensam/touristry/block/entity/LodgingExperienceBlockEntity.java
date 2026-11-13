@@ -246,15 +246,7 @@ public class LodgingExperienceBlockEntity extends AbstractExperienceBlockEntity 
             }
         }
 
-        return new ExperienceVisit(
-                visit.experienceUUID(),
-                visit.budgetRemaining(),
-                updatedTargets,
-                visit.targetsCompleted(),
-                visit.totalTargets(),
-                visit.result(),
-                visit.hasReviewed()
-        );
+        return visit.withTargets(updatedTargets);
     }
 
     public boolean reserveBed(int targetIndex, UUID touristUUID) {
