@@ -17,7 +17,10 @@ public class EatFoodGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        return this.tourist.getMind().isHungry() && !this.tourist.isUsingCamera() && !this.tourist.isWaving() && this.tourist.hasFood();
+        return this.tourist.getMind().isHungry()
+                && this.tourist.getRandom().nextDouble() < 0.02
+                && this.tourist.hasFood()
+                && this.tourist.getMind().canEatNow();
     }
 
     @Override

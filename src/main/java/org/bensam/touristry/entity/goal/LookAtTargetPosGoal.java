@@ -97,7 +97,7 @@ public class LookAtTargetPosGoal extends Goal {
         RandomSource random = this.tourist.getRandom();
 
         // Determine if tourist is going to use (or continue using) camera.
-        boolean usingCamera = !this.tourist.isSleeping() && this.canUseCamera && random.nextDouble() < 0.25;
+        boolean usingCamera = !this.tourist.isSleeping() && !this.tourist.isEating() && this.canUseCamera && random.nextDouble() < 0.25;
         this.tourist.setUsingCamera(usingCamera);
 
         // Calculate look offsets.

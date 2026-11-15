@@ -6,7 +6,6 @@ import net.minecraft.world.item.ItemStack;
 import org.bensam.touristry.block.entity.LodgingExperienceBlockEntity;
 import org.bensam.touristry.config.Verbosity;
 import org.bensam.touristry.entity.TouristEntity;
-import org.bensam.touristry.tourism.TouristEconomy;
 import org.bensam.touristry.tourism.VisitResult;
 import org.bensam.touristry.tourism.experience.ExperienceVisit;
 
@@ -38,12 +37,8 @@ public class LodgingExperienceGoal extends LookAtTargetPosGoal {
         ExperienceVisit visit = this.tourist.getMind().getExperienceVisit();
         String targetName = "target";
 
-        float allowance = 0;
-        if (visit != null) {
-            allowance = visit.budgetRemaining();
-            if (!visit.remainingTargets().isEmpty()) {
-                targetName = visit.remainingTargets().getFirst().getDisplayName(getServerLevel(this.tourist)).getString();
-            }
+        if (visit != null && !visit.remainingTargets().isEmpty()) {
+            targetName = visit.remainingTargets().getFirst().getDisplayName(getServerLevel(this.tourist)).getString();
         }
 
         if (this.goalType == GoalType.SLEEP) {
@@ -60,10 +55,9 @@ public class LodgingExperienceGoal extends LookAtTargetPosGoal {
                         this.durationTicks);
             }
         } else if (this.goalType == GoalType.PAY) {
-            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] Paying for stay at {} with budget of {} for {} ticks",
+            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] Paying for stay at {} for {} ticks",
                     this.getClass().getSimpleName(),
                     targetName,
-                    allowance,
                     this.durationTicks);
         } else {
             TouristEntity.logActivity(Verbosity.GAMEPLAY_WARNINGS, "[{}] Unexpected goal type: {}",
@@ -84,6 +78,7 @@ public class LodgingExperienceGoal extends LookAtTargetPosGoal {
                 if (!this.tourist.isSleeping()) {
                     if (!this.startedSleeping) {
                         this.tourist.startSleeping(this.targetPos);
+                        this.tourist.getMind().setSleepTime(serverLevel.getDayTime());
                         this.startedSleeping = true;
                     } else {
                         this.tourist.getMind().finishTargetGoal();
@@ -101,9 +96,7 @@ public class LodgingExperienceGoal extends LookAtTargetPosGoal {
         if (serverLevel.getBlockEntity(this.targetPos) instanceof LodgingExperienceBlockEntity lodgingBlockEntity) {
             ItemStack cost = lodgingBlockEntity.getDefaultCost();
             if (lodgingBlockEntity.tryDepositPayment(cost)) {
-                float itemValue = (int) TouristEconomy.getEmeraldEquivalent(cost);
-                this.tourist.getMind().spendBudget(itemValue);
-                paymentCompleted = true;
+                paymentCompleted = true; // note: lodging cost does not come out of tourist's daily spending budget
             }
         }
 

@@ -12,10 +12,10 @@ import java.util.Locale;
 public enum TouristState implements StringRepresentable {
     IDLE(false, false, TouristLocation.WORLD, TouristLocation.WORLD),
     TRAVELING_TO_BEACON(true, false, TouristLocation.WORLD, TouristLocation.BEACON),
-    WAIT_AT_BEACON(false, false, TouristLocation.BEACON, TouristLocation.BEACON),
+    WAITING_AT_BEACON(false, false, TouristLocation.BEACON, TouristLocation.BEACON),
     CHOOSING_EXPERIENCE_AT_BEACON(true, false, TouristLocation.BEACON, TouristLocation.BEACON),
     TRAVELING_TO_EXPERIENCE(false, true, TouristLocation.BEACON, TouristLocation.EXPERIENCE),
-    WAIT_AT_EXPERIENCE(false, false, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
+    WAITING_AT_EXPERIENCE(false, false, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
     ENTERING_EXPERIENCE(false, true, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
     CHOOSING_EXPERIENCE_TARGET(false, true, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
     TRAVELING_TO_EXPERIENCE_TARGET(false, true, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),

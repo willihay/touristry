@@ -69,7 +69,9 @@ public final class TouristMind {
     private float remainingBudgetEmeralds;
     private boolean reportedHurtEnRoute;
     private boolean reportedHurtOnPremises;
+    private int sleepTimeTicks;
     private int waitTicks;
+    private int wakeTimeTicks;
     private final Map<UUID, WaveRecord> waveMemory = new HashMap<>(); // (not persisted)
 
     // Beacon-related
@@ -113,6 +115,8 @@ public final class TouristMind {
     //region Initialization Methods
     private void decideOvernightInterest() {
         this.eveningActivityStartTimeTicks = 12000 + this.random().nextInt(1000);
+        this.sleepTimeTicks = this.eveningActivityStartTimeTicks;
+        this.wakeTimeTicks = Mth.clamp((int) Math.round(2000 + this.random().nextGaussian() * 300), 1000, 4000);
         this.wantsToStayOvernight = this.random().nextFloat() < (CHANCE_TO_STAY_OVERNIGHT - (0.1F * (this.dayNumberOfVisit - 1)));
     }
 
@@ -285,6 +289,8 @@ public final class TouristMind {
         valueOutput.putFloat("DailyBudget", this.dailyBudgetEmeralds);
         valueOutput.putFloat("RemainingBudget", this.remainingBudgetEmeralds);
         valueOutput.putInt("DayNumberOfVisit", this.dayNumberOfVisit);
+        valueOutput.putInt("SleepTime", this.sleepTimeTicks);
+        valueOutput.putInt("WakeTime", this.wakeTimeTicks);
     }
 
     public void readAdditionalSaveData(ValueInput valueInput) {
@@ -333,6 +339,8 @@ public final class TouristMind {
         this.dailyBudgetEmeralds = valueInput.getFloatOr("DailyBudgetEmeralds", this.dailyBudgetEmeralds);
         this.remainingBudgetEmeralds = valueInput.getFloatOr("RemainingBudgetEmeralds", this.remainingBudgetEmeralds);
         this.dayNumberOfVisit = valueInput.getIntOr("DayNumberOfVisit", this.dayNumberOfVisit);
+        this.sleepTimeTicks = valueInput.getIntOr("SleepTime", this.eveningActivityStartTimeTicks);
+        this.wakeTimeTicks = valueInput.getIntOr("WakeTime", this.wakeTimeTicks);
 
         // Reconstruct currentExperienceTarget from experienceTargetTracker.
         if (!this.experienceTargetTracker.isEmpty()) {
@@ -358,7 +366,11 @@ public final class TouristMind {
             this.tickIdle(serverLevel);
         }
 
-        if (!this.tourist.isSleeping()) {
+        if (this.tourist.isSleeping()) {
+            if (this.isTimeToWake()) {
+                this.tourist.stopSleeping();
+            }
+        } else {
             // Evening activity transition check
             if (this.isTimeForEveningActivity()) {
                 if (this.state.isAtExperience()
@@ -401,7 +413,7 @@ public final class TouristMind {
         }
 
         switch (this.state) {
-            case WAIT_AT_BEACON, WANDERING_AT_EXPERIENCE -> {
+            case WAITING_AT_BEACON, WANDERING_AT_EXPERIENCE -> {
                 if (this.waitTicks <= 0) {
                     this.transitionTo(TouristState.CHOOSING_EXPERIENCE_AT_BEACON);
                 } else {
@@ -412,7 +424,7 @@ public final class TouristMind {
                 }
             }
 
-            case WAIT_AT_EXPERIENCE -> {
+            case WAITING_AT_EXPERIENCE -> {
                 if (this.waitTicks <= 0) {
                     this.tourist.clearHeldItem();
                     this.transitionTo(TouristState.ENTERING_EXPERIENCE);
@@ -548,7 +560,7 @@ public final class TouristMind {
         switch (newState) {
             case PLANNING_NEXT_MOVE -> this.planNextMove(serverLevel);
             case TRAVELING_TO_BEACON -> this.beginTravelingToBeacon();
-            case WAIT_AT_BEACON, WAIT_AT_EXPERIENCE -> this.beginWaitAtBlock(serverLevel);
+            case WAITING_AT_BEACON, WAITING_AT_EXPERIENCE -> this.beginWaitAtBlock(serverLevel);
             case CHOOSING_EXPERIENCE_AT_BEACON -> this.chooseExperienceAtBeacon(serverLevel, beaconBlockEntity);
             case CHOOSING_EXPERIENCE_TARGET -> this.chooseExperienceTarget(serverLevel);
             case TRAVELING_TO_EXPERIENCE -> this.beginTravelingToExperienceBlock();
@@ -616,7 +628,7 @@ public final class TouristMind {
                     true,
                     true));
             // Begin short pause before choosing experience.
-            this.transitionTo(TouristState.WAIT_AT_BEACON);
+            this.transitionTo(TouristState.WAITING_AT_BEACON);
         } else {
             this.updateMood(VisitResult.CLOSED_EARLY);
             Component experienceMessage = Component.literal("found beacon closed at");
@@ -647,7 +659,7 @@ public final class TouristMind {
 
         // New experience - begin short pause before choosing experience target.
         this.ticksAtCurrentExperience = 0;
-        this.transitionTo(TouristState.WAIT_AT_EXPERIENCE);
+        this.transitionTo(TouristState.WAITING_AT_EXPERIENCE);
     }
 
     private void arriveAtExperienceTarget() {
@@ -679,7 +691,7 @@ public final class TouristMind {
     private void beginWaitAtBlock(ServerLevel serverLevel) {
         this.lastMapToggleTicks = this.tourist.level().getDayTime();
 
-        if (this.state == TouristState.WAIT_AT_EXPERIENCE &&
+        if (this.state == TouristState.WAITING_AT_EXPERIENCE &&
                 serverLevel.getBlockEntity(this.experienceBlockPos) instanceof AbstractExperienceBlockEntity experienceBlockEntity
         ) {
             this.waitTicks = experienceBlockEntity.getPostArrivalWaitTicks(this.random());
@@ -1064,9 +1076,11 @@ public final class TouristMind {
 
     public void onStopSleeping(ServerLevel serverLevel) {
         int tickTimeOfDay = (int) (serverLevel.getDayTime() % 24000L);
-        if (tickTimeOfDay <= 1000 && !this.reportedHurtOnPremises) {
-            this.startNewDay();
-            Component experienceMessage = Component.literal("woke up in a good mood at"); // startNewDay() determines how good of a mood
+        boolean needsToCheckOut = this.isAtOvernightLodging() && this.state.isAtTarget();
+
+        if (Math.abs(tickTimeOfDay - this.wakeTimeTicks) <= 200 && !this.reportedHurtOnPremises) {
+            this.startNewDay(true);
+            Component experienceMessage = Component.literal("woke up in a good mood at");
             this.recordExperience(serverLevel, new TouristReview(
                     this.state.reviewTarget(),
                     VisitResult.GOOD,
@@ -1075,12 +1089,8 @@ public final class TouristMind {
                     experienceMessage,
                     true,
                     true));
-
-            if (!this.isAtOvernightLodging()) {
-                this.transitionTo(TouristState.CHOOSING_EXPERIENCE_AT_BEACON);
-            }
         } else {
-            this.updateMood(VisitResult.UNFAVORABLE);
+            this.startNewDay(false);
             Component experienceMessage = Component.literal("woke up abruptly at");
             this.recordExperience(serverLevel, new TouristReview(
                     this.state.reviewTarget(),
@@ -1090,7 +1100,10 @@ public final class TouristMind {
                     experienceMessage,
                     true,
                     true));
-            this.transitionTo(TouristState.DESPAWNING);
+        }
+
+        if (!needsToCheckOut) {
+            this.transitionTo(TouristState.CHOOSING_EXPERIENCE_AT_BEACON);
         }
     }
 
@@ -1239,6 +1252,12 @@ public final class TouristMind {
         }
     }
 
+    public boolean canEatNow() {
+        return !this.tourist.isUsingCamera()
+                && !this.tourist.isWaving()
+                && (this.state.isWandering() || this.state.isTraveling());
+    }
+
     private void clearBeaconSession() {
         this.resetBeaconJourneyStats();
         this.availableExperienceUUIDs.clear();
@@ -1374,15 +1393,15 @@ public final class TouristMind {
     }
 
     public String getStateForLogging(TouristState state) {
-        String stateName = this.tourist.isSleeping() ? "SLEEPING in" : state.toString();
+        String stateName = this.tourist.isSleeping() ? "SLEEPING while " + state.toString() : state.toString();
         String targetName = this.getStateTargetName(state);
         if (targetName.isEmpty()) {
             targetName = "(unknown)";
         }
 
         String logMessageSuffix = switch (state) {
-            case TRAVELING_TO_BEACON, WAIT_AT_BEACON, CHOOSING_EXPERIENCE_AT_BEACON, WANDERING_AT_BEACON,
-                 TRAVELING_TO_EXPERIENCE, WAIT_AT_EXPERIENCE, ENTERING_EXPERIENCE, WANDERING_AT_EXPERIENCE,
+            case TRAVELING_TO_BEACON, WAITING_AT_BEACON, CHOOSING_EXPERIENCE_AT_BEACON, WANDERING_AT_BEACON,
+                 TRAVELING_TO_EXPERIENCE, WAITING_AT_EXPERIENCE, ENTERING_EXPERIENCE, WANDERING_AT_EXPERIENCE,
                  TRAVELING_TO_EXPERIENCE_TARGET, POSITIONING_AT_TARGET, EXPERIENCING_TARGET -> " " + targetName;
             case CHOOSING_EXPERIENCE_TARGET -> " at " + targetName;
             default -> "";
@@ -1397,7 +1416,7 @@ public final class TouristMind {
 
     public String getStateTargetName(TouristState state) {
         switch (state) {
-            case TRAVELING_TO_BEACON, WAIT_AT_BEACON, CHOOSING_EXPERIENCE_AT_BEACON, WANDERING_AT_BEACON -> {
+            case TRAVELING_TO_BEACON, WAITING_AT_BEACON, CHOOSING_EXPERIENCE_AT_BEACON, WANDERING_AT_BEACON -> {
                 TouristBeaconBlockEntity beaconBlockEntity = TourismManager.getBeaconBlockEntity(this.tourist.level(), this.beaconPos);
                 if (beaconBlockEntity != null) {
                     return beaconBlockEntity.getPlainTextName();
@@ -1405,7 +1424,7 @@ public final class TouristMind {
                     return "";
                 }
             }
-            case TRAVELING_TO_EXPERIENCE, WAIT_AT_EXPERIENCE, ENTERING_EXPERIENCE, WANDERING_AT_EXPERIENCE,
+            case TRAVELING_TO_EXPERIENCE, WAITING_AT_EXPERIENCE, ENTERING_EXPERIENCE, WANDERING_AT_EXPERIENCE,
                  CHOOSING_EXPERIENCE_TARGET -> {
                 TouristExperience experience = TourismManager.getTouristExperienceByPos(this.experienceBlockPos);
                 if (experience != null) {
@@ -1499,14 +1518,19 @@ public final class TouristMind {
         return (this.tourist.level().getDayTime() % 24000L) >= 18000L;
     }
 
+    private boolean isTimeForEveningActivity() {
+        int timeOfDayTicks = (int) (this.tourist.level().getDayTime() % 24000L);
+        return timeOfDayTicks >= this.eveningActivityStartTimeTicks;
+    }
+
     private boolean isTimeToCheckMood() {
         int timeOfDayTicks = (int) (this.tourist.level().getDayTime() % 24000L);
         return !this.tourist.isSleeping() && timeOfDayTicks >= 6000;
     }
 
-    private boolean isTimeForEveningActivity() {
+    private boolean isTimeToWake() {
         int timeOfDayTicks = (int) (this.tourist.level().getDayTime() % 24000L);
-        return timeOfDayTicks >= this.eveningActivityStartTimeTicks;
+        return timeOfDayTicks >= this.wakeTimeTicks && timeOfDayTicks < this.sleepTimeTicks;
     }
 
     private RandomSource random() {
@@ -1568,7 +1592,7 @@ public final class TouristMind {
         this.consecutiveFailedProgressChecks = 0;
     }
 
-    private void startNewDay() {
+    private void startNewDay(boolean wokeInGoodMood) {
         this.dayNumberOfVisit++;
         this.availableExperienceUUIDs.clear();
         this.visitedExperienceUUIDs.clear();
@@ -1577,15 +1601,19 @@ public final class TouristMind {
         this.isHungry = true;
         this.lastMapToggleTicks = 0;
         this.overnightExperienceUUID = null;
-        this.mood = this.generateRandomStartingMood();
+        this.mood = wokeInGoodMood ? this.generateRandomStartingMood() : this.random().nextDouble() * MIN_MOOD;
+        this.tourist.setUnhappyCounter(this.mood < 0 ? 1 : 0);
         this.nextMoodCheckTicks = this.random().nextInt(CHECK_MOOD_INTERVAL_TICKS);
         this.remainingBudgetEmeralds = this.dailyBudgetEmeralds;
         this.reportedHurtEnRoute = false;
         this.reportedHurtOnPremises = false;
         this.ticksAtCurrentTarget = 0;
-        this.tourist.setUnhappyCounter(0);
         this.waveMemory.clear();
         this.decideOvernightInterest();
+    }
+
+    public void setSleepTime(long sleepTimeTicks) {
+        this.sleepTimeTicks = (int) (sleepTimeTicks % 24000L);
     }
 
     public void setWavingAtEntity(Entity entity, boolean wave) {
@@ -1624,8 +1652,10 @@ public final class TouristMind {
     }
 
     private void toggleHeldMapWhileWaiting(ServerLevel serverLevel) {
-        if (!this.tourist.isEating() && !this.tourist.isWaving() && !this.tourist.isUsingCamera() &&
-                serverLevel.getDayTime() >= (this.lastMapToggleTicks + MIN_TICKS_BEFORE_MAP_TOGGLE)
+        if (!this.tourist.isEating()
+                && !this.tourist.isWaving()
+                && !this.tourist.isUsingCamera()
+                && serverLevel.getDayTime() >= (this.lastMapToggleTicks + MIN_TICKS_BEFORE_MAP_TOGGLE)
         ) {
             if (this.tourist.hasHeldItem() && this.waitTicks < 20) {
                 return; // don't put away the map near the end of the wait cycle

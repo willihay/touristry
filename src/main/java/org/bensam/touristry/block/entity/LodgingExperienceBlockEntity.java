@@ -232,6 +232,11 @@ public class LodgingExperienceBlockEntity extends AbstractExperienceBlockEntity 
     }
 
     @Override
+    public void onTouristDeparture(TouristEntity tourist, ServerLevel serverLevel, boolean completed) {
+        this.cancelReservation(tourist);
+    }
+
+    @Override
     public ExperienceVisit prepareToLeaveEarly(ExperienceVisit visit) {
         if (visit.remainingTargets().isEmpty()) {
             return visit;
