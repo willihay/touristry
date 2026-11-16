@@ -6,6 +6,7 @@ import net.minecraft.world.item.ItemStack;
 import org.bensam.touristry.block.entity.LodgingExperienceBlockEntity;
 import org.bensam.touristry.config.Verbosity;
 import org.bensam.touristry.entity.TouristEntity;
+import org.bensam.touristry.tourism.TourismManager;
 import org.bensam.touristry.tourism.VisitResult;
 import org.bensam.touristry.tourism.experience.ExperienceVisit;
 
@@ -18,6 +19,7 @@ public class LodgingExperienceGoal extends LookAtTargetPosGoal {
 
     private int tickCount;
     private boolean startedSleeping;
+    private String targetName;
 
     public LodgingExperienceGoal(TouristEntity tourist, GoalType goalType, BlockPos targetPos, int startingTickCount, int timeAtTarget) {
         super(tourist, targetPos, false, true);
@@ -28,6 +30,7 @@ public class LodgingExperienceGoal extends LookAtTargetPosGoal {
         this.startedSleeping = this.tourist.isSleeping();
         this.minimumTimeAtTarget = this.startedSleeping ? this.tickCount : this.adjustedTickDelay(timeAtTarget);
         this.durationTicks = Math.max(0, timeAtTarget - startingTickCount);
+        this.targetName = "target";
     }
 
     @Override
@@ -35,29 +38,27 @@ public class LodgingExperienceGoal extends LookAtTargetPosGoal {
         super.start();
 
         ExperienceVisit visit = this.tourist.getMind().getExperienceVisit();
-        String targetName = "target";
-
         if (visit != null && !visit.remainingTargets().isEmpty()) {
-            targetName = visit.remainingTargets().getFirst().getDisplayName(getServerLevel(this.tourist)).getString();
+            this.targetName = visit.remainingTargets().getFirst().getDisplayName(getServerLevel(this.tourist)).getString();
         }
 
         if (this.goalType == GoalType.SLEEP) {
             if (this.startedSleeping) {
                 TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] Sleeping in {} at {}",
                         this.getClass().getSimpleName(),
-                        targetName,
+                        this.targetName,
                         this.targetPos.toShortString());
             } else {
                 TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] Sleeping in {} at {} after looking around for {} ticks",
                         this.getClass().getSimpleName(),
-                        targetName,
+                        this.targetName,
                         this.targetPos.toShortString(),
                         this.durationTicks);
             }
         } else if (this.goalType == GoalType.PAY) {
             TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] Paying for stay at {} for {} ticks",
                     this.getClass().getSimpleName(),
-                    targetName,
+                    this.targetName,
                     this.durationTicks);
         } else {
             TouristEntity.logActivity(Verbosity.GAMEPLAY_WARNINGS, "[{}] Unexpected goal type: {}",
@@ -80,6 +81,10 @@ public class LodgingExperienceGoal extends LookAtTargetPosGoal {
                         this.tourist.startSleeping(this.targetPos);
                         this.tourist.getMind().setSleepTime(serverLevel.getDayTime());
                         this.startedSleeping = true;
+                        TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] Started sleeping in {} at {}",
+                                this.getClass().getSimpleName(),
+                                this.targetName,
+                                TourismManager.getFriendlyTimeOfDay(this.tourist.getMind().getSleepTimeTicks(), false, false));
                     } else {
                         this.tourist.getMind().finishTargetGoal();
                     }

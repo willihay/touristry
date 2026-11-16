@@ -673,6 +673,12 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
             return;
         }
 
+        if (this.mind.getState() == TouristState.FINISHED) {
+            TourismManager.unregisterTourist(this);
+            this.discard();
+            return;
+        }
+
         if (TourismManager.shouldForceDespawn(this)) {
             this.dropAll();
             this.mind.onForcedDespawn();
