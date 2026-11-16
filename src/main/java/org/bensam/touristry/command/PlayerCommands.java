@@ -338,6 +338,20 @@ public final class PlayerCommands {
                     .append(touristEntity.getMind().getStateForLogging());
             source.sendSuccess(() -> stateMessage, false);
 
+            if (touristEntity.getMind().isStayingOvernight()) {
+                Component overnightMessage1 = Component.literal("   - Sleep time: ")
+                        .append(TourismManager.getFriendlyTimeOfDay(touristEntity.getMind().getSleepTimeTicks(), false, true));
+                source.sendSuccess(() -> overnightMessage1, false);
+
+                Component overnightMessage2 = Component.literal("   - Wake time: ")
+                        .append(TourismManager.getFriendlyTimeOfDay(touristEntity.getMind().getWakeTimeTicks(), false, true));
+                source.sendSuccess(() -> overnightMessage2, false);
+            } else {
+                Component overnightMessage = Component.literal("   - Leave time: ")
+                        .append(TourismManager.getFriendlyTimeOfDay(touristEntity.getMind().getLeaveTimeTicks(), false, true));
+                source.sendSuccess(() -> overnightMessage, false);
+            }
+
             Component interestsMessage = Component.literal("   - Interests: ")
                     .append(touristEntity.getMind().getInterests().stream().map(Enum::toString).collect(Collectors.joining(", ")));
             source.sendSuccess(() -> interestsMessage, false);

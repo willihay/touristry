@@ -1345,6 +1345,10 @@ public final class TouristMind {
         return List.copyOf(this.interests);
     }
 
+    public int getLeaveTimeTicks() {
+        return this.eveningActivityStartTimeTicks;
+    }
+
     public String getLocationNameOrPos() {
         TouristLocation currentLocation = this.state.touristLocation();
         switch (currentLocation) {
@@ -1382,6 +1386,10 @@ public final class TouristMind {
             return this.targetPos;
         }
         return null;
+    }
+
+    public int getSleepTimeTicks() {
+        return this.sleepTimeTicks;
     }
 
     public TouristState getState() {
@@ -1458,6 +1466,10 @@ public final class TouristMind {
         return this.ticksAtCurrentTarget;
     }
 
+    public int getWakeTimeTicks() {
+        return this.wakeTimeTicks;
+    }
+
     public boolean hasReportedHurtEnRoute() {
         return this.reportedHurtEnRoute;
     }
@@ -1516,6 +1528,10 @@ public final class TouristMind {
 
     private boolean isMidnightOrLater() {
         return (this.tourist.level().getDayTime() % 24000L) >= 18000L;
+    }
+
+    public boolean isStayingOvernight() {
+        return this.wantsToStayOvernight;
     }
 
     private boolean isTimeForEveningActivity() {
