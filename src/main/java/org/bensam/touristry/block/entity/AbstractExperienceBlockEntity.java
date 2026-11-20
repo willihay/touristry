@@ -191,12 +191,17 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         return key;
     }
 
+    @Override
     public Direction getApproachFromDirection() {
         BlockState blockState = this.getBlockState();
         if (blockState.hasProperty(AbstractExperienceBlock.FACING)) {
             return blockState.getValue(AbstractExperienceBlock.FACING);
         }
         return Direction.NORTH;
+    }
+
+    private static BlockPos getBlockPosInFront(BlockPos blockPos, Direction approachFrom) {
+        return blockPos.relative(approachFrom);
     }
 
     public static BlockPos getCanonicalChestTargetPos(ServerLevel serverLevel, BlockPos blockPos) {
@@ -324,23 +329,24 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         }
     }
 
-    public List<ExperienceTarget> getTargets(ServerLevel serverLevel) {
-        this.pruneInvalidTargets(serverLevel);
-        return List.copyOf(this.targets);
-    }
-
     @Override
-    public List<ExperienceTarget> getTargetsForVisit(TouristEntity tourist, ServerLevel serverLevel) {
+    public List<TargetOverlayView> getTargetOverlayViews(ServerLevel serverLevel) {
         if (serverLevel != serverLevel.getServer().overworld()) {
             return Collections.emptyList();
         }
 
         this.pruneInvalidTargets(serverLevel);
-        List<ExperienceTarget> targetList = new ArrayList<>(this.targets);
-        if (!this.orderedTargets) {
-            Collections.shuffle(targetList);
-        }
-        return targetList;
+        List<TargetOverlayView> targetOverlays = new ArrayList<>();
+        IntStream.range(0, this.targets.size())
+                .forEach(i -> {
+                    ExperienceTarget target = this.targets.get(i);
+                    targetOverlays.add(new TargetOverlayView(
+                            target.pos(),
+                            getBlockPosInFront(target.pos(), target.approachFrom()),
+                            target.entityUUID(),
+                            i + 1));
+                });
+        return targetOverlays;
     }
 
     public List<TargetView> getTargetViews(ServerLevel serverLevel) {
@@ -379,28 +385,23 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
         return targetView;
     }
 
+    public List<ExperienceTarget> getTargets(ServerLevel serverLevel) {
+        this.pruneInvalidTargets(serverLevel);
+        return List.copyOf(this.targets);
+    }
+
     @Override
-    public List<TargetOverlayView> getTargetOverlayViews(ServerLevel serverLevel) {
+    public List<ExperienceTarget> getTargetsForVisit(TouristEntity tourist, ServerLevel serverLevel) {
         if (serverLevel != serverLevel.getServer().overworld()) {
             return Collections.emptyList();
         }
 
         this.pruneInvalidTargets(serverLevel);
-        List<TargetOverlayView> targetOverlays = new ArrayList<>();
-        IntStream.range(0, this.targets.size())
-                .forEach(i -> {
-                    ExperienceTarget target = this.targets.get(i);
-                    targetOverlays.add(new TargetOverlayView(
-                            target.pos(),
-                            getBlockPosInFront(target.pos(), target.approachFrom()),
-                            target.entityUUID(),
-                            i + 1));
-                });
-        return targetOverlays;
-    }
-
-    private static BlockPos getBlockPosInFront(BlockPos blockPos, Direction approachFrom) {
-        return blockPos.relative(approachFrom);
+        List<ExperienceTarget> targetList = new ArrayList<>(this.targets);
+        if (!this.orderedTargets) {
+            Collections.shuffle(targetList);
+        }
+        return targetList;
     }
 
     @Override
@@ -511,13 +512,22 @@ public abstract class AbstractExperienceBlockEntity extends BaseContainerBlockEn
     }
 
     @Override
+    public ExperienceVisit onLostTravelingToTarget(@NonNull ExperienceVisit visit) {
+        List<ExperienceTarget> remainingTargets = new ArrayList<>(visit.remainingTargets());
+        if (!remainingTargets.isEmpty()) {
+            remainingTargets.removeFirst(); // remove target
+        }
+        return visit.withTargets(remainingTargets);
+    }
+
+    @Override
     public void onTouristArrival(TouristEntity tourist, ServerLevel serverLevel) {}
 
     @Override
     public void onTouristDeparture(TouristEntity tourist, ServerLevel serverLevel, boolean completed) {}
 
     @Override
-    public ExperienceVisit prepareToLeaveEarly(ExperienceVisit visit) {
+    public ExperienceVisit prepareToLeaveEarly(@NonNull ExperienceVisit visit) {
         if (visit.remainingTargets().size() <= 1) {
             // There are no remaining targets, or none after the current target, so just return the current visit unchanged.
             return visit;

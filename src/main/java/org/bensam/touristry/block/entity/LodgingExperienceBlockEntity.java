@@ -28,13 +28,14 @@ import org.bensam.touristry.entity.goal.LodgingExperienceGoal;
 import org.bensam.touristry.menu.LodgingExperienceMenu;
 import org.bensam.touristry.tourism.experience.ExperienceTarget;
 import org.bensam.touristry.tourism.experience.ExperienceVisit;
+import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 
 public class LodgingExperienceBlockEntity extends AbstractExperienceBlockEntity {
     public static final int IDEAL_TARGET_APPROACH_DISTANCE = 1; // Tourist should try to stand this far away for bed targets
-    public static final int MAX_APPROACH_DISTANCE = 3; // Skip target if tourist can't get closer than this distance
+    public static final int MAX_TARGET_APPROACH_DISTANCE = 3; // Skip target if tourist can't get closer than this distance
     public static final int MAX_RANGE_TO_TARGET = 100;
     public static final int MIN_WAIT_AFTER_ARRIVAL_TICKS = 100;
     public static final int MAX_WAIT_AFTER_ARRIVAL_TICKS = 200;
@@ -126,16 +127,6 @@ public class LodgingExperienceBlockEntity extends AbstractExperienceBlockEntity 
     }
 
     @Override
-    public int getIdealApproachDistance() {
-        return IDEAL_TARGET_APPROACH_DISTANCE;
-    }
-
-    @Override
-    public int getMaxApproachDistance() {
-        return MAX_APPROACH_DISTANCE;
-    }
-
-    @Override
     public int getMaxRangeToTarget() {
         return MAX_RANGE_TO_TARGET;
     }
@@ -160,6 +151,16 @@ public class LodgingExperienceBlockEntity extends AbstractExperienceBlockEntity 
         return this.targets.stream()
                 .filter(target -> target.isReservedBy(touristUUID))
                 .findFirst().orElse(null);
+    }
+
+    @Override
+    public int getTargetIdealApproachDistance() {
+        return IDEAL_TARGET_APPROACH_DISTANCE;
+    }
+
+    @Override
+    public int getTargetMaxApproachDistance() {
+        return MAX_TARGET_APPROACH_DISTANCE;
     }
 
     @Override
@@ -232,12 +233,20 @@ public class LodgingExperienceBlockEntity extends AbstractExperienceBlockEntity 
     }
 
     @Override
+    public ExperienceVisit onLostTravelingToTarget(@NonNull ExperienceVisit visit) {
+        // If tourist gets lost traveling either to their bed OR back to the lodging experience to pay for their visit,
+        // remove ALL remaining targets so that they leave without paying.
+        List<ExperienceTarget> remainingTargets = new ArrayList<>();
+        return visit.withTargets(remainingTargets);
+    }
+
+    @Override
     public void onTouristDeparture(TouristEntity tourist, ServerLevel serverLevel, boolean completed) {
         this.cancelReservation(tourist);
     }
 
     @Override
-    public ExperienceVisit prepareToLeaveEarly(ExperienceVisit visit) {
+    public ExperienceVisit prepareToLeaveEarly(@NonNull ExperienceVisit visit) {
         if (visit.remainingTargets().isEmpty()) {
             return visit;
         }

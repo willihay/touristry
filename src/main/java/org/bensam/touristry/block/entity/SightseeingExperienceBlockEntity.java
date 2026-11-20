@@ -19,7 +19,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.LecternBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.bensam.touristry.ModBlockEntities;
-import org.bensam.touristry.Touristry;
 import org.bensam.touristry.entity.TouristEntity;
 import org.bensam.touristry.entity.goal.SightseeingExperienceGoal;
 import org.bensam.touristry.menu.SightseeingExperienceMenu;
@@ -28,7 +27,7 @@ import org.jspecify.annotations.Nullable;
 
 public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEntity {
     public static final int IDEAL_TARGET_APPROACH_DISTANCE = 2; // Tourist should try to stand this far away for sightseeing targets
-    public static final int MAX_APPROACH_DISTANCE = 6; // Skip target if tourist can't get closer than this distance
+    public static final int MAX_TARGET_APPROACH_DISTANCE = 6; // Skip target if tourist can't get closer than this distance
     public static final int MAX_RANGE_TO_TARGET = 100;
     public static final int MIN_TICKS_AT_TARGET = 100;
     public static final int PAYMENT_SLOT_SIZE = 9;
@@ -83,16 +82,6 @@ public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEnt
     }
 
     @Override
-    public int getIdealApproachDistance() {
-        return IDEAL_TARGET_APPROACH_DISTANCE;
-    }
-
-    @Override
-    public int getMaxApproachDistance() {
-        return MAX_APPROACH_DISTANCE;
-    }
-
-    @Override
     public int getMaxRangeToTarget() {
         return MAX_RANGE_TO_TARGET;
     }
@@ -100,6 +89,16 @@ public class SightseeingExperienceBlockEntity extends AbstractExperienceBlockEnt
     @Override
     public int getPaymentSlotSize() {
         return PAYMENT_SLOT_SIZE;
+    }
+
+    @Override
+    public int getTargetIdealApproachDistance() {
+        return IDEAL_TARGET_APPROACH_DISTANCE;
+    }
+
+    @Override
+    public int getTargetMaxApproachDistance() {
+        return MAX_TARGET_APPROACH_DISTANCE;
     }
 
     private boolean isSightseeingBlock(BlockState blockState) {

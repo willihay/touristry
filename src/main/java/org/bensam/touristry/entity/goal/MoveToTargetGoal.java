@@ -2,172 +2,202 @@ package org.bensam.touristry.entity.goal;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.ai.navigation.PathNavigation;
+import net.minecraft.world.level.pathfinder.Path;
 import org.bensam.touristry.config.Verbosity;
 import org.bensam.touristry.entity.TouristEntity;
-import org.jspecify.annotations.NonNull;
 
 import java.util.EnumSet;
 
 public class MoveToTargetGoal extends Goal {
-    private static final double DESIRED_DISTANCE_SQUARED = 4.0D;
-    private static final int REPATH_INTERVAL_GOALTICKS = 15;
-    private static final int CHECK_PROGRESS_GOALTICKS = 30;
+    private static final double IDEAL_DISTANCE_SQUARED = 2.25D;
+    private static final double MAX_VERTICAL_DIFFERENCE = 2.0D;
+    private static final int NAVIGATION_LIMIT_TICKS = 60*20; // 60 seconds * 20 ticks/second (pre-adjusted)
+    private static final int PROGRESS_CHECK_TICKS = 60;
     private static final int PROGRESS_CHECK_RETRIES = 4;
 
     private final TouristEntity tourist;
-    private double maxDistanceSq;
-    private int nextRepathTicks;
-    private int nextCheckProgressTicks;
+    private final float defaultPathLength;
+
+    private boolean finished;
+    private BlockPos targetPos;
+    private BlockPos navPos;
+    private int maxAcceptableDistance;
+    private double maxAcceptableDistanceSq;
+    private int nextProgressCheckTicks;
+    private int timerTicks;
 
     public MoveToTargetGoal(TouristEntity tourist) {
         this.tourist = tourist;
+        this.defaultPathLength = this.tourist.getDefaultNavPathLength();
         this.setFlags(EnumSet.of(Goal.Flag.MOVE));
     }
 
     @Override
     public boolean canUse() {
-        return this.tourist.getMind().getMoveToTarget() != null && this.tourist.isTraveling();
+        return this.tourist.getMind().getMoveToTargetPos(false) != null && this.tourist.isTraveling();
     }
 
     @Override
     public boolean canContinueToUse() {
-        return this.tourist.getMind().getMoveToTarget() != null && this.tourist.isTraveling();
+        return !this.finished
+                && this.tourist.isTraveling()
+                && this.targetPos.equals(this.tourist.getMind().getMoveToTargetPos(false));
     }
 
     @Override
     public void start() {
-        int maxDistanceFromTarget = this.tourist.getMind().getMaxDistanceAwayFromTarget();
-        this.maxDistanceSq = maxDistanceFromTarget * maxDistanceFromTarget;
-        this.nextRepathTicks = 0;
-        this.nextCheckProgressTicks = CHECK_PROGRESS_GOALTICKS;
-        BlockPos targetPos = this.tourist.getMind().getMoveToTarget();
-        if (targetPos == null) {
-            return;
+        this.finished = false;
+        this.timerTicks = this.adjustedTickDelay(NAVIGATION_LIMIT_TICKS);
+        this.nextProgressCheckTicks = this.adjustedTickDelay(PROGRESS_CHECK_TICKS);
+        this.maxAcceptableDistance = this.tourist.getMind().getMaxDistanceAwayFromTarget();
+        this.maxAcceptableDistanceSq = (double) this.maxAcceptableDistance * this.maxAcceptableDistance;
+
+        this.targetPos = this.tourist.getMind().getMoveToTargetPos(false);
+        this.navPos = this.tourist.getMind().getMoveToTargetPos(true);
+        if (this.navPos == null) {
+            this.navPos = this.targetPos;
         }
 
         String targetName = this.tourist.getMind().getStateTargetName();
         if (!targetName.isEmpty()) {
-            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] Starting navigation to {}",
+            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] Starting navigation to {} at {}",
                     this.getClass().getSimpleName(),
-                    targetName
+                    targetName,
+                    this.navPos.toShortString()
             );
         } else {
-            TouristEntity.logActivity(Verbosity.GAMEPLAY_WARNINGS, "[{}] Starting navigation to (unknown) {}",
+            TouristEntity.logActivity(Verbosity.GAMEPLAY_WARNINGS, "[{}] Starting navigation to unknown target at {}",
                     this.getClass().getSimpleName(),
-                    targetPos.toShortString()
+                    this.navPos.toShortString()
             );
         }
 
-        double distanceToTarget = Math.sqrt(this.getDistanceToTargetSqr(targetPos, false));
-        this.tourist.getMind().recordProgressTowardsTarget(distanceToTarget, 0);
+        this.tourist.getMind().recordFailedProgressChecks(0);
+        double distanceToTarget = Math.sqrt(this.getDistanceToNavPosSqr());
+        this.tourist.getMind().recordProgressTowardsTarget(distanceToTarget);
 
-        if (!this.isAtTarget(targetPos)) {
+        if (!this.isAtTarget()) {
             this.moveToTarget();
         } else {
-            this.tourist.stopNavigation();
+            this.finished = true;
+            this.tourist.getMind().arriveAtDestination();
         }
     }
 
     @Override
     public void tick() {
-        // DEV NOTE: This Goal tick() runs at 10 TPS because Goal.requiresUpdateEveryTick() is false.
-
-        BlockPos targetPos = this.tourist.getMind().getMoveToTarget();
-        if (targetPos == null) {
+        if (this.finished) {
             return;
         }
 
-        if (this.isAtTarget(targetPos)) {
+        if (this.isAtTarget()) {
+            this.finished = true;
             this.tourist.getMind().arriveAtDestination();
             return;
         }
 
-        if (this.nextRepathTicks > 0) {
-            this.nextRepathTicks--;
+        if (this.timerTicks <= 0) {
+            double distanceToTarget = Math.sqrt(this.getDistanceToNavPosSqr());
+            this.tourist.getMind().recordProgressTowardsTarget(distanceToTarget);
+            this.finishNavigation();
+            return;
         }
 
-        if (this.nextRepathTicks <= 0 || this.tourist.getNavigation().isDone()) {
-            this.moveToTarget();
-        }
+        if (this.nextProgressCheckTicks <= 0) {
+            double distanceToTarget = Math.sqrt(this.getDistanceToNavPosSqr());
+            this.tourist.getMind().recordProgressTowardsTarget(distanceToTarget);
 
-        if (this.nextCheckProgressTicks > 0) {
-            this.nextCheckProgressTicks--;
-        }
-
-        // Check on progress towards target and report. Determine if tourist is lost.
-        if (nextCheckProgressTicks <= 0 && !this.isAtTarget(targetPos)) {
-            double closestDistanceToTarget = this.tourist.getClosestDistanceToTarget();
-            double distanceToTarget = Math.sqrt(getDistanceToTargetSqr(targetPos, false));
-            if ((closestDistanceToTarget - distanceToTarget) < 0.5) {
-                int consecutiveFailedProgressChecks = this.tourist.getConsecutiveFailedProgressChecks();
+            if (!this.tourist.getNavigation().isInProgress()) {
+                int consecutiveFailedProgressChecks = this.tourist.getMind().getConsecutiveFailedProgressChecks();
                 consecutiveFailedProgressChecks++;
-                this.tourist.getMind().recordProgressTowardsTarget(closestDistanceToTarget, consecutiveFailedProgressChecks);
+                this.tourist.getMind().recordFailedProgressChecks(consecutiveFailedProgressChecks);
 
-                if (consecutiveFailedProgressChecks >= 2) {
-                    if (this.getDistanceToTargetSqr(targetPos, true) <= DESIRED_DISTANCE_SQUARED) {
-                        this.tourist.getMind().arriveAtDestination(); // tourist got within the right horizontal distance - the target might be just too high off the ground
-                        return;
-                    }
-                }
+                TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] {} failed {} consecutive navigation progress checks",
+                        this.getClass().getSimpleName(),
+                        this.tourist.getDisplayName().getString(),
+                        consecutiveFailedProgressChecks
+                );
 
                 if (consecutiveFailedProgressChecks > PROGRESS_CHECK_RETRIES) {
-                    if (this.getDistanceToTargetSqr(targetPos, false) <= this.maxDistanceSq) {
-                        this.tourist.getMind().arriveAtDestination(); // tourist got "close enough"
-                    } else {
-                        this.tourist.getMind().onLost();
-                    }
+                    this.finishNavigation();
                     return;
-                } else {
-                    TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[{}] {} failed {} consecutive nav progress checks",
-                            this.getClass().getSimpleName(),
-                            this.tourist.getDisplayName().getString(),
-                            consecutiveFailedProgressChecks
-                    );
                 }
-            } else {
-                this.tourist.getMind().recordProgressTowardsTarget(distanceToTarget, 0);
+                this.moveToTarget();
             }
-            this.nextCheckProgressTicks = CHECK_PROGRESS_GOALTICKS;
+
+            this.nextProgressCheckTicks = this.adjustedTickDelay(PROGRESS_CHECK_TICKS);
+        } else {
+            this.nextProgressCheckTicks--;
         }
+
+        this.timerTicks--;
     }
 
     @Override
     public void stop() {
-        this.tourist.stopNavigation();
+        this.tourist.getNavigation().setRequiredPathLength(this.defaultPathLength);
+        this.tourist.getNavigation().stop();
     }
 
     private void moveToTarget() {
-        BlockPos targetPos = this.tourist.getMind().getMoveToTarget();
-        if (targetPos == null) {
-            return;
+        PathNavigation nav = this.tourist.getNavigation();
+        int retry = this.tourist.getMind().getConsecutiveFailedProgressChecks();
+        BlockPos destination = this.navPos;
+        int accuracy = 1;
+
+        if (retry == 1) {
+            accuracy = 2;
+        } else if (retry == 2) {
+            destination = this.targetPos;
+            accuracy = this.maxAcceptableDistance;
+        } else if (retry >= 3) {
+            nav.setRequiredPathLength(this.defaultPathLength * 2);
+            if (retry >= 4) {
+                destination = this.targetPos;
+                accuracy = this.maxAcceptableDistance;
+            }
         }
 
-        boolean moveStarted = this.tourist.getNavigation().moveTo(
-                targetPos.getX() + 0.5,
-                targetPos.getY(),
-                targetPos.getZ() + 0.5,
-                1.0 // speed modifier
-        );
-
-        if (!moveStarted) {
-            TouristEntity.logActivity(Verbosity.LEVEL_1_DIAGNOSTICS,
-                    "[{}] Unable to path {} toward target at {}",
+        nav.stop();
+        Path path = nav.createPath(destination, accuracy);
+        if (path == null || !nav.moveTo(path, 1.0)) {
+            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS,
+                    "[{}] Unable to start path for {} toward {}",
                     this.getClass().getSimpleName(),
                     this.tourist.getDisplayName().getString(),
-                    targetPos.toShortString());
+                    destination.toShortString());
+        } else if (!path.canReach()) {
+            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS,
+                    "[{}] Following partial path for {} toward {}",
+                    this.getClass().getSimpleName(),
+                    this.tourist.getDisplayName().getString(),
+                    destination.toShortString());
         }
-
-        this.nextRepathTicks = REPATH_INTERVAL_GOALTICKS;
     }
 
-    private double getDistanceToTargetSqr(BlockPos targetPos, boolean disregardHeightDifference) {
-        double targetCenterX = targetPos.getX() + 0.5;
-        double targetCenterY = disregardHeightDifference ? this.tourist.getY() : targetPos.getY();
-        double targetCenterZ = targetPos.getZ() + 0.5;
+    private double getDistanceToNavPosSqr() {
+        double targetCenterX = this.navPos.getX() + 0.5;
+        double targetCenterY = this.navPos.getY();
+        double targetCenterZ = this.navPos.getZ() + 0.5;
         return this.tourist.distanceToSqr(targetCenterX, targetCenterY, targetCenterZ);
     }
 
-    private boolean isAtTarget(@NonNull BlockPos targetPos) {
-        return this.getDistanceToTargetSqr(targetPos, false) <= DESIRED_DISTANCE_SQUARED;
+    private boolean isAtTarget() {
+        return this.getDistanceToNavPosSqr() <= IDEAL_DISTANCE_SQUARED;
+    }
+
+    private void finishNavigation() {
+        double dx = this.tourist.getX() - (this.targetPos.getX() + 0.5);
+        double dy = this.tourist.getY() - this.targetPos.getY();
+        double dz = this.tourist.getZ() - (this.targetPos.getZ() + 0.5);
+        double horizontalDistanceSq = dx * dx + dz * dz;
+
+        this.finished = true;
+        if (horizontalDistanceSq <= this.maxAcceptableDistanceSq && Math.abs(dy) <= MAX_VERTICAL_DIFFERENCE) {
+            this.tourist.getMind().arriveAtDestination();
+        } else {
+            this.tourist.getMind().onLost();
+        }
     }
 }

@@ -35,7 +35,7 @@ import java.util.*;
 
 public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
     public static final int IDEAL_TARGET_APPROACH_DISTANCE = 1; // Tourist should try to stand this far away for dining spot targets
-    public static final int MAX_APPROACH_DISTANCE = 4; // Skip target if tourist can't get closer than this distance
+    public static final int MAX_TARGET_APPROACH_DISTANCE = 4; // Skip target if tourist can't get closer than this distance
     public static final int MAX_RANGE_TO_TARGET = 100;
     public static final int MIN_TICKS_CHOOSING_FOOD_AT_COUNTER = 80;
     public static final int MAX_TICKS_CHOOSING_FOOD_AT_COUNTER = 200;
@@ -110,16 +110,6 @@ public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
     }
 
     @Override
-    public int getIdealApproachDistance() {
-        return IDEAL_TARGET_APPROACH_DISTANCE;
-    }
-
-    @Override
-    public int getMaxApproachDistance() {
-        return MAX_APPROACH_DISTANCE;
-    }
-
-    @Override
     public int getMaxRangeToTarget() {
         return MAX_RANGE_TO_TARGET;
     }
@@ -161,6 +151,16 @@ public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
     @Override
     public int getPaymentSlotSize() {
         return PAYMENT_SLOT_SIZE;
+    }
+
+    @Override
+    public int getTargetIdealApproachDistance() {
+        return IDEAL_TARGET_APPROACH_DISTANCE;
+    }
+
+    @Override
+    public int getTargetMaxApproachDistance() {
+        return MAX_TARGET_APPROACH_DISTANCE;
     }
 
     @Override
@@ -233,7 +233,7 @@ public class DiningExperienceBlockEntity extends AbstractExperienceBlockEntity {
     }
 
     @Override
-    public ExperienceVisit prepareToLeaveEarly(ExperienceVisit visit) {
+    public ExperienceVisit prepareToLeaveEarly(@NonNull ExperienceVisit visit) {
         if (visit.remainingTargets().isEmpty()) {
             return visit;
         }

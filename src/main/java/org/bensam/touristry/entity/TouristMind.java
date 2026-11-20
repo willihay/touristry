@@ -1,6 +1,7 @@
 package org.bensam.touristry.entity;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -224,7 +225,7 @@ public final class TouristMind {
         }
 
         // Recreate and inject the positioning goal for the current target.
-        int idealDistance = experience.getIdealApproachDistance();
+        int idealDistance = experience.getTargetIdealApproachDistance();
         Goal positioningGoal = new PositionForViewingGoal(
                 this.tourist,
                 this.currentExperienceTarget.pos(),
@@ -1055,8 +1056,30 @@ public final class TouristMind {
 
         if (this.state == TouristState.TRAVELING_TO_EXPERIENCE_TARGET) {
             this.updateMood(VisitResult.LOST);
-            this.removeCurrentTarget(false);
-            this.transitionTo(TouristState.CHOOSING_EXPERIENCE_TARGET);
+            if (this.experienceTargetTracker.isEmpty() || this.currentExperienceTarget == null) {
+                Component experienceMessage = Component.literal("got lost travelling in");
+                this.exitCurrentExperience(serverLevel, VisitResult.LOST, false, experienceMessage);
+            }
+            // Let the experience update the current visit upon tourist lost.
+            ExperienceTarget target = this.currentExperienceTarget;
+            ExperienceVisit currentVisit = this.experienceTargetTracker.peekFirst();
+            TouristExperience experience = TourismManager.getTouristExperienceById(currentVisit.experienceUUID());
+            if (experience != null) {
+                String lostMessage = "got lost travelling to target " + target.getDisplayName(serverLevel).getString() + " at " + experience.getDisplayName().getString();
+                TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS, "[TouristMind] {} {}",
+                        this.tourist.getDisplayName().getString(),
+                        lostMessage);
+                this.experienceTargetTracker.pollFirst();
+                currentVisit = experience.onLostTravelingToTarget(currentVisit);
+                this.experienceTargetTracker.push(currentVisit);
+                this.transitionTo(TouristState.CHOOSING_EXPERIENCE_TARGET);
+            } else {
+                // If the experience is not loaded, then default to exiting the current experience.
+                Component lostMessage = Component.literal("got lost travelling to target ")
+                        .append(target.getDisplayName(serverLevel))
+                        .append(" at");
+                this.exitCurrentExperience(serverLevel, VisitResult.LOST, false, lostMessage);
+            }
         } else if (this.state == TouristState.TRAVELING_TO_EXPERIENCE) {
             Component experienceMessage = Component.literal("got lost travelling to");
             this.exitCurrentExperience(serverLevel, VisitResult.LOST, false, experienceMessage);
@@ -1162,7 +1185,7 @@ public final class TouristMind {
         }
 
         // Inject positioning goal to fine-tune position and orientation.
-        int idealDistance = experience.getIdealApproachDistance();
+        int idealDistance = experience.getTargetIdealApproachDistance();
         Goal positioningGoal = new PositionForViewingGoal(
                 this.tourist,
                 this.currentExperienceTarget.pos(),
@@ -1371,20 +1394,50 @@ public final class TouristMind {
             ExperienceVisit currentVisit = this.experienceTargetTracker.peekFirst();
             TouristExperience experience = TourismManager.getTouristExperienceById(currentVisit.experienceUUID());
             if (experience != null) {
-                return experience.getMaxApproachDistance();
+                return experience.getTargetMaxApproachDistance();
             }
         }
         return 3;
     }
 
-    public @Nullable BlockPos getMoveToTarget() {
+    public @Nullable BlockPos getMoveToTargetPos(boolean returnIdealNavPos) {
         if (this.state == TouristState.TRAVELING_TO_BEACON) {
-            return this.beaconPos;
+            if (this.beaconPos != null) {
+                if (returnIdealNavPos) {
+                    return this.beaconPos.relative(Direction.Plane.HORIZONTAL.getRandomDirection(this.random()));
+                } else {
+                    return this.beaconPos;
+                }
+            }
         } else if (this.state == TouristState.TRAVELING_TO_EXPERIENCE) {
-            return this.experienceBlockPos;
+            if (this.experienceBlockPos != null) {
+                if (returnIdealNavPos) {
+                    TouristExperience experience = TourismManager.getTouristExperienceByPos(this.experienceBlockPos);
+                    if (experience == null) {
+                        return null;
+                    }
+                    return this.experienceBlockPos.relative(experience.getApproachFromDirection());
+                } else {
+                    return this.experienceBlockPos;
+                }
+            }
         } else if (this.state == TouristState.TRAVELING_TO_EXPERIENCE_TARGET) {
-            return this.targetPos;
+            if (this.targetPos != null) {
+                if (returnIdealNavPos) {
+                    if (!this.experienceTargetTracker.isEmpty() && this.currentExperienceTarget != null) {
+                        ExperienceVisit currentVisit = this.experienceTargetTracker.peekFirst();
+                        TouristExperience experience = TourismManager.getTouristExperienceById(currentVisit.experienceUUID());
+                        if (experience == null) {
+                            return null;
+                        }
+                        return this.targetPos.relative(this.currentExperienceTarget.approachFrom(), experience.getTargetIdealApproachDistance());
+                    }
+                } else {
+                    return this.targetPos;
+                }
+            }
         }
+
         return null;
     }
 
@@ -1591,9 +1644,14 @@ public final class TouristMind {
         this.recordExperience(serverLevel, review);
     }
 
-    public void recordProgressTowardsTarget(double closestDistanceToTarget, int consecutiveFailedProgressChecks) {
-        this.closestDistanceToDestination = closestDistanceToTarget;
+    public void recordFailedProgressChecks(int consecutiveFailedProgressChecks) {
         this.consecutiveFailedProgressChecks = consecutiveFailedProgressChecks;
+    }
+
+    public void recordProgressTowardsTarget(double distanceToTarget) {
+        if (distanceToTarget < this.closestDistanceToDestination) {
+            this.closestDistanceToDestination = distanceToTarget;
+        }
     }
 
     private void resetBeaconJourneyStats() {

@@ -13,7 +13,7 @@ public class TouristWalkNodeEvaluator extends WalkNodeEvaluator {
         BlockPos blockPos = new BlockPos(i, j, k);
         BlockState blockState = pathfindingContext.level().getBlockState(blockPos);
         if (blockState.getBlock() instanceof FenceGateBlock && !blockState.getValue(FenceGateBlock.OPEN)) {
-            return PathType.DOOR_WOOD_CLOSED; // treat closed gate like a wooden door
+            return PathType.DOOR_WOOD_CLOSED; // treat closed gate like a closed wooden door
         }
 
         return super.getPathType(pathfindingContext, i, j, k);

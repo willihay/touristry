@@ -63,6 +63,7 @@ import java.util.List;
 
 public class TouristEntity extends AbstractVillager implements ContainerUser {
     private static final int BASE_MODEL_VARIANTS = 10;
+    private static final float DEFAULT_NAV_PATH_LENGTH = 128;
     protected static final Identifier TOURIST_SPEED_VARIATION_ID = Identifier.fromNamespaceAndPath(Touristry.MOD_ID, "tourist_speed_variation");
 
     private static final EntityDataAccessor<Integer> DATA_BASE_MODEL = SynchedEntityData.defineId(TouristEntity.class, EntityDataSerializers.INT);
@@ -104,7 +105,7 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
         this.selectCameraModel();
         this.getNavigation().setCanOpenDoors(true);
         this.getNavigation().setCanFloat(true);
-        this.getNavigation().setRequiredPathLength(48.0F);
+        this.getNavigation().setRequiredPathLength(DEFAULT_NAV_PATH_LENGTH);
         logActivity(Verbosity.LEVEL_1_DIAGNOSTICS, "Constructed tourist {} base={} clothing={}", this.uuid, this.baseModelVariant, this.clothingVariantKey);
     }
 
@@ -437,14 +438,6 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
         return this.isCameraFlashNeeded() ? this.flashCamera : this.baseCamera;
     }
 
-    public double getClosestDistanceToTarget() {
-        return this.mind.getClosestDistanceToDestination();
-    }
-
-    public int getConsecutiveFailedProgressChecks() {
-        return this.mind.getConsecutiveFailedProgressChecks();
-    }
-
     @Override
     public double getContainerInteractionRange() {
         return this.getAttributeValue(Attributes.BLOCK_INTERACTION_RANGE);
@@ -457,6 +450,10 @@ public class TouristEntity extends AbstractVillager implements ContainerUser {
     @Override
     protected SoundEvent getDeathSound() {
         return SoundEvents.VILLAGER_DEATH;
+    }
+
+    public float getDefaultNavPathLength() {
+        return DEFAULT_NAV_PATH_LENGTH;
     }
 
     public @Nullable BlockPos getExperienceTarget() {

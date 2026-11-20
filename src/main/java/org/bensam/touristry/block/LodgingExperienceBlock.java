@@ -30,6 +30,15 @@ public class LodgingExperienceBlock extends AbstractExperienceBlock {
     private static final VoxelShape SHAPE = Shapes.or(BASE, SHELVES, DESK);
     private static final Map<Direction, VoxelShape> SHAPE_BY_DIRECTION = Shapes.rotateHorizontal(SHAPE);
 
+    private static final int COLLISION_WIDE_AXIS_INSET = 3;
+    private static final VoxelShape COLLISION_BASE = Block.box(COLLISION_WIDE_AXIS_INSET, 0, 1, 16 - COLLISION_WIDE_AXIS_INSET, 1, 15);
+    private static final VoxelShape COLLISION_SHELVES = Block.box(COLLISION_WIDE_AXIS_INSET, 1, 2, 16 - COLLISION_WIDE_AXIS_INSET, 15, 13);
+    private static final VoxelShape COLLISION_DESK = Block.box(COLLISION_WIDE_AXIS_INSET, 15, 1, 16 - COLLISION_WIDE_AXIS_INSET, 20, 15);
+    private static final VoxelShape COLLISION_SHAPE =
+            Shapes.or(COLLISION_BASE, COLLISION_SHELVES, COLLISION_DESK);
+    private static final Map<Direction, VoxelShape> COLLISION_SHAPE_BY_DIRECTION =
+            Shapes.rotateHorizontal(COLLISION_SHAPE);
+
     public static final MapCodec<LodgingExperienceBlock> CODEC = simpleCodec(LodgingExperienceBlock::new);
 
     public LodgingExperienceBlock(Properties properties) {
@@ -52,6 +61,11 @@ public class LodgingExperienceBlock extends AbstractExperienceBlock {
             return lodgingExperienceBlockEntity.isOpenForBusiness() ? 15 : 0;
         }
         return 0;
+    }
+
+    @Override
+    protected VoxelShape getCollisionShape(BlockState blockState, BlockGetter blockGetter, BlockPos blockPos, CollisionContext collisionContext) {
+        return COLLISION_SHAPE_BY_DIRECTION.get(blockState.getValue(FACING));
     }
 
     @Override

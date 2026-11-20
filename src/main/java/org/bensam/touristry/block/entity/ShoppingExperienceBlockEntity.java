@@ -32,7 +32,7 @@ import java.util.*;
 
 public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity {
     public static final int IDEAL_TARGET_APPROACH_DISTANCE = 1; // Tourist should try to stand this far away for shopping targets
-    public static final int MAX_APPROACH_DISTANCE = 4; // Skip target if tourist can't get closer than this distance
+    public static final int MAX_TARGET_APPROACH_DISTANCE = 4; // Skip target if tourist can't get closer than this distance
     public static final int MAX_RANGE_TO_TARGET = 100;
     public static final int MIN_TICKS_AT_TARGET = 60;
     public static final int MAX_TICKS_AT_TARGET = 100;
@@ -103,11 +103,6 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
         return Component.translatable("block.touristry.shopping_experience");
     }
 
-    @Override
-    public int getIdealApproachDistance() {
-        return IDEAL_TARGET_APPROACH_DISTANCE;
-    }
-
     public @Nullable ItemPrice getItemPrice(int index) {
         List<ItemPrice> itemPriceList = this.getItemPrices();
 
@@ -133,11 +128,6 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
     }
 
     @Override
-    public int getMaxApproachDistance() {
-        return MAX_APPROACH_DISTANCE;
-    }
-
-    @Override
     public int getMaxRangeToTarget() {
         return MAX_RANGE_TO_TARGET;
     }
@@ -155,6 +145,16 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
     @Override
     public int getPaymentSlotSize() {
         return PAYMENT_SLOT_SIZE;
+    }
+
+    @Override
+    public int getTargetIdealApproachDistance() {
+        return IDEAL_TARGET_APPROACH_DISTANCE;
+    }
+
+    @Override
+    public int getTargetMaxApproachDistance() {
+        return MAX_TARGET_APPROACH_DISTANCE;
     }
 
     @Override
@@ -229,7 +229,7 @@ public class ShoppingExperienceBlockEntity extends AbstractExperienceBlockEntity
     }
 
     @Override
-    public ExperienceVisit prepareToLeaveEarly(ExperienceVisit visit) {
+    public ExperienceVisit prepareToLeaveEarly(@NonNull ExperienceVisit visit) {
         if (visit.remainingTargets().isEmpty()) {
             return visit;
         }
