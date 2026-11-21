@@ -815,6 +815,9 @@ public final class TouristMind {
     }
 
     private void deSpawn() {
+        if (this.tourist.isSleeping()) {
+            this.tourist.stopSleeping();
+        }
         this.cancelOvernightReservation();
         this.tourist.onDespawn();
         this.transitionTo(TouristState.FINISHED);
@@ -1098,6 +1101,10 @@ public final class TouristMind {
     }
 
     public void onStopSleeping(ServerLevel serverLevel) {
+        if (this.state == TouristState.DESPAWNING) {
+            return; // if a tourist is despawning while sleeping, it must be a forced despawn; just return from here
+        }
+
         int tickTimeOfDay = (int) (serverLevel.getDayTime() % 24000L);
         boolean needsToCheckOut = this.isAtOvernightLodging() && this.state.isAtTarget();
 
