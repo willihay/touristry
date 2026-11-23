@@ -112,7 +112,7 @@ public class PositionForViewingGoal extends Goal {
             this.positioned = true;
 
             TouristEntity.logActivity(Verbosity.LEVEL_1_DIAGNOSTICS,
-                "[{}] Positioned at ideal viewing position", this.getClass().getSimpleName());
+                "[{}] Positioned at ideal viewing position on tick {}", this.getClass().getSimpleName(), this.ticksPositioning);
             
             this.finishPositioning();
         }

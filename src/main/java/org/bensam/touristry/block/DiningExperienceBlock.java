@@ -13,6 +13,7 @@ import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.pathfinder.PathComputationType;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
@@ -75,6 +76,11 @@ public class DiningExperienceBlock extends AbstractExperienceBlock {
     @Override
     protected boolean hasAnalogOutputSignal(@NonNull BlockState blockState) {
         return true;
+    }
+
+    @Override
+    protected boolean isPathfindable(BlockState blockState, PathComputationType pathComputationType) {
+        return pathComputationType != PathComputationType.LAND && super.isPathfindable(blockState, pathComputationType);
     }
 
     @Override

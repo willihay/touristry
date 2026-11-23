@@ -11,6 +11,11 @@ public class TouristPathNavigation extends GroundPathNavigation {
     }
 
     @Override
+    public boolean canUpdatePath() {
+        return super.canUpdatePath();
+    }
+
+    @Override
     protected PathFinder createPathFinder(int i) {
         this.nodeEvaluator = new TouristWalkNodeEvaluator();
         return new PathFinder(this.nodeEvaluator, i);

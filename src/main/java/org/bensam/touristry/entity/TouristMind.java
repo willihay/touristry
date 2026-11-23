@@ -55,8 +55,6 @@ public final class TouristMind {
     // Tourist entity-related
     private final TouristEntity tourist;
     private TouristState state;
-    private double closestDistanceToDestination;
-    private int consecutiveFailedProgressChecks;
     private float dailyBudgetEmeralds; // does not include budget for overnight accommodations, which is handled separately
     private int dayNumberOfVisit;
     private int eveningActivityStartTimeTicks;
@@ -100,7 +98,6 @@ public final class TouristMind {
     public TouristMind(TouristEntity tourist) {
         this.tourist = tourist;
         this.beaconPos = null;
-        this.closestDistanceToDestination = Double.MAX_VALUE;
         this.dailyBudgetEmeralds = this.generateDailyBudget();
         this.dayNumberOfVisit = 1;
         this.experienceBlockPos = null;
@@ -274,8 +271,6 @@ public final class TouristMind {
             valueOutput.store("TargetPos", BlockPos.CODEC, this.targetPos);
         }
 
-        valueOutput.putDouble("ClosestDistanceToDestination", this.closestDistanceToDestination);
-        valueOutput.putInt("FailedProgressChecks", this.consecutiveFailedProgressChecks);
         valueOutput.putBoolean("ReportedHurtEnRoute", this.reportedHurtEnRoute);
         valueOutput.putBoolean("ReportedHurtOnPremises", this.reportedHurtOnPremises);
         valueOutput.putDouble("Mood", this.mood);
@@ -323,8 +318,6 @@ public final class TouristMind {
 
         this.experienceBlockPos = valueInput.read("ExperienceBlockPos", BlockPos.CODEC).orElse(null);
         this.targetPos = valueInput.read("TargetPos", BlockPos.CODEC).orElse(null);
-        this.closestDistanceToDestination = valueInput.getDoubleOr("ClosestDistanceToDestination", Double.MAX_VALUE);
-        this.consecutiveFailedProgressChecks = valueInput.getIntOr("FailedProgressChecks", 0);
         this.reportedHurtEnRoute = valueInput.getBooleanOr("ReportedHurtEnRoute", false);
         this.reportedHurtOnPremises = valueInput.getBooleanOr("ReportedHurtOnPremises", false);
         this.mood = valueInput.getDoubleOr("Mood", this.mood);
@@ -565,7 +558,6 @@ public final class TouristMind {
             case CHOOSING_EXPERIENCE_AT_BEACON -> this.chooseExperienceAtBeacon(serverLevel, beaconBlockEntity);
             case CHOOSING_EXPERIENCE_TARGET -> this.chooseExperienceTarget(serverLevel);
             case TRAVELING_TO_EXPERIENCE -> this.beginTravelingToExperienceBlock();
-            case TRAVELING_TO_EXPERIENCE_TARGET -> this.beginTravelingToExperienceTarget();
             case ENTERING_EXPERIENCE -> this.enterExperience(serverLevel);
             case POSITIONING_AT_TARGET -> this.positionAtTarget(serverLevel);
             case WANDERING_WORLD -> this.beginWanderingWorld();
@@ -683,10 +675,6 @@ public final class TouristMind {
     private void beginTravelingToExperienceBlock() {
         this.clearExperienceSession();
         this.tourist.giveItemToHold(new ItemStack(Items.MAP));
-    }
-
-    private void beginTravelingToExperienceTarget() {
-        this.resetExperienceJourneyStats();
     }
 
     private void beginWaitAtBlock(ServerLevel serverLevel) {
@@ -1297,8 +1285,6 @@ public final class TouristMind {
     }
 
     private void clearExperienceSession() {
-        this.resetExperienceJourneyStats();
-
         // Exit any active experiences.
         ServerLevel serverLevel = (ServerLevel) this.tourist.level();
         while (!this.experienceTargetTracker.isEmpty()) {
@@ -1353,14 +1339,6 @@ public final class TouristMind {
 
     public @Nullable BlockPos getBeaconPos() {
         return this.beaconPos;
-    }
-
-    public double getClosestDistanceToDestination() {
-        return this.closestDistanceToDestination;
-    }
-
-    public int getConsecutiveFailedProgressChecks() {
-        return this.consecutiveFailedProgressChecks;
     }
 
     public @Nullable BlockPos getExperiencePos() {
@@ -1651,26 +1629,9 @@ public final class TouristMind {
         this.recordExperience(serverLevel, review);
     }
 
-    public void recordFailedProgressChecks(int consecutiveFailedProgressChecks) {
-        this.consecutiveFailedProgressChecks = consecutiveFailedProgressChecks;
-    }
-
-    public void recordProgressTowardsTarget(double distanceToTarget) {
-        if (distanceToTarget < this.closestDistanceToDestination) {
-            this.closestDistanceToDestination = distanceToTarget;
-        }
-    }
-
     private void resetBeaconJourneyStats() {
-        this.closestDistanceToDestination = Double.MAX_VALUE;
-        this.consecutiveFailedProgressChecks = 0;
         this.reportedHurtEnRoute = false;
         this.reportedHurtOnPremises = false;
-    }
-
-    private void resetExperienceJourneyStats() {
-        this.closestDistanceToDestination = Double.MAX_VALUE;
-        this.consecutiveFailedProgressChecks = 0;
     }
 
     private void startNewDay(boolean wokeInGoodMood) {
