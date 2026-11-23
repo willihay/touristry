@@ -31,10 +31,9 @@ public class LodgingExperienceBlock extends AbstractExperienceBlock {
     private static final VoxelShape SHAPE = Shapes.or(BASE, SHELVES, DESK);
     private static final Map<Direction, VoxelShape> SHAPE_BY_DIRECTION = Shapes.rotateHorizontal(SHAPE);
 
-    private static final int COLLISION_WIDE_AXIS_INSET = 3;
-    private static final VoxelShape COLLISION_BASE = Block.box(COLLISION_WIDE_AXIS_INSET, 0, 1, 16 - COLLISION_WIDE_AXIS_INSET, 1, 15);
-    private static final VoxelShape COLLISION_SHELVES = Block.box(COLLISION_WIDE_AXIS_INSET, 1, 2, 16 - COLLISION_WIDE_AXIS_INSET, 15, 13);
-    private static final VoxelShape COLLISION_DESK = Block.box(COLLISION_WIDE_AXIS_INSET, 15, 1, 16 - COLLISION_WIDE_AXIS_INSET, 20, 15);
+    private static final VoxelShape COLLISION_BASE = Block.box(0, 0, 1, 16, 1, 15);
+    private static final VoxelShape COLLISION_SHELVES = Block.box(0, 1, 2, 16, 15, 13);
+    private static final VoxelShape COLLISION_DESK = Block.box(0, 15, 1, 16, 20, 15);
     private static final VoxelShape COLLISION_SHAPE =
             Shapes.or(COLLISION_BASE, COLLISION_SHELVES, COLLISION_DESK);
     private static final Map<Direction, VoxelShape> COLLISION_SHAPE_BY_DIRECTION =
