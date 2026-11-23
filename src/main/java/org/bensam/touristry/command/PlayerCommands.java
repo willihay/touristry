@@ -279,8 +279,9 @@ public final class PlayerCommands {
 
         source.sendSuccess(() -> Component.literal("Tourist beacon locations:"), false);
 
-        for (TouristBeaconBlockEntity beaconBlockEntity : loadedBeacons) {
-            Component message = Component.literal(" - ")
+        for (int i = 0; i < loadedBeacons.size(); ++i) {
+            TouristBeaconBlockEntity beaconBlockEntity = loadedBeacons.get(i);
+            Component message = Component.literal((i + 1) + ") ")
                     .append(beaconBlockEntity.getName())
                     .append(Component.literal(" @ " + beaconBlockEntity.getBlockPos().toShortString() + " ("))
                     .append(Component.translatable(beaconBlockEntity.isOpenForBusiness()
@@ -301,14 +302,15 @@ public final class PlayerCommands {
 
         source.sendSuccess(() -> Component.literal("Tourist experiences:"), false);
 
-        for (TouristExperience experience : loadedExperiences) {
+        for (int i = 0; i < loadedExperiences.size(); ++i) {
+            TouristExperience experience = loadedExperiences.get(i);
             MutableComponent name = experience.getDisplayName().copy();
             if (experience.hasCustomName()) {
                 name.append(" (")
                         .append(experience.getDefaultName())
                         .append(")");
             }
-            Component message = Component.literal(" - ")
+            Component message = Component.literal((i + 1) + ") ")
                     .append(name)
                     .append(Component.literal(" @ " + experience.getBlockPos().toShortString()));
             source.sendSuccess(() -> message, false);
@@ -325,8 +327,9 @@ public final class PlayerCommands {
 
         source.sendSuccess(() -> Component.literal("Tourists:"), false);
 
-        for (TouristEntity touristEntity : tourists) {
-            Component message = Component.literal(" - ")
+        for (int i = 0; i < tourists.size(); i++) {
+            TouristEntity touristEntity = tourists.get(i);
+            Component message = Component.literal((i + 1) + ") ")
                     .append(touristEntity.getName())
                     .append(" @ " + touristEntity.blockPosition().toShortString());
             source.sendSuccess(() -> message, false);
@@ -368,8 +371,9 @@ public final class PlayerCommands {
 
         source.sendSuccess(() -> Component.literal("Remaining tourist arrivals scheduled for today:"), false);
 
-        for (TourismManager.ScheduledTouristSpawn spawn : pendingSpawns) {
-            MutableComponent message = Component.literal(" - " + TourismManager.getFriendlyTimeOfDay(spawn.timeOfDay(), false, false) + " for ");
+        for (int i = 0; i < pendingSpawns.size(); i++) {
+            TourismManager.ScheduledTouristSpawn spawn = pendingSpawns.get(i);
+            MutableComponent message = Component.literal((i + 1) + ") " + TourismManager.getFriendlyTimeOfDay(spawn.timeOfDay(), false, false) + " for ");
             TouristBeaconBlockEntity beaconBlockEntity = TourismManager.getBeaconBlockEntityByUUID(spawn.beaconUUID());
             if (beaconBlockEntity != null) {
                 message.append(beaconBlockEntity.getName().copy());
