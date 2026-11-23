@@ -268,11 +268,12 @@ public class MoveToTargetGoal extends Goal {
                 }
 
                 TouristEntity.logActivity(this.currentVerbosityLevel,
-                        "[{}] {} ({}) path retry={} requested={} accuracy={} pathTarget={} canReach={} end={} nodes=[{}]",
+                        "[{}] {} ({}) path expansionLevel={}/{} destination={} accuracy={} pathTarget={} canReach={} end={} nodes=[{}]",
                         this.getClass().getSimpleName(),
                         this.tourist.getDisplayName().getString(),
                         this.tourist.getUUID(),
                         expansionLevel,
+                        MAX_NAV_EXPANSION_LEVEL,
                         destination.toShortString(),
                         accuracy,
                         path.getTarget().toShortString(),
@@ -313,13 +314,15 @@ public class MoveToTargetGoal extends Goal {
 
     private void logNavigationEnd(String reason) {
         TouristEntity.logActivity(this.currentVerbosityLevel,
-                "[{}] {} ({}) navigation ended: {} time={} pos={} isStuck={} lastPos={} lastNode={}/{} at {} lastHorizontalCollision={}",
+                "[{}] {} ({}) navigation ended: {} time={} pos={} expansionLevel={}/{} isStuck={} lastPos={} lastNode={}/{} at {} lastHorizontalCollision={}",
                 this.getClass().getSimpleName(),
                 this.tourist.getDisplayName().getString(),
                 this.tourist.getUUID(),
                 reason,
                 this.tourist.level().getGameTime(),
                 this.tourist.position(),
+                this.navExpansionLevel,
+                MAX_NAV_EXPANSION_LEVEL,
                 this.tourist.getNavigation().isStuck(),
                 this.lastPathPosition,
                 this.lastPathNodeIndex,
@@ -354,7 +357,7 @@ public class MoveToTargetGoal extends Goal {
 
         if (this.nextNavigationLogTicks <= 0) {
             TouristEntity.logActivity(this.currentVerbosityLevel,
-                    "[{}] {} ({}) navigating: time={} pos={} node={}/{} at {} horizontalCollision={} onGround={} isStuck={}",
+                    "[{}] {} ({}) navigating: time={} pos={} node={}/{} at {} expansionLevel={}/{} horizontalCollision={} onGround={} isStuck={}",
                     this.getClass().getSimpleName(),
                     this.tourist.getDisplayName().getString(),
                     this.tourist.getUUID(),
@@ -363,6 +366,8 @@ public class MoveToTargetGoal extends Goal {
                     this.lastPathNodeIndex,
                     this.lastPathNodeCount,
                     this.lastPathNode.toShortString(),
+                    this.navExpansionLevel,
+                    MAX_NAV_EXPANSION_LEVEL,
                     this.lastPathHorizontalCollision,
                     this.tourist.onGround(),
                     nav.isStuck());
