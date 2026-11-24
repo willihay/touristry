@@ -1,6 +1,8 @@
 package org.bensam.touristry.entity.goal;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.level.pathfinder.Path;
@@ -9,6 +11,7 @@ import org.bensam.touristry.config.ModServerConfigManager;
 import org.bensam.touristry.config.Verbosity;
 import org.bensam.touristry.entity.TouristEntity;
 import org.bensam.touristry.entity.navigation.TouristPathNavigation;
+import org.jspecify.annotations.Nullable;
 
 import java.util.EnumSet;
 import java.util.StringJoiner;
@@ -17,6 +20,7 @@ public class MoveToTargetGoal extends Goal {
     private static final boolean VERBOSE_LOGGING_OVERRIDE = false; // TODO: set to false before publishing
     private static final double IDEAL_DISTANCE_SQUARED = 2.25D;
     private static final double MAX_VERTICAL_DIFFERENCE = 2.0D;
+    private static final int MAX_SURFACE_ADJUSTMENT = 2;
     private static final int MAX_NAV_EXPANSION_LEVEL = 5;
     private static final int FAILED_NAV_RETRY_TICKS = 60;
     private static final int NAVIGATION_LIMIT_TICKS = 60*20; // 60 seconds * 20 ticks/second (pre-adjusted)
@@ -74,6 +78,21 @@ public class MoveToTargetGoal extends Goal {
         this.navPos = this.tourist.getMind().getMoveToTargetPos(true);
         if (this.navPos == null) {
             this.navPos = this.targetPos;
+        } else {
+            BlockPos surfacePos = this.findSurfacePosition(this.navPos);
+            if (surfacePos == null) {
+                TouristEntity.logActivity(Verbosity.LEVEL_1_DIAGNOSTICS, "[{}] No nearby surface for navigation position {}, using target position {}",
+                        this.getClass().getSimpleName(),
+                        this.navPos.toShortString(),
+                        this.targetPos.toShortString());
+                this.navPos = this.targetPos;
+            } else if (!surfacePos.equals(this.navPos)) {
+                TouristEntity.logActivity(Verbosity.LEVEL_1_DIAGNOSTICS, "[{}] Adjusted navigation position {} to surface position {}",
+                        this.getClass().getSimpleName(),
+                        this.navPos.toShortString(),
+                        surfacePos.toShortString());
+                this.navPos = surfacePos;
+            }
         }
 
         this.couldNotUpdatePath = false;
@@ -299,6 +318,58 @@ public class MoveToTargetGoal extends Goal {
         } else {
             this.tourist.getMind().onLost();
         }
+    }
+
+    /**
+     * Mirrors vanilla GroundPathNavigation.findSurfacePosition so that arrival is measured against the position the
+     * pathfinder will actually target (e.g. a block placed on top of another block, or a position inside terrain).
+     * Returns null if the surface is more than MAX_SURFACE_ADJUSTMENT blocks above or below the requested position,
+     * so the caller keeps the original position.
+     */
+    private @Nullable BlockPos findSurfacePosition(BlockPos pos) {
+        Level level = this.tourist.level();
+        if (!level.hasChunkAt(pos)) {
+            return null;
+        }
+
+        int minY = level.getMinY();
+        int maxY = level.getMaxY();
+        BlockPos.MutableBlockPos cursor = pos.mutable();
+
+        if (level.getBlockState(cursor).isAir()) {
+            cursor.move(Direction.DOWN);
+            while (cursor.getY() >= minY && cursor.getY() >= pos.getY() - MAX_SURFACE_ADJUSTMENT - 1
+                    && level.getBlockState(cursor).isAir()) {
+                cursor.move(Direction.DOWN);
+            }
+
+            if (cursor.getY() >= minY && cursor.getY() >= pos.getY() - MAX_SURFACE_ADJUSTMENT - 1) {
+                return cursor.above().immutable();
+            }
+
+            // Nothing within range below, so look upward as vanilla does.
+            cursor.setY(pos.getY() + 1);
+            while (cursor.getY() <= maxY && cursor.getY() <= pos.getY() + MAX_SURFACE_ADJUSTMENT + 1
+                    && level.getBlockState(cursor).isAir()) {
+                cursor.move(Direction.UP);
+            }
+        }
+
+        if (!level.getBlockState(cursor).isSolid()) {
+            return Math.abs(cursor.getY() - pos.getY()) <= MAX_SURFACE_ADJUSTMENT ? cursor.immutable() : null;
+        }
+
+        cursor.move(Direction.UP);
+        while (cursor.getY() <= maxY && cursor.getY() <= pos.getY() + MAX_SURFACE_ADJUSTMENT + 1
+                && level.getBlockState(cursor).isSolid()) {
+            cursor.move(Direction.UP);
+        }
+
+        if (cursor.getY() > maxY || Math.abs(cursor.getY() - pos.getY()) > MAX_SURFACE_ADJUSTMENT
+                || level.getBlockState(cursor).isSolid()) {
+            return null;
+        }
+        return cursor.immutable();
     }
 
     private double getDistanceToNavPosSqr() {
