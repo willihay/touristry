@@ -2,14 +2,19 @@ package org.bensam.touristry.entity.goal;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.pathfinder.Path;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.bensam.touristry.config.ModServerConfigManager;
 import org.bensam.touristry.config.Verbosity;
 import org.bensam.touristry.entity.TouristEntity;
+import org.bensam.touristry.entity.TouristState;
 import org.bensam.touristry.entity.navigation.TouristPathNavigation;
 import org.jspecify.annotations.Nullable;
 
@@ -21,6 +26,8 @@ public class MoveToTargetGoal extends Goal {
     private static final double IDEAL_DISTANCE_SQUARED = 2.25D;
     private static final double MAX_VERTICAL_DIFFERENCE = 2.0D;
     private static final int MAX_SURFACE_ADJUSTMENT = 2;
+    private static final int SEARCH_RADIUS = 2;
+    private static final double MAX_STEPPABLE_HEIGHT = 0.6D;
     private static final int MAX_NAV_EXPANSION_LEVEL = 5;
     private static final int FAILED_NAV_RETRY_TICKS = 60;
     private static final int NAVIGATION_LIMIT_TICKS = 60*20; // 60 seconds * 20 ticks/second (pre-adjusted)
@@ -92,6 +99,11 @@ public class MoveToTargetGoal extends Goal {
                         this.navPos.toShortString(),
                         surfacePos.toShortString());
                 this.navPos = surfacePos;
+            }
+
+            if (this.tourist.getMind().getState() == TouristState.TRAVELING_TO_EXPERIENCE_TARGET
+                    && !this.navPos.equals(this.targetPos)) {
+                this.navPos = this.chooseViewablePosition(this.navPos);
             }
         }
 
@@ -355,21 +367,95 @@ public class MoveToTargetGoal extends Goal {
             }
         }
 
-        if (!level.getBlockState(cursor).isSolid()) {
+        if (!this.isTallSolid(level, cursor)) {
             return Math.abs(cursor.getY() - pos.getY()) <= MAX_SURFACE_ADJUSTMENT ? cursor.immutable() : null;
         }
 
         cursor.move(Direction.UP);
         while (cursor.getY() <= maxY && cursor.getY() <= pos.getY() + MAX_SURFACE_ADJUSTMENT + 1
-                && level.getBlockState(cursor).isSolid()) {
+                && this.isTallSolid(level, cursor)) {
             cursor.move(Direction.UP);
         }
 
         if (cursor.getY() > maxY || Math.abs(cursor.getY() - pos.getY()) > MAX_SURFACE_ADJUSTMENT
-                || level.getBlockState(cursor).isSolid()) {
+                || this.isTallSolid(level, cursor)) {
             return null;
         }
         return cursor.immutable();
+    }
+
+    /** Low solid blocks (beds, carpets, slabs) can be stood on or stepped over, so they don't push the position upward. */
+    private boolean isTallSolid(Level level, BlockPos pos) {
+        BlockState state = level.getBlockState(pos);
+        return state.isSolid() && state.getCollisionShape(level, pos).max(Direction.Axis.Y) > MAX_STEPPABLE_HEIGHT;
+    }
+
+    /**
+     * Keeps the ideal position if the target is visible from it. Otherwise (e.g. the position is behind a wall),
+     * tries nearby standable positions that can see the target, nearest to the ideal position first, and finally
+     * falls back to the target position itself.
+     */
+    private BlockPos chooseViewablePosition(BlockPos idealPos) {
+        if (this.hasLineOfSight(idealPos)) {
+            return idealPos;
+        }
+
+        Level level = this.tourist.level();
+        int maxDistance = this.tourist.getMind().getMaxDistanceAwayFromTarget();
+        BlockPos best = null;
+        int bestDistSq = Integer.MAX_VALUE;
+
+        for (int dx = -SEARCH_RADIUS; dx <= SEARCH_RADIUS; dx++) {
+            for (int dz = -SEARCH_RADIUS; dz <= SEARCH_RADIUS; dz++) {
+                if (dx == 0 && dz == 0) {
+                    continue;
+                }
+                BlockPos candidate = this.findSurfacePosition(idealPos.offset(dx, 0, dz));
+                if (candidate == null
+                        || Math.abs(candidate.getY() - idealPos.getY()) > MAX_SURFACE_ADJUSTMENT
+                        || candidate.distManhattan(this.targetPos) > maxDistance
+                        || !this.isStandable(level, candidate)
+                        || !this.hasLineOfSight(candidate)) {
+                    continue;
+                }
+                int distSq = (int) candidate.distSqr(idealPos);
+                if (distSq < bestDistSq) {
+                    best = candidate;
+                    bestDistSq = distSq;
+                }
+            }
+        }
+
+        BlockPos chosen = best != null ? best : this.targetPos;
+        TouristEntity.logActivity(Verbosity.LEVEL_1_DIAGNOSTICS, "[{}] No line of sight to target {} from {}, using {} position {}",
+                this.getClass().getSimpleName(),
+                this.targetPos.toShortString(),
+                idealPos.toShortString(),
+                best != null ? "alternative" : "target",
+                chosen.toShortString());
+        return chosen;
+    }
+
+    private boolean isStandable(Level level, BlockPos pos) {
+        return level.getBlockState(pos).getCollisionShape(level, pos).isEmpty()
+                && level.getBlockState(pos.above()).getCollisionShape(level, pos.above()).isEmpty()
+                && !level.getBlockState(pos.below()).getCollisionShape(level, pos.below()).isEmpty();
+    }
+
+    /** Checks from two vantage points (eye and chest height) for a clear line to the target; hitting the target itself is fine. */
+    private boolean hasLineOfSight(BlockPos fromBlock) {
+        Level level = this.tourist.level();
+        Vec3 toPos = Vec3.atCenterOf(this.targetPos);
+
+        for (double height : new double[] {1.5, 0.5}) {
+            Vec3 fromPos = new Vec3(fromBlock.getX() + 0.5, fromBlock.getY() + height, fromBlock.getZ() + 0.5);
+            BlockHitResult hit = level.clip(new ClipContext(fromPos, toPos,
+                    ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this.tourist));
+            if (hit.getType() == HitResult.Type.MISS || hit.getBlockPos().closerThan(this.targetPos, 1.5)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private double getDistanceToNavPosSqr() {
