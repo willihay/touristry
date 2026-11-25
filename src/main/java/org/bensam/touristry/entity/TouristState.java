@@ -19,7 +19,6 @@ public enum TouristState implements StringRepresentable {
     ENTERING_EXPERIENCE(false, true, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
     CHOOSING_EXPERIENCE_TARGET(false, true, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
     TRAVELING_TO_EXPERIENCE_TARGET(false, true, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
-    POSITIONING_AT_TARGET(false, true, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
     EXPERIENCING_TARGET(false, true, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),
     WANDERING_AT_BEACON(true, false, TouristLocation.BEACON, TouristLocation.BEACON),
     WANDERING_AT_EXPERIENCE(false, true, TouristLocation.EXPERIENCE, TouristLocation.EXPERIENCE),

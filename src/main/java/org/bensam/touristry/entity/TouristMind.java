@@ -21,7 +21,6 @@ import org.bensam.touristry.block.entity.LodgingExperienceBlockEntity;
 import org.bensam.touristry.block.entity.TouristBeaconBlockEntity;
 import org.bensam.touristry.config.ModServerConfigManager;
 import org.bensam.touristry.config.Verbosity;
-import org.bensam.touristry.entity.goal.PositionForViewingGoal;
 import org.bensam.touristry.tourism.*;
 import org.bensam.touristry.tourism.experience.ExperienceTarget;
 import org.bensam.touristry.tourism.experience.ExperienceVisit;
@@ -158,8 +157,6 @@ public final class TouristMind {
     public void onEntityLoaded(ServerLevel serverLevel) {
        if (this.state.isAtTarget()) {
            this.reconstructExperienceGoals(serverLevel);
-       } else if (this.state == TouristState.POSITIONING_AT_TARGET) {
-           this.reconstructPositioningGoal(serverLevel);
        }
     }
 
@@ -194,43 +191,6 @@ public final class TouristMind {
             this.injectExperienceGoal(goal);
             TouristEntity.logActivity(Verbosity.LEVEL_1_DIAGNOSTICS, "[TouristMind] Load: Reconstructed experience goal {}", goal.getClass().getSimpleName());
         }
-    }
-
-    private void reconstructPositioningGoal(ServerLevel serverLevel) {
-        if (this.experienceTargetTracker.isEmpty()) {
-            // Inconsistent state - should not be POSITIONING_AT_TARGET with empty stack.
-            TouristEntity.logActivity(Verbosity.GAMEPLAY_WARNINGS, "[TouristMind] Load warning: State is POSITIONING_AT_TARGET but experience tracker is empty");
-            this.transitionTo(TouristState.PLANNING_NEXT_MOVE);
-            return;
-        }
-
-        if (this.currentExperienceTarget == null) {
-            // Inconsistent state - should have a target.
-            TouristEntity.logActivity(Verbosity.GAMEPLAY_WARNINGS, "[TouristMind] Load warning: State is POSITIONING_AT_TARGET but current experience target is null");
-            this.transitionTo(TouristState.CHOOSING_EXPERIENCE_TARGET);
-            return;
-        }
-
-        ExperienceVisit currentVisit = this.experienceTargetTracker.peekFirst();
-        TouristExperience experience = TourismManager.getTouristExperienceById(currentVisit.experienceUUID());
-
-        if (experience == null) {
-            // Experience was unloaded / removed - exit gracefully.
-            TouristEntity.logActivity(Verbosity.GAMEPLAY_WARNINGS, "[TouristMind] Load warning: Experience {} no longer exists", currentVisit.experienceUUID());
-            this.exitCurrentExperience(serverLevel, VisitResult.UNFAVORABLE, false, null);
-            return;
-        }
-
-        // Recreate and inject the positioning goal for the current target.
-        int idealDistance = experience.getTargetIdealApproachDistance();
-        Goal positioningGoal = new PositionForViewingGoal(
-                this.tourist,
-                this.currentExperienceTarget.pos(),
-                this.currentExperienceTarget.approachFrom(),
-                idealDistance
-        );
-        this.injectExperienceGoal(positioningGoal);
-        TouristEntity.logActivity(Verbosity.LEVEL_1_DIAGNOSTICS, "[TouristMind] Load: Reconstructed PositionForViewingGoal (distance: {})", idealDistance);
     }
     //endregion
 
@@ -530,7 +490,6 @@ public final class TouristMind {
         }
 
         if (newState == TouristState.TRAVELING_TO_EXPERIENCE_TARGET ||
-                newState == TouristState.POSITIONING_AT_TARGET ||
                 newState == TouristState.EXPERIENCING_TARGET
         ) {
             if (this.targetPos == null) {
@@ -559,7 +518,6 @@ public final class TouristMind {
             case CHOOSING_EXPERIENCE_TARGET -> this.chooseExperienceTarget(serverLevel);
             case TRAVELING_TO_EXPERIENCE -> this.beginTravelingToExperienceBlock();
             case ENTERING_EXPERIENCE -> this.enterExperience(serverLevel);
-            case POSITIONING_AT_TARGET -> this.positionAtTarget(serverLevel);
             case WANDERING_WORLD -> this.beginWanderingWorld();
             case WANDERING_AT_BEACON, WANDERING_AT_EXPERIENCE -> this.beginWanderingAtBlock();
             case DESPAWNING, LOST -> this.deSpawn();
@@ -586,7 +544,7 @@ public final class TouristMind {
 
             case TRAVELING_TO_EXPERIENCE -> this.arriveAtExperience();
 
-            case TRAVELING_TO_EXPERIENCE_TARGET -> this.arriveAtExperienceTarget();
+            case TRAVELING_TO_EXPERIENCE_TARGET -> this.arriveAtExperienceTarget(serverLevel);
         }
     }
 
@@ -655,7 +613,7 @@ public final class TouristMind {
         this.transitionTo(TouristState.WAITING_AT_EXPERIENCE);
     }
 
-    private void arriveAtExperienceTarget() {
+    private void arriveAtExperienceTarget(ServerLevel serverLevel) {
         if (this.experienceTargetTracker.isEmpty() || this.currentExperienceTarget == null) {
             this.transitionTo(TouristState.CHOOSING_EXPERIENCE_TARGET);
             return;
@@ -664,8 +622,24 @@ public final class TouristMind {
         // Reset tick counter for this target.
         this.ticksAtCurrentTarget = 0;
 
-        // Transition to positioning state (fine-tune position and orientation)
-        this.transitionTo(TouristState.POSITIONING_AT_TARGET);
+        // Now inject experience-specific goals.
+        ExperienceVisit currentVisit = this.experienceTargetTracker.peekFirst();
+        TouristExperience experience = TourismManager.getTouristExperienceById(currentVisit.experienceUUID());
+
+        if (experience == null) {
+            this.exitCurrentExperience(serverLevel, VisitResult.UNFAVORABLE, false, null);
+            return;
+        }
+
+        Goal experienceGoal = experience.createGoalForTarget(this.tourist, serverLevel, this.currentExperienceTarget);
+
+        if (experienceGoal != null) {
+            this.injectExperienceGoal(experienceGoal);
+            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS,
+                    "[TouristMind] Injected experience goal: {}", experienceGoal.getClass().getSimpleName());
+        }
+
+        this.transitionTo(TouristState.EXPERIENCING_TARGET);
     }
 
     private void beginTravelingToBeacon() {
@@ -1165,35 +1139,6 @@ public final class TouristMind {
         this.transitionTo(TouristState.WANDERING_WORLD);
     }
 
-    private void positionAtTarget(ServerLevel serverLevel) {
-        if (this.experienceTargetTracker.isEmpty() || this.currentExperienceTarget == null) {
-            this.transitionTo(TouristState.CHOOSING_EXPERIENCE_TARGET);
-            return;
-        }
-
-        ExperienceVisit currentVisit = this.experienceTargetTracker.peekFirst();
-        TouristExperience experience = TourismManager.getTouristExperienceById(currentVisit.experienceUUID());
-
-        if (experience == null) {
-            this.exitCurrentExperience(serverLevel, VisitResult.UNFAVORABLE, false, null);
-            return;
-        }
-
-        // Inject positioning goal to fine-tune position and orientation.
-        int idealDistance = experience.getTargetIdealApproachDistance();
-        Goal positioningGoal = new PositionForViewingGoal(
-                this.tourist,
-                this.currentExperienceTarget.pos(),
-                this.currentExperienceTarget.approachFrom(),
-                idealDistance
-        );
-        this.injectExperienceGoal(positioningGoal);
-
-        TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS,
-                "[TouristMind] Injected PositionForViewingGoal for target at {} (ideal distance: {})",
-                this.currentExperienceTarget.pos().toShortString(), idealDistance);
-    }
-
     public void prepareForJourney(ServerLevel serverLevel, @NonNull BlockPos target) {
         BlockEntity blockEntity = serverLevel.getBlockEntity(target);
         if (blockEntity instanceof TouristBeaconBlockEntity) {
@@ -1448,7 +1393,7 @@ public final class TouristMind {
         String logMessageSuffix = switch (state) {
             case TRAVELING_TO_BEACON, WAITING_AT_BEACON, CHOOSING_EXPERIENCE_AT_BEACON, WANDERING_AT_BEACON,
                  TRAVELING_TO_EXPERIENCE, WAITING_AT_EXPERIENCE, ENTERING_EXPERIENCE, WANDERING_AT_EXPERIENCE,
-                 TRAVELING_TO_EXPERIENCE_TARGET, POSITIONING_AT_TARGET, EXPERIENCING_TARGET -> " " + targetName;
+                 TRAVELING_TO_EXPERIENCE_TARGET, EXPERIENCING_TARGET -> " " + targetName;
             case CHOOSING_EXPERIENCE_TARGET -> " at " + targetName;
             default -> "";
         };
@@ -1479,7 +1424,7 @@ public final class TouristMind {
                     return "";
                 }
             }
-            case TRAVELING_TO_EXPERIENCE_TARGET, POSITIONING_AT_TARGET, EXPERIENCING_TARGET -> {
+            case TRAVELING_TO_EXPERIENCE_TARGET, EXPERIENCING_TARGET -> {
                 if (this.targetPos == null) {
                     return "";
                 }
