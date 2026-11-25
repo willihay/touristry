@@ -941,35 +941,6 @@ public final class TouristMind {
         }
     }
 
-    public void finishPositioning(ServerLevel serverLevel) {
-        if (this.experienceTargetTracker.isEmpty() || this.currentExperienceTarget == null) {
-            this.transitionTo(TouristState.CHOOSING_EXPERIENCE_TARGET);
-            return;
-        }
-
-        // Clear positioning goal.
-        this.clearInjectedGoals();
-
-        ExperienceVisit currentVisit = this.experienceTargetTracker.peekFirst();
-        TouristExperience experience = TourismManager.getTouristExperienceById(currentVisit.experienceUUID());
-
-        if (experience == null) {
-            this.exitCurrentExperience(serverLevel, VisitResult.UNFAVORABLE, false, null);
-            return;
-        }
-
-        // Now inject experience-specific goals.
-        Goal experienceGoal = experience.createGoalForTarget(this.tourist, serverLevel, this.currentExperienceTarget);
-
-        if (experienceGoal != null) {
-            this.injectExperienceGoal(experienceGoal);
-            TouristEntity.logActivity(Verbosity.LEVEL_2_DIAGNOSTICS,
-                    "[TouristMind] Injected experience goal: {}", experienceGoal.getClass().getSimpleName());
-        }
-
-        this.transitionTo(TouristState.EXPERIENCING_TARGET);
-    }
-
     public void finishTargetGoal() {
         // Remove experience-specific goals.
         this.clearInjectedGoals();
