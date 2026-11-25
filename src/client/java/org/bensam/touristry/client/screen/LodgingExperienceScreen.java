@@ -4,8 +4,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import org.bensam.touristry.ModBlocks;
 import org.bensam.touristry.ModItems;
+import org.bensam.touristry.client.screen.tabs.BedTargetsTab;
 import org.bensam.touristry.client.screen.tabs.StatusTab;
-import org.bensam.touristry.client.screen.tabs.TargetsTab;
 import org.bensam.touristry.menu.LodgingExperienceMenu;
 
 import java.util.List;
@@ -21,7 +21,7 @@ public class LodgingExperienceScreen extends AbstractTabbedExperienceScreen<Lodg
     public LodgingExperienceScreen(LodgingExperienceMenu containerMenu, Inventory inventory, Component title) {
         super(containerMenu, inventory, title, List.of(
                 new StatusTab<>(BED_COST_SLOT_LABEL, LodgingExperienceMenu.Tab.STATUS, ModBlocks.LODGING_EXPERIENCE.get().asItem()),
-                new TargetsTab<>(BED_TARGETS_TAB_TITLE, LodgingExperienceMenu.Tab.TARGETS, ModItems.EXPERIENCE_TARGET_KEY.get(), true, TARGET_NAME_EDITBOX_LABEL, true)
+                new BedTargetsTab<>(BED_TARGETS_TAB_TITLE, LodgingExperienceMenu.Tab.TARGETS, ModItems.EXPERIENCE_TARGET_KEY.get(), true, TARGET_NAME_EDITBOX_LABEL, true)
         ));
         this.imageWidth = BG_SCREEN_WIDTH;
     }

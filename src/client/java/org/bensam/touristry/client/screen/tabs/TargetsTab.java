@@ -93,16 +93,16 @@ public class TargetsTab<T extends Enum<T>> extends AbstractScreenTab<T> {
     private static final int TARGET_REMOVE_BUTTON_X = -20;
     private static final int TARGET_REMOVE_BUTTON_Y = 45;
     private static final int TARGET_ORDERED_LABEL_X = 125;
-    private static final int TARGET_ORDERED_LABEL_Y = 73;
+    private static final int TARGET_ORDERED_LABEL_Y = 125;
     private static final int TARGET_ORDERED_BUTTON_X = 190;
-    private static final int TARGET_ORDERED_BUTTON_Y = 68;
+    private static final int TARGET_ORDERED_BUTTON_Y = 120;
     private static final int TARGET_REMOVE_ALL_BUTTON_X = -22;
     private static final int TARGET_REMOVE_ALL_BUTTON_Y = -22;
     //endregion
 
     private final boolean enableTargetNaming;
     private final boolean showVisitOrderToggle;
-    private final ScrollBox scrollBox = new ScrollBox();
+    protected final ScrollBox scrollBox = new ScrollBox();
     private final Component targetNameEditBoxLabel;
 
     private EditBox targetName;
@@ -481,6 +481,10 @@ public class TargetsTab<T extends Enum<T>> extends AbstractScreenTab<T> {
     }
 
     // Render methods
+    protected int getTargetDisplayNameColor(TargetView target) {
+        return ARGB_SCROLLBOX_BUTTON_TEXT_COLOR;
+    }
+
     @Override
     public void renderAdditionalBackground(GuiGraphics guiGraphics, int mouseX, int mouseY, AbstractTabbedExperienceScreen<?, ?> screen, AbstractExperienceMenu<?> menu) {
         if (this.enableTargetNaming) {
@@ -625,7 +629,7 @@ public class TargetsTab<T extends Enum<T>> extends AbstractScreenTab<T> {
                     screen.getFont().plainSubstrByWidth(target.displayName(), maxTextWidth),
                     xTextStart,
                     yItem + 5,
-                    ARGB_SCROLLBOX_BUTTON_TEXT_COLOR,
+                    TargetsTab.this.getTargetDisplayNameColor(target),
                     true);
         }
     }

@@ -102,7 +102,7 @@ public class ItemPricingTab<T extends Enum<T>> extends AbstractScreenTab<T> {
     //endregion
 
     private final Component importTooltip;
-    private final ScrollBox scrollBox = new ScrollBox();
+    protected final ScrollBox scrollBox = new ScrollBox();
 
     private ItemStack focusItemForSale = ItemStack.EMPTY;
     private int lastItemPricesRevision;
